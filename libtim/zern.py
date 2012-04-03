@@ -358,14 +358,79 @@ class TestZernikes(unittest.TestCase):
 		print fitvec, self.vec[:10]
 		self.assertTrue(N.allclose(self.vec[:10]/fitvec, 1.0, rtol=0.01))
 
-	def test3a_timing(self):
-		"""Test Zernike reconstruction timing"""
-		fitdata = fit_zernike(self.wf, nmodes=10)
-		fitvec = fitdata[0]
-		print fitvec, self.vec[:10]
-		self.assertTrue(N.allclose(self.vec[:10]/fitvec, 1.0, rtol=0.01))
+class TestZernikeSpeed(unittest.TestCase):
+	def setUp(self):
+		self.calc_iter = 3
+		self.fit_iter = 5
+		self.nmodes = 25
+		self.rad = 257
+
+	def test3a_timing_calc(self):
+		"""Test Zernike calculation timing and cache functioning"""
+
+		t1 = Timer("""
+a=calc_zernike(vec, rad, z_cache)
+		""", """
+from __main__ import calc_zern_basis, fit_zernike, calc_zernike
+import numpy as N
+rad = %d
+nmodes = %d
+vec = N.random.random(nmodes)
+z_cache = {}
+		""" % (self.rad, self.nmodes) )
+		t2 = Timer("""
+a=calc_zernike(vec, rad, {})
+		""", """
+from __main__ import calc_zern_basis, fit_zernike, calc_zernike
+import numpy as N
+rad = %d
+nmodes = %d
+vec = N.random.random(nmodes)
+		""" % (self.rad, self.nmodes) )
+		t_cache = t1.timeit(self.calc_iter)/self.calc_iter
+		t_nocache = t2.timeit(self.calc_iter)/self.calc_iter
+		# Caching should be at least twice as fast as no caching
+		print "test3a_timing_calc(): cached: %.3g sec/it, non-cached: %.3g sec/it" % (t_cache, t_nocache)
+		self.assertGreater(t_nocache/2.0, t_cache)
+
+	def test3b_timing_calc(self):
+		"""Test Zernike calculation performance"""
+
+		t1 = Timer("""
+a=calc_zernike(vec, rad, z_cache)
+		""", """
+from __main__ import calc_zern_basis, fit_zernike, calc_zernike
+import numpy as N
+rad = %d
+nmodes = %d
+vec = N.random.random(nmodes)
+z_cache = calc_zern_basis(len(vec), rad)
+		""" % (self.rad, self.nmodes) )
+
+		t_cached = min(t1.repeat(2, self.calc_iter))/self.calc_iter
+		print "test3b_timing_calc(): rad=257, nmodes=25 %.3g sec/it" %(t_cached)
+
+	def test3c_timing_fit(self):
+		"""Test Zernike fitting performance"""
+
+		t1 = Timer("""
+a=fit_zernike(wf, z_cache, nmodes=nmodes)
+		""", """
+from __main__ import calc_zern_basis, fit_zernike, calc_zernike
+import numpy as N
+rad = %d
+nmodes = %d
+vec = N.random.random(nmodes)
+z_cache = calc_zern_basis(len(vec), rad)
+wf = N.random.random((rad, rad))
+		""" % (self.rad, self.nmodes) )
+
+		t_cached = min(t1.repeat(2, self.fit_iter))/self.fit_iter
+		# Caching should be at least twice as fast as no caching
+		print "test3c_timing_fit(): rad=257, nmodes=25 %.3g sec/it" % (t_cached)
 
 if __name__ == "__main__":
 	import sys
 	import pyfits
+	from timeit import Timer
 	sys.exit(unittest.main())
