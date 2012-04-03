@@ -131,6 +131,63 @@ def shift_img(im, shvec, method="pixel", zoomfac=8):
 	else:
 		raise ValueError("<method> %s not valid" % (method))
 
+def calc_subpixmax(data, offset=(0,0), dimension=2, error=False):
+	"""
+	Find the extrema of 'data' using a two-dimensional 9-point quadratic
+	interpolation (QI formulae by Yi & Molowny Horas (1992, Eq. (10)), also
+	available in M.G. Löfdahl (2010), table 2.). The subpixel maximum will be
+	examined around the coordinate of the pixel with the maximum intensity.
+
+	'offset' must be set to the shift-range that the correlation map in 'data'
+	corresponds to to find the pixel corresponding to a shift of 0.
+
+	'dimension' indicates the dimension of the quadratic interpolation, this can be either 2, 1 or 0 for no interpolation.
+
+	If 2D quadratic interpolation fails (i.e. shift > 1), a 1D QI is done. If
+	this fails (i.e. shift > 1), the integer coordinates of the pixel with the
+	maximum intensity is returned.
+
+	Warnings are shown if 'error' is set.
+
+	This routine is implemented in pure Python, formerly known quadInt2dPython
+	"""
+	if (not 0 <= dimension <= 2):
+		raise ValueError("Interpolation <dimension> should be 0 <= d <= 2")
+
+	# Initial guess for the interpolation
+	s = N.argwhere(data == data.max())[0]
+
+	a2 = 0.5 * (data[ s[0]+1, s[1] ] - data[ s[0]-1, s[1] ])
+	a3 = 0.5 * data[ s[0]+1, s[1] ] - data[ s[0], s[1] ] + \
+		0.5 * data[ s[0]-1, s[1] ]
+	a4 = 0.5 * (data[ s[0], s[1]+1 ] - data[ s[0], s[1]-1 ])
+	a5 = 0.5 * data[ s[0], s[1]+1 ] - data[ s[0], s[1] ] + \
+		0.5 * data[ s[0], s[1]-1 ]
+	a6 = 0.25 * (data[ s[0]+1, s[1]+1 ] - data[ s[0]+1, s[1]-1 ] - \
+		data[ s[0]-1, s[1]+1 ] + data[ s[0]-1, s[1]-1 ])
+
+
+	# 2D Quadratic Interpolation
+	if (dimension == 2):
+		v = N.array([(2*a2*a5-a4*a6)/(a6*a6-4*a3*a5), \
+			(2*a3*a4-a2*a6)/(a6*a6-4*a3*a5)])
+		# Subpixel vector should be smaller than 1
+		if ((N.abs(v) > 1).any()):
+			if (error): print '!! 2D QI failed:', v
+			dimension = 1
+	# 1D Quadratic Interpolation
+	elif (dimension == 1):
+		v = N.array([a2/(2*a3), a4/(2*a5)])
+		# Subpixel vector should be smaller than 1
+		if ((N.abs(v) > 1).any()):
+			if (error): print '!! 1D QI failed:', v
+			dimension = 0
+	# Maximum value pixel
+	elif (dimension == 0):
+		v = N.array([0 , 0])
+
+	return v + s - N.r_[offset]
+
 ### Testing begins here
 
 import unittest
