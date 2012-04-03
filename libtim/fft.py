@@ -26,6 +26,7 @@ Some utilities for Fourier transforming data
 # Import libraries here
 #=============================================================================
 
+import unittest
 import numpy as N
 from collections import Iterable
 
@@ -363,5 +364,4 @@ class PlotApodMask(unittest.TestCase):
 if __name__ == "__main__":
 	import sys
 	import pylab as plt
-	import unittest
 	sys.exit(unittest.main())
