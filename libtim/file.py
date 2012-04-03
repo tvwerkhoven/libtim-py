@@ -27,6 +27,7 @@ This module provides some file IO functions
 #=============================================================================
 
 import matplotlib.image as mpimg
+import string
 
 #=============================================================================
 # Defines
@@ -90,6 +91,24 @@ def read_files(flist, dtype=None):
 
 	# Read files
 	return [read_func(path) for path in flist]
+
+def filenamify(str):
+	"""
+	Convert any string into a valid filename by rejecting unknown characters. Valid characters are ascii letters, digits and -_.(). (internally using %s%s" % (string.ascii_letters, string.digits)).
+
+	@param str [in] String to convert
+	@return Filtered filename
+	"""
+	# From <http://stackoverflow.com/a/295146>
+	valid_chars = "-_.()%s%s" % (string.ascii_letters, string.digits)
+	valid_chars = frozenset(valid_chars)
+
+	# Replace space by _
+	fbase = str.replace(' ','_')
+	# Rebuild string filtering out unknown chars
+	fbase = ''.join(c for c in fbase if c in valid_chars)
+	return fbase
+
 
 if __name__ == "__main__":
 	import sys
