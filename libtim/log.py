@@ -9,19 +9,19 @@ and quite meaningful on its own.
 """
 
 ##  @file log.py
-# @author Tim van Werkhoven (tim@astro.su.se)
+# @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
 # @date 20090330
 #
 # Created by Tim van Werkhoven on 2009-03-30.
-# Copyright (c) 2008-2009 Tim van Werkhoven (tim@astro.su.se)
+# Copyright (c) 2008-2009 Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
 #
 # This file is licensed under the Creative Commons Attribution-Share Alike
 # license versions 3.0 or higher, see
 # http://creativecommons.org/licenses/by-sa/3.0/
 
-## @package astooki.liblog
+## @package liblog
 # @brief Library for logging functionality
-# @author Tim van Werkhoven (tim@astro.su.se)
+# @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
 # @date 20090330
 #
 # This package provides some routines for printing and logging messages to
