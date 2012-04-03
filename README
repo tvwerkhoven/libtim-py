@@ -1,0 +1,36 @@
+libwfs-py: some wavefront-related tools
+==============================================================================
+
+About
+=====
+
+This library provides some routines to work with wavefront analysis, which can
+be useful for (offline) wavefront sensor data processing.
+
+Created by Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl).
+
+Installation
+============
+
+This module can be installed using the standard NumPy distutils. Therefore,
+simply running
+
+   python setup.py install
+
+will install this module to the default installation location. Running
+
+   python setup.py
+
+will start an interactive installation process.
+
+Usage
+=====
+
+Documentation of routines can be found in the docstrings of the respective 
+modules.
+
+Version history
+===============
+
+20100519, v0.1.0:
+   * Initial version
