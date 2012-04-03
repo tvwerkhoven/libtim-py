@@ -33,6 +33,7 @@ import os
 import hashlib
 import pyfits
 from time import asctime, gmtime, time, localtime
+import unittest
 
 #=============================================================================
 # Defines
@@ -440,5 +441,4 @@ class TestTokenize(unittest.TestCase):
 if __name__ == "__main__":
 	import numpy as N
 	import sys
-	import unittest
 	sys.exit(unittest.main())
