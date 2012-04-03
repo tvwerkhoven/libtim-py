@@ -88,7 +88,10 @@ def mk_apod_mask(masksz, apodpos=None, apodsz=None, shape='rect', wsize=-0.3, ap
 		raise ValueError("All mask size <masksz> dimensions should be >= 1")
 
 	# Only the first 4 letters are significant.
-	shape = shape[:4]
+	try:
+		shape = shape[:4]
+	except:
+		raise ValueError("<shape> should be a string!")
 
 	# Check if shape is legal
 	if (shape not in ('rect', 'circ')):
@@ -266,6 +269,27 @@ class TestApodMask(unittest.TestCase):
 				thismask = mk_apod_mask(sz, apod_f=func, wsize=wsz)
 				self.assertTrue(N.allclose(thismask, refmask), \
 					"Windows size 0 mask for %s != %s" % (self.wshp_l[0], func))
+
+	# Test illegal function calls
+	def test4a_apodf_err(self):
+		"""Test if illegal apod_f raises error"""
+
+		for sz in self.szlist:
+			with self.assertRaisesRegexp(ValueError, ".*apod_f.*not supported!"):
+				mk_apod_mask(sz, apod_f="not a function")
+		for sz in self.szlist:
+			with self.assertRaisesRegexp(ValueError, ".*apod_f.*should be.*"):
+				mk_apod_mask(sz, apod_f=[1])
+
+	def test4b_shape_err(self):
+		"""Test if illegal shape raises error"""
+
+		for sz in self.szlist:
+			with self.assertRaisesRegexp(ValueError, "<shape> should be.*"):
+				mk_apod_mask(sz, shape="not a shape")
+		for sz in self.szlist:
+			with self.assertRaisesRegexp(ValueError, ".*should be a string!"):
+				mk_apod_mask(sz, shape=1)
 
 class PlotApodMask(unittest.TestCase):
 	def setUp(self):
