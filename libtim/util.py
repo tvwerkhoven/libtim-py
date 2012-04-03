@@ -29,9 +29,10 @@ filenames, etc.
 #=============================================================================
 
 import sys
-import unittest
 import os
 import hashlib
+import pyfits
+from time import asctime, gmtime, time, localtime
 
 #=============================================================================
 # Defines
@@ -156,22 +157,38 @@ def find_tok_pos(tokstr, tokens=['.', '-', '_'], rev=False, past=True):
 
 def parse_range_str(rstr, sep=",", rsep="-", offs=0):
 	"""
-	Parse string <rstr> which represents a range of integers, such as:
-	1,2,3,7-10, 19
-	which would represent elements 1,2,3,7,8,9,19
+	Expand a string <rstr> represents a range of integers, such as:
+	1,2,3,7-10,19-25
+	which would expand to 1,2,3,7,8,9,19,20,21,22,23,24,25
 
-	<sep> is a string separating elements, <rsep> indicates ranges.
+	<sep> is a string separating elements, <rsep> indicates ranges.  <offs> is an offset added to all
 
-	>>> parse_range_str("1,2,3,7-10, 19")
-	[1, 2, 3, 7, 8, 9, 19]
+	>>> parse_range_str("1,2,3,7-10,19-25")
+	[1, 2, 3, 7, 8, 9, 10, 19, 20, 21, 22, 23, 24, 25]
 	"""
+	if (rsep == sep):
+		raise ValueError("<sep> and <rsep> cannot be identical")
+
+	# int(rsep) and int(sep) should raise, otherwise, something is wrong
+	rflag = 0
+	try: a = int(rsep); rflag = 1
+	except: pass
+	try: a = int(sep); rflag = 1
+	except: pass
+	if (rflag): raise ValueError("<rsep> and <sep> should not parse to int")
+
 	els = []
+	# Split input string around <sep>
 	for el in rstr.split(sep):
-		# If 'rsep' is in 'el', then we use it as input for range
-		if (rsep in el):
-			els.extend(range(*[int(i) for i in el.split(rsep)[0:2]]))
+		# If <rsep> is in this <el> (like '7-10 '), this is a range that needs expansion. In that case, split the the element around <rsep>, and calculate range(el[0], el[1]+1)
+		# Note that <resp> should not be the first character (i.e. (-5-0)) to
+		# accomodate for negative start range
+		el = el.strip()
+		if (rsep in el[1:]):
+			spl_idx = el[1:].find(rsep)+1
+			els.extend( range(int(el[:spl_idx]), int(el[spl_idx+1:])+1) )
 		else:
-			els.append(int(el))
+			els.append( int(el) )
 	# Apply offset and return
 	return [i+offs for i in els]
 
@@ -236,6 +253,89 @@ def store_metadata(metadict, basename, dir='./', aspickle=False, asjson=True):
 		fp = open(basepath + "_meta.json", 'w')
 		json.dump(metadict, fp, indent=2)
 		fp.close()
+
+def mkfitshdr(cards):
+	"""
+	Make a FITS file header of all arguments supplied in the dict <cards>.
+	Also add default header items:
+
+	- Program name (sys.argv[0])
+	- epoch (time()
+	- utctime / localtime
+	- hostname
+
+	@params [in] cards Dict containing key=value pairs for the header
+	@return pyfits header object
+	"""
+	# Init list
+	clist = pyfits.CardList()
+
+	# Add default fields
+	clist.append(pyfits.Card('prog', sys.argv[0]) )
+	clist.append(pyfits.Card('epoch', time()) )
+	clist.append(pyfits.Card('utctime', asctime(gmtime(time()))) )
+	clist.append(pyfits.Card('loctime', asctime(localtime(time()))) )
+
+	# Add custom fields
+	for key, val in cards.iteritems():
+		clist.append(pyfits.Card(key, val) )
+
+	return pyfits.Header(cards=clist)
+
+class TestParsestr(unittest.TestCase):
+	def setUp(self):
+		pass
+
+	def test1a_known_simpl(self):
+		"""Test on simple list"""
+
+		rng_calc = parse_range_str("1,2,3,4")
+		rng_expect = [1,2,3,4]
+		self.assertEqual(rng_calc, rng_expect)
+
+	def test1b_known(self):
+		"""Test range expansion on known positive list"""
+
+		rng_calc = parse_range_str("6 - 10,1,2,3,7-10,19-10")
+		rng_expect = [6, 7, 8, 9, 10, 1, 2, 3, 7, 8, 9, 10]
+		self.assertEqual(rng_calc, rng_expect)
+
+	def test1c_negative(self):
+		"""Test on negative list"""
+
+		rng_calc = parse_range_str("-5 - -1, 0, 5, 8, 9, 10, 100-105")
+		rng_expect = [-5, -4, -3, -2, -1, 0, 5, 8, 9, 10, 100, 101, 102, 103, 104, 105]
+		self.assertEqual(rng_calc, rng_expect)
+
+	def test2a_negative_cust(self):
+		"""Test on negative list, custom rsep"""
+
+		rng_calc = parse_range_str("-5 = -1, 0=5", rsep="=")
+		rng_expect = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5]
+		self.assertEqual(rng_calc, rng_expect)
+
+		rng_calc = parse_range_str("-5 . -1, 0.5", rsep=".")
+		rng_expect = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5]
+		self.assertEqual(rng_calc, rng_expect)
+
+	def test4a_fail_input(self):
+		"""Test on illegal input"""
+
+		with self.assertRaisesRegexp(ValueError, "invalid literal"):
+			rng_calc = parse_range_str("0a")
+		with self.assertRaisesRegexp(ValueError, "invalid literal"):
+			rng_calc = parse_range_str("5-10a")
+		with self.assertRaisesRegexp(ValueError, "invalid literal"):
+			rng_calc = parse_range_str("5aa10a")
+
+	def test4a_fail_sep(self):
+		"""Test for illegal rsep, sep"""
+
+		with self.assertRaisesRegexp(ValueError, "should not parse to int"):
+			rng_calc = parse_range_str("0", rsep='0')
+		with self.assertRaisesRegexp(ValueError, "should not parse to int"):
+			rng_calc = parse_range_str("0", sep='0')
+
 
 class TestTokenize(unittest.TestCase):
 	def setUp(self):
@@ -340,4 +440,5 @@ class TestTokenize(unittest.TestCase):
 if __name__ == "__main__":
 	import numpy as N
 	import sys
+	import unittest
 	sys.exit(unittest.main())
