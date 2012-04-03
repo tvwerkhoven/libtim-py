@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-This is astooki.liblog, providing logging functions
+This is liblog, providing logging functions
 
 This module provides logging functions to log data using prefixes, loglevels
 and permanent logfiles. This is probably only useful in more elaborate scripts
