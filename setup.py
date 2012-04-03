@@ -1,9 +1,9 @@
-#!/usr/bin/env python2.5
+#!/usr/bin/env python
 # encoding: utf-8
 """
-setup.py -- setup file for the libwfs module
+setup.py -- setup file for the libtim module
 
-Created by Tim van Werkhoven (timvanwerkhoven@gmail.com) on 2010-05-19
+Created by Tim van Werkhoven (werkhoven@strw.leidenuniv.nl) on 2010-05-19
 Copyright (c) 2010--2012 Tim van Werkhoven. All rights reserved.
 """
 import sys
@@ -20,9 +20,9 @@ except:
 # Setup
 setup(name = 'libtim',
 	version = 'v0.1.0',
-	description = 'Personal lib, mostly wavefront-related.',
+	description = 'Personal lib, keywords: wavefronts, zernike, fft.',
 	author = 'Tim van Werkhoven',
-	author_email = 'timvanwerkhoven@gmail.com',
+	author_email = 'werkhoven@strw.leidenuniv.nl',
 	url = 'http://work.vanwerkhoven.org/',
 	license = "GPL",
 	packages = ['libtim'])
