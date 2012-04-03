@@ -4,10 +4,10 @@
 """
 @file xcorr.py
 @brief Cross-correlation utils for measuring image shifts
-@author Tim van Werkhoven (timvanwerkhoven@gmail.com)
+@author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
 @date 20120402
 
-Created by Tim van Werkhoven (timvanwerkhoven@gmail.com) on 2012-04-02
+Created by Tim van Werkhoven (werkhoven@strw.leidenuniv.nl) on 2012-04-02
 Copyright (c) 2012 Tim van Werkhoven. All rights reserved.
 
 This file is licensed under the Creative Commons Attribution-Share Alike
@@ -15,14 +15,30 @@ license versions 3.0 or higher, see
 http://creativecommons.org/licenses/by-sa/3.0/
 """
 
-import numpy as N
+#=============================================================================
+# Import libraries here
+#=============================================================================
 
-def crosscorr(imlst, shrange, refim=None):
-	"""Cross-correlate images from <imlst> to measure image shifts in between
+import numpy as N
+import unittest
+import fft as _fft
+
+#=============================================================================
+# Defines
+#=============================================================================
+
+#=============================================================================
+# Routines
+#=============================================================================
+
+def crosscorr(imlst, shrange, dsh=(1,1), refim=None):
+	"""Cross-correlate images from <imlst> to measure image shifts. If <refim> is given, compare all images from <imlist> with this image, otherwise cross-correlate all pairs of images in <imlist>
 
 	@param [in] imlst list of images to cross correlate
-	@param [in] shrange shift range to calculate, format ((-sh0, +sh0, dsh0), (-sh1, +sh1, dsh1))
+	@param [in] shrange shift range to calculate, format (sh0, sh1)
+	@param [in] dsh shift range jumps
 	@param [in] refim Reference image to cross correlate others against. If None, will use cross correlate all pairs from imlst
+	@return NxN (refim==None) or Nx1 (refim!=None) list of cross-correlation maps. Each map is (2*shrange[0]+1, 2*shrange[1]+1) big)
 	"""
 
 	# Check if imlst is malformed
@@ -35,33 +51,33 @@ def crosscorr(imlst, shrange, refim=None):
 		if (refim.shape != imlst[0].shape):
 			raise ValueError("<refim> should be same size as <imlst[0]>")
 
-	# Convenience variables for shift range in two directions, 0 and 1
-	sh00, sh01, dsh0 = shrange[0]
-	sh10, sh11, dsh1 = shrange[1]
+	# Convenience variables for shift range for two dimensions, 0 and 1
+	sh0, sh1 = shrange
+	dsh0, dsh1 = dsh
+	imsz0, imsz1 = imlst[0].shape
+
+	# Shift ranges need to be larger than 0
+	if (sh0 < 1 or sh1 < 1):
+		raise ValueError("<shrange> should be larger than 0")
 
 	# We need a crop window to allow for image shifting
-	sm_crop = [slice(abs(sh00), -abs(sh01)), slice(abs(sh10), -abs(sh11))]
+	sm_crop = [slice(sh0, -sh0), slice(sh1, -sh1)]
 
-	print shrange, sm_crop
-
-	# # Explicit full loop
-	# for fi in imlst:
-	# 	for fj in imlst:
-	# 	# fj should be smaller because we move it over the larger window
-	# 		for shi in xrange(shrange[0]):
-	# 			for shj in xrange(shrange[1]):
-	# 				fi[7+shi:7-shi, 7+shj:7-shj] * fj[sm_crop]
-
-	# Calculate correlation for all files
+	# Calculate correlation for all files with <refim> (output Nx1)
 	if (refim != None):
-		xcorr_mat = [[ N.r_[ [[N.sum(refim[sh01+shi:sh00+shi, sh11+shj:sh10+shj] * refim[sm_crop])
-			for shi in xrange(*shrange[0])]
-				for shj in xrange(*shrange[1])] ]
+		xcorr_mat = [[
+			N.r_[ [[
+			N.sum(refim[sh0+shi:imsz0-sh0+shi, sh1+shj:imsz1-sh1+shj] * refim[sm_crop])
+			for shi in xrange(-sh0, sh0+1, dsh0)]
+				for shj in xrange(-sh1, sh1+1, dsh1)] ]
 					for fj in imlst]]
+	# Calculate correlation for all files with each other (output NxN)
 	else:
-		xcorr_mat = [[ N.r_[ [[N.sum(fi[sh01+shi:sh00+shi, sh11+shj:sh10+shj] * fj[sm_crop])
-			for shi in xrange(*shrange[0])]
-				for shj in xrange(*shrange[1])] ]
+		xcorr_mat = [[
+			N.r_[ [[
+			N.sum(fi[sh0+shi:imsz0-sh0+shi, sh1+shj:imsz1-sh1+shj] * fj[sm_crop])
+			for shi in xrange(-sh0, sh0+1, dsh0)]
+				for shj in xrange(-sh1, sh1+1, dsh1)] ]
 					for fj in imlst]
 						for fi in imlst]
 
@@ -124,7 +140,7 @@ def shift_img(im, shvec, method="pixel", zoomfac=8):
 		grid = N.indices(im.shape)
 
 		# Make apodisation
-		apod_mask = timlib.mk_apod_mask(im.shape, wsize=0.1, apod_f=wfunc)
+		apod_mask = _fft.mk_apod_mask(im.shape, wsize=0.1, apod_f=wfunc)
 
 		# FT image
 		im_ft = N.fft.fft2(im)
@@ -147,7 +163,7 @@ def calc_subpixmax(data, offset=(0,0), dimension=2, error=False):
 	this fails (i.e. shift > 1), the integer coordinates of the pixel with the
 	maximum intensity is returned.
 
-	Warnings are shown if 'error' is set.
+	Warnings are shown if <error> is set.
 
 	This routine is implemented in pure Python, formerly known quadInt2dPython
 	"""
@@ -156,6 +172,17 @@ def calc_subpixmax(data, offset=(0,0), dimension=2, error=False):
 
 	# Initial guess for the interpolation
 	s = N.argwhere(data == data.max())[0]
+
+	# 0D: Maximum value pixel
+	if (dimension == 0):
+		return s - N.r_[offset]
+
+	# If maximum position is at the edge, abort: we cannot calculate subpixel
+	# maxima
+	# N.B.: Maybe we should return the max pix position anyway?
+	if ((s == 0).any() or (s+1 == data.shape).any()):
+		return s - N.r_[offset]
+#		raise ValueError("maximum value at edge of data, cannot calculate subpixel max")
 
 	a2 = 0.5 * (data[ s[0]+1, s[1] ] - data[ s[0]-1, s[1] ])
 	a3 = 0.5 * data[ s[0]+1, s[1] ] - data[ s[0], s[1] ] + \
@@ -166,7 +193,6 @@ def calc_subpixmax(data, offset=(0,0), dimension=2, error=False):
 	a6 = 0.25 * (data[ s[0]+1, s[1]+1 ] - data[ s[0]+1, s[1]-1 ] - \
 		data[ s[0]-1, s[1]+1 ] + data[ s[0]-1, s[1]-1 ])
 
-
 	# 2D Quadratic Interpolation
 	if (dimension == 2):
 		v = N.array([(2*a2*a5-a4*a6)/(a6*a6-4*a3*a5), \
@@ -176,123 +202,200 @@ def calc_subpixmax(data, offset=(0,0), dimension=2, error=False):
 			if (error): print '!! 2D QI failed:', v
 			dimension = 1
 	# 1D Quadratic Interpolation
-	elif (dimension == 1):
+	# no elif here because we might need this from 2D fallback
+	if (dimension == 1):
 		v = N.array([a2/(2*a3), a4/(2*a5)])
 		# Subpixel vector should be smaller than 1
 		if ((N.abs(v) > 1).any()):
 			if (error): print '!! 1D QI failed:', v
 			dimension = 0
-	# Maximum value pixel
-	elif (dimension == 0):
-		v = N.array([0 , 0])
+	# 0D: Maximum value pixel (keep here as fallback if 1D, 2D fail)
+	# no elif here because we might need this from 1D fallback
+	if (dimension == 0):
+		return s - N.r_[offset]
 
 	return v + s - N.r_[offset]
 
-### Testing begins here
+#=============================================================================
+# Unittesting
+#=============================================================================
 
-import unittest
+def _gauss(sz, spotsz, spotpos, amp, noiamp):
+	"""
+	Calculate Gauss in matrix of size <sz> with width <spotsz> at position <spotpos> and amplitude <amp>. If <noiamp> > 0, add Poissonian noise as well.
 
-class TestXcorr(unittest.TestCase):
+	@return ndarray of shape <sz> with the Guassian function
+	"""
+
+	# Coordinate grid
+	sz2 = (N.r_[sz]/2.0).reshape(2,1,1)
+	grid = (N.indices(sz, dtype=N.float) - sz2)
+
+	# Make shifted Gaussian peak
+	im = amp*N.exp(-((grid[0]-spotpos[1])/spotsz)**2.0) * N.exp(-((grid[1]-spotpos[0])/spotsz)**2.0)
+
+	# Add noise if requested
+	if (noiamp > 0):
+		return im + N.random.poisson(noiamp, N.product(sz)).reshape(*sz)
+	else:
+		return im
+
+class TestSubpixmax(unittest.TestCase):
+	def setUp(self):
+		self.sz_l = [(37, 43), (61, 31)]
+		self.pos_l = [(1,1), (15,13), (20,1), (35, 29)]
+
+	# api: calc_subpixmax(data, offset=(0,0), dimension=2, error=False):
+
+	def test1a_simple(self):
+		"""Simple test of hot pixels in zero matrix"""
+		for sz in self.sz_l:
+			for pos in self.pos_l:
+				simple = N.zeros(sz)
+				simple[pos] = 1
+				for dim in range(3):
+					p = calc_subpixmax(simple, dimension=dim)
+					self.assertEqual(tuple(p), pos)
+
+	def test3a_random_data(self):
+		"""Give random input data"""
+		for it in range(10):
+			rnd = N.random.random(self.sz_l[0])
+			# Set edge to zero to prevent erros
+			rnd[0] = rnd[-1] = 0
+			rnd[:,0] = rnd[:,-1] = 0
+			# Don't print errors because output is garbage anyway
+			for dim in range(3):
+				calc_subpixmax(rnd, offset=(0,0), dimension=dim, error=False)
+
+	def test3b_edge_error(self):
+		"""Maximum at edge should give IndexError"""
+		map = N.zeros(self.sz_l[0])
+		# Set maximum at the edge
+		map[0,0] = 1
+		# 0D should not raise:
+		calc_subpixmax(map, offset=(0,0), dimension=0, error=True)
+		# 1D and 2D should raise:
+		with self.assertRaises(ValueError):
+			calc_subpixmax(map, offset=(0,0), dimension=1, error=True)
+		with self.assertRaises(ValueError):
+			calc_subpixmax(map, offset=(0,0), dimension=2, error=True)
+
+class BaseXcorr(unittest.TestCase):
 	def setUp(self):
 		"""Generate test data"""
-
-		import scipy as S
-		import scipy.ndimage			# For fast ndimage processing
-
 		### Test parameters ###
 		# Test image size
 		sz_l = [(37, 43), (61, 31)]
-# 		sz_l = [(37, 43), (257, 509)]
+		sz_l = [(37, 43), (257, 509)]
+		# Test shift vectors
+#		self.shtest = [(0,0), (5.5, 4.3), (0.9, 0.8), (3.2, 11.1)]
+		self.shtest = [(0,0), (1.5981882, 2.312351), (0.9, 0.8)]
+		# Poisson noise factor and image intensity factor
+		self.nfac = 5
+		self.imfac = 255
 		# Gaussian spot size
 		spotsz = 5.
-		# Test shift vectors
-		self.shtest = [(0,0), (5.5, 4.3), (0.9, 0.8), (3.2, 11.1)]
-		# Poisson noise factor and image intensity factor
-		nfac = 75
-		imfac = 255
+		# Shift range to measure
+#		self.shrng = (18, 16)
+		self.shrng = (6, 6)
 
-		### Generate random test images ###
-		# Use random patterns as input. Scale up a factor <zoomfac>, then shift images, then scale back
+		### Generate Gaussian test images ###
+		# Loop over all test sizes and shift vectors to generate images, store in self.testimg_l
+		self.testimg_l = [[_gauss(sz, spotsz, sh, self.imfac, self.nfac)
+			for sh in self.shtest] for sz in sz_l]
 
-# 		zoomfac=8
-# 		self.testimg_l2 = []
-# 		self.shtest2 = []
-# 		for sz in sz_l:
-# 			sz2 = (N.r_[sz]/2.0).reshape(2,1,1)
-# 			randim = N.random.random(sz)*255
-# 			testimg_ll = []
-# 			# Blow up image by zoomfac
-# 			randim_zm = S.ndimage.zoom(randim, zoomfac)
-#
-# 			# Shift images in zoomed space by integer shifts
-# 			for sh in self.shtest:
-# 				# We cannot shift arbitrary vectors, exact shifts depends on
-# 				# zoom factor
-# 				thissh_zm = N.round(N.r_[sh]*zoomfac)
-# 				# Store real shifts
-# 				self.shtest2.append(tuple(thissh_zm/zoomfac))
-#
-# 				# Shift image (wrap around)
-# 				thisim = randim_zm.copy()
-# 				N.roll(thisim, int(thissh_zm[0]), axis=0)
-# 				N.roll(thisim, int(thissh_zm[1]), axis=1)
-#
-# 				# Zoom down (again by zoomfac), store
-# 				thisim2 = S.ndimage.zoom(thisim, 1./zoomfac)
-# 				testimg_ll.append(thisim2)
-# 			# Show images
-# # 			plot_img_mat([testimg_ll], pause=True, extent=(-sz[1]/2, sz[1]/2, sz[0]/2, -sz[0]/2))
-# 			self.testimg_l2.append(testimg_ll)
-
-		### Generate test images ###
-		# Use Gaussian peaks to test image shifts
-
-		# Loop over all test sizes and shift vectors to generate images
-		self.testimg_l = []
-		for sz in sz_l:
-			# Half the size to generate an image
-			sz2 = (N.r_[sz]/2.0).reshape(2,1,1)
-			grid = (N.indices(sz, dtype=N.float) - sz2)
-			testimg_ll = []
-			for sh in self.shtest:
-				# Generate Poisson noise
-				noi = N.random.poisson(nfac, N.product(sz))
-				# Make shifted Gaussian peak, add noise
-				im = imfac*N.exp(-((grid[0]-sh[0])/spotsz)**2.0) * N.exp(-((grid[1]-sh[1])/spotsz)**2.0) + noi.reshape(*sz)
-				# Store in list
-				testimg_ll.append(im)
-			# Show images
-# 			plot_img_mat([testimg_ll], pause=True, extent=(-sz[1]/2, sz[1]/2, sz[0]/2, -sz[0]/2))
-			self.testimg_l.append(testimg_ll)
-
-
-	# Shallow data tests
-	def test0a_inspect(self):
-		"""Dummy test, inspect data"""
-		# Loop over different sizes
-		for idx, testimg_l0 in enumerate(self.testimg_l):
-			# Plot images for this size
-			sz = testimg_l0[0].shape
-			tit = "Input data for sz="+str(sz)+"\nshifts:"+str(self.shtest)
-			plot_img_mat([testimg_l0], fignum=idx, pause=True, pltit=tit, extent=(-sz[1]/2, sz[1]/2, sz[0]/2, -sz[0]/2))
-
-
+class TestXcorr(BaseXcorr):
 	def test1a_xcorr(self):
 		"""Test inter-image cross-correlation"""
 		# Loop over different sizes
 		for idx,testimg_l0 in enumerate(self.testimg_l):
 			# Test this shiftrange
-			shr = ((-5,3,1), (-5, 7, 1))
+			shr = self.shrng
+			sz = testimg_l0[0].shape
+			sz2 = N.r_[sz]/2.
 
+			# Output is a cross-corr for all image pairs
+			outarr = crosscorr(testimg_l0, shr, refim=None)
+
+			#print self.shtest
+			for shi, outarr_l in zip(self.shtest, outarr):
+				for shj, corr in zip(self.shtest, outarr_l):
+					vec = calc_subpixmax(corr, offset=N.r_[corr.shape]/2)
+#					print "Resid:", vec - (N.r_[shi]-N.r_[shj])
+					# In some cases, the shift is too large to measure. This
+					# happens when the shift is larger than the shr or it is
+					# outside the cross-correlated area
+					if (shi[0]+shj[0]+1 > sz2[0]-shr[0] or
+						shi[1]+shj[1]+1 > sz2[0]-shr[1] or
+						shi[0]+shj[0]+1 > shr[0] or
+						shi[1]+shj[1]+1 > shr[1]):
+						print "This shift might be too large to measure wrt the shift range and image size"
+					elif (self.nfac <= 5):
+						self.assertTrue(shi[0]-shj[0]-vec[0] < 0.05)
+						self.assertTrue(shi[1]-shj[1]-vec[1] < 0.05)
+
+class PlotXcorr(BaseXcorr):
+	# Shallow data tests
+	def test0a_inspect(self):
+		"""Dummy test, inspect data"""
+		# Loop over different sizes
+		for idx, testimg_l0 in enumerate(self.testimg_l):
+			shr = self.shrng
+			# Plot images for this size
+			sz = testimg_l0[0].shape
+			tit = "Input data for sz="+str(sz) + "shr="+str(shr) + "\nshifts:"+str(self.shtest)
+			plot_img_mat([testimg_l0], fignum=idx, pause=True, pltit=tit, extent=(-sz[1]/2, sz[1]/2, sz[0]/2, -sz[0]/2))
+
+	def test1a_xcorr(self):
+		"""Plot inter-image cross-correlation"""
+		# Loop over different sizes
+		import pylab as plt
+		for idx,testimg_l0 in enumerate(self.testimg_l):
+			# Test this shiftrange
+			shr = self.shrng
 			sz = testimg_l0[0].shape
 
 			# Output is a xcorr for all image pairs
 			outarr = crosscorr(testimg_l0, shr, refim=None)
 
 			# Plot correlation maps
-			tit = "Input data for sz="+str(sz)+"\nshifts:"+str(self.shtest)
-			plot_img_mat(outarr, fignum=idx+10, pause=True, pltit=tit, extent=(shr[0][0], shr[0][1], shr[1][0], shr[1][1]))
+			tit = "Xcorr maps for sz="+str(sz) + "shr="+str(shr) + "\nshifts:"+str(self.shtest)
+			plot_img_mat(outarr, fignum=idx+10, pause=True, pltit=tit, extent=(-shr[0], shr[0], -shr[1], shr[1]))
 
+	def test1b_xcorr_sh(self):
+		"""Plot inter-image cross-correlation shifts"""
+		# Loop over different sizes
+		import pylab as plt
+		for idx,testimg_l0 in enumerate(self.testimg_l):
+			# Test this shiftrange
+			shr = self.shrng
+			sz = testimg_l0[0].shape
+
+			# Output is a xcorr for all image pairs
+			outarr = crosscorr(testimg_l0, shr, refim=None)
+
+			plt.figure(0)
+			plt.clf()
+			tit = "Xcorr shifts for sz="+str(sz) + "shr="+str(shr) + "\nshifts:"+str(self.shtest)
+			plt.title(tit)
+			for shi, outarr_l in zip(self.shtest, outarr):
+				for shj, corr in zip(self.shtest, outarr_l):
+# 					print shi, shj
+# 					print N.r_[shi]-N.r_[shj]
+					vec = calc_subpixmax(corr, offset=N.r_[corr.shape]/2)
+					plt.plot([shi[0]-shj[0], vec[0]], [shi[1]-shj[1], vec[1]], '+-')
+			plt.figure(1)
+			plt.clf()
+			tit = "Xcorr shifts resid for sz="+str(sz) + "shr="+str(shr) + "\nshifts:"+str(self.shtest)
+			plt.title(tit)
+			for shi, outarr_l in zip(self.shtest, outarr):
+				for shj, corr in zip(self.shtest, outarr_l):
+# 					print shi, shj
+# 					print N.r_[shi]-N.r_[shj]
+					vec = calc_subpixmax(corr, offset=N.r_[corr.shape]/2)
+					plt.plot([shi[0]-shj[0]-vec[0]], [shi[1]-shj[1]-vec[1]], '*')
+			raw_input()
 
 if __name__ == "__main__":
 	import sys
