@@ -262,17 +262,14 @@ def calc_zernike(zern_vec, rad, zern_data={}):
 class TestZernikes(unittest.TestCase):
 	def setUp(self):
 		"""Generate source image, darkfield, flatfield and simulated data"""
-		sz = (257, 509)
 		rad = 257
+		rad = 127
 		self.rad = rad
 		self.nmodes = 25
 		self.vec = N.random.random(self.nmodes)
 		self.basis = []
 		self.basis_data = calc_zern_basis(self.nmodes, self.rad)
 		self.basis = self.basis_data['modes']
-		grid = (N.indices((2*rad, 2*rad), dtype=N.float) - rad) / rad
-		grid_rad = (grid[0]**2. + grid[1]**2.)**0.5
-		self.mask = grid_rad <= 1
 		self.wf = reduce(lambda x,y: x+y[1]*self.basis[y[0]], enumerate(self.vec), 0)
 
 	# Shallow data tests
@@ -339,8 +336,11 @@ class TestZernikes(unittest.TestCase):
 
 	def test2c_variance(self):
 		"""Test whether all Zernike modes have variance unity"""
-# 		for idx, m in enumerate(self.basis):
-# 			print idx, N.var(m[self.mask])
+		rad = self.rad
+		grid = (N.indices((2*rad, 2*rad), dtype=N.float) - rad) / rad
+		grid_rad = (grid[0]**2. + grid[1]**2.)**0.5
+		self.mask = grid_rad <= 1
+
 		for idx, m in enumerate(self.basis):
 			if (idx == 0):
 				continue
