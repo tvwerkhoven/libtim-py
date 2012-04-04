@@ -140,9 +140,13 @@ def calc_zern_basis(nmodes, rad, mask=True):
 	if (nmodes <= 0):
 		return {'modes':[], 'covmat':0, 'covmat_in':0}
 
-	grid = (N.indices((2*rad, 2*rad), dtype=N.float) - rad) / rad
-	grid_rad = (grid[0]**2. + grid[1]**2.)**0.5
-	grid_ang = N.arctan2(grid[0], grid[1])
+	# Use vectors instead of a grid matrix
+	rvec = ((N.arange(2.0*rad) - rad)/rad)
+	r0 = rvec.reshape(-1,1)
+	r1 = rvec.reshape(1,-1)
+	grid_rad = (r1**2. + r0**2.)**0.5
+	grid_ang = N.arctan2(r0, r1)
+
 	if (mask):
 		grid_mask = grid_rad <= 1
 	else:
@@ -184,8 +188,11 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, fitweight=None, center=(-0.5
 	if (min(center) < 0):
 		center = -N.r_[center] * min(wavefront.shape)
 
-	grid = (N.indices((2*rad, 2*rad), dtype=N.float) - rad) / rad
-	grid_rad = (grid[0]**2. + grid[1]**2.)**0.5
+	# Use vectors instead of grid
+	rvec = ((N.arange(2*rad) - rad)/rad)
+	r0 = rvec.reshape(-1,1)
+	r1 = rvec.reshape(1,-1)
+	grid_rad = (r0**2. + r1**2.)**0.5
 	grid_mask = grid_rad <= 1
 
 	xslice = slice(center[0]-rad, center[0]+rad)
