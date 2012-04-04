@@ -262,7 +262,7 @@ def _gauss_slow(sz, spotsz, spotpos, amp, noiamp):
 	grid = (N.indices(sz, dtype=N.float) - sz2)
 
 	# Make shifted Gaussian peak
-	im = amp*N.exp(-((grid[0]-spotpos[1])/spotsz)**2.0) * N.exp(-((grid[1]-spotpos[0])/spotsz)**2.0)
+	im = amp*N.exp(-((grid[0]-spotpos[0])/spotsz)**2.0) * N.exp(-((grid[1]-spotpos[1])/spotsz)**2.0)
 
 	# Add noise if requested
 	if (noiamp > 0):
@@ -282,7 +282,7 @@ def _gauss(sz, spotsz, spotpos, amp, noiamp):
 	r1 = (N.arange(sz[1]) - sz[1]/2.0).reshape(1,-1)
 
 	# Make shifted Gaussian peak
-	im = amp*N.exp(-((r0-spotpos[1])/spotsz)**2.0) * N.exp(-((r1-spotpos[0])/spotsz)**2.0)
+	im = amp*N.exp(-((r0-spotpos[0])/spotsz)**2.0) * N.exp(-((r1-spotpos[1])/spotsz)**2.0)
 
 	# Add noise if requested
 	if (noiamp > 0):
