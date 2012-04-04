@@ -83,8 +83,10 @@ ERRORCL = "\033[37;41m"
 #=============================================================================
 
 
+## @brief
+# @deprecated Use init_logfile instead
 def initLogFile(*args):
-	raise RuntimeError("Use init_logfile() instead")
+	raise DeprecationWarning("Use init_logfile() instead")
 
 ## @brief (Re-)initialize logging to disk at 'logfile'
 def init_logfile(logfile):
@@ -132,4 +134,4 @@ def log_msg(verb, msg, err=EXIT):
 			print LVLDESC[verb], msg
 
 def prNot(verb, msg, err=EXIT):
-	raise RuntimeError("Use log_msg() instead")
+	raise DeprecationWarning("Use log_msg() instead")
