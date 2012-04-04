@@ -468,7 +468,7 @@ class BaseXcorr(unittest.TestCase):
 		# NB: If these are too large compared to shrng and sz_l, we cannot
 		# find it back with xcorr measurements
 #		self.shtest = [(0,0), (5.5, 4.3), (0.9, 0.8), (3.2, 11.1)]
-		self.shtest = [(0,0), (1.5981882, 2.312351), (0.9, 0.8)]
+		self.shtest = [(0,0), (5,2), (1.5981882, 2.312351), (0.9, 0.8)]
 		# Poisson noise factor and image intensity factor
 		self.nfac = 5
 		self.imfac = 255
@@ -484,7 +484,30 @@ class BaseXcorr(unittest.TestCase):
 			for sh in self.shtest] for sz in sz_l]
 
 class TestXcorr(BaseXcorr):
-	def test1a_xcorr(self):
+	def test1a_test_func(self):
+		"""Test cross-correlation function calls"""
+		# Loop over different sizes
+		for idx, testimg_l0 in enumerate(self.testimg_l):
+			refim = testimg_l0[0]
+			for shr in [(1,1), (5,5), (3,8), (1,9)]:
+				for dsh in [(1,1), (2,2)]:
+					corr_map = crosscorr(testimg_l0, shr, dsh, refim)
+					# Correlation with refim should give 1xN correlation list
+					self.assertEqual(len(corr_map), 1)
+					self.assertEqual(len(corr_map[0]), len(testimg_l0))
+
+					# Individual corr maps should be ceil(2*shr+1 / dsh)
+					self.assertEqual(
+						corr_map[0][0].shape,
+						tuple( (N.ceil((2.0*N.r_[shr]+1)/N.r_[dsh])) )
+						) # //assertEqual
+
+					corr_map = crosscorr(testimg_l0, shr, dsh)
+					# Without refim should give a NxN correlation list
+					self.assertEqual(len(corr_map), len(corr_map[0]))
+
+
+	def test2a_xcorr(self):
 		"""Test inter-image cross-correlation"""
 		# Loop over different sizes
 		for idx,testimg_l0 in enumerate(self.testimg_l):
@@ -508,7 +531,8 @@ class TestXcorr(BaseXcorr):
 						shi[1]+shj[1]+1 > sz2[0]-shr[1] or
 						shi[0]+shj[0]+1 > shr[0] or
 						shi[1]+shj[1]+1 > shr[1]):
-						print "This shift might be too large to measure wrt the shift range and image size"
+						# This shift might be too large to measure wrt the shift range and image size, don't test
+						pass
 					elif (self.nfac <= 5):
 						self.assertTrue(shi[0]-shj[0]-vec[0] < 0.05)
 						self.assertTrue(shi[1]-shj[1]-vec[1] < 0.05)
@@ -535,11 +559,13 @@ class PlotXcorr(BaseXcorr):
 			sz = testimg_l0[0].shape
 
 			# Output is a xcorr for all image pairs
-			outarr = crosscorr(testimg_l0, shr, refim=None)
+			outarr = crosscorr(testimg_l0, shr, refim=testimg_l0[0])
+			vec = calc_subpixmax(outarr, offset=N.r_[outarr.shape]/2)
 
 			# Plot correlation maps
 			tit = "Xcorr maps for sz="+str(sz) + "shr="+str(shr) + "\nshifts:"+str(self.shtest)
 			plot_img_mat(outarr, fignum=idx+10, pause=True, pltit=tit, extent=(-shr[0], shr[0], -shr[1], shr[1]))
+
 
 	def test1b_xcorr_sh(self):
 		"""Plot inter-image cross-correlation shifts"""
