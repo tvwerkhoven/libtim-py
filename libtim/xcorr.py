@@ -403,7 +403,7 @@ a=_gauss(sz, spsz, pos, amp, noi)
 class TestSubpixmax(unittest.TestCase):
 	def setUp(self):
 		self.sz_l = [(37, 43), (61, 31)]
-		self.pos_l = [(1,1), (15,13), (20,1), (35, 29)]
+		self.pos_l = [(1,5), (15,13), (20,1), (35, 29)]
 
 	# api: calc_subpixmax(data, offset=(0,0), dimension=2, error=False):
 
@@ -417,6 +417,17 @@ class TestSubpixmax(unittest.TestCase):
 					p = calc_subpixmax(simple, dimension=dim)
 					self.assertEqual(tuple(p), pos)
 
+	def test1b_offset(self):
+		"""Simple test of hot pixels in zero matrix, using offset"""
+		for sz in self.sz_l:
+			offs = N.r_[sz]/2.
+			for pos in self.pos_l:
+				simple = N.zeros(sz)
+				simple[pos] = 1
+				for dim in range(3):
+					p = calc_subpixmax(simple, offset=offs, dimension=dim)
+					self.assertEqual(tuple(p), tuple(N.r_[pos]-offs))
+
 	def test3a_random_data(self):
 		"""Give random input data"""
 		for it in range(10):
@@ -429,17 +440,22 @@ class TestSubpixmax(unittest.TestCase):
 				calc_subpixmax(rnd, offset=(0,0), dimension=dim, error=False)
 
 	def test3b_edge_error(self):
-		"""Maximum at edge should give IndexError"""
-		map = N.zeros(self.sz_l[0])
+		"""Maximum at edge should give max intensity pixel pos"""
+		map = N.random.random(self.sz_l[0])*0.7
 		# Set maximum at the edge
 		map[0,0] = 1
 		# 0D should not raise:
-		calc_subpixmax(map, offset=(0,0), dimension=0, error=True)
+		vec0 = calc_subpixmax(map, offset=(0,0), dimension=0, error=True)
 		# 1D and 2D should raise:
-		with self.assertRaises(ValueError):
-			calc_subpixmax(map, offset=(0,0), dimension=1, error=True)
-		with self.assertRaises(ValueError):
-			calc_subpixmax(map, offset=(0,0), dimension=2, error=True)
+# 		with self.assertRaises(ValueError):
+# 			calc_subpixmax(map, offset=(0,0), dimension=1, error=True)
+# 		with self.assertRaises(ValueError):
+# 			calc_subpixmax(map, offset=(0,0), dimension=2, error=True)
+		vec1 = calc_subpixmax(map, offset=(0,0), dimension=1, error=True)
+		vec2 = calc_subpixmax(map, offset=(0,0), dimension=2, error=True)
+		self.assertEqual(tuple(vec0), (0,0))
+		self.assertEqual(tuple(vec0), tuple(vec1))
+		self.assertEqual(tuple(vec0), tuple(vec2))
 
 class BaseXcorr(unittest.TestCase):
 	def setUp(self):
