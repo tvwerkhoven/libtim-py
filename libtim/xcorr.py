@@ -362,6 +362,8 @@ class BaseXcorr(unittest.TestCase):
 		sz_l = [(37, 43), (61, 31)]
 		sz_l = [(37, 43), (257, 509)]
 		# Test shift vectors
+		# NB: If these are too large compared to shrng and sz_l, we cannot
+		# find it back with xcorr measurements
 #		self.shtest = [(0,0), (5.5, 4.3), (0.9, 0.8), (3.2, 11.1)]
 		self.shtest = [(0,0), (1.5981882, 2.312351), (0.9, 0.8)]
 		# Poisson noise factor and image intensity factor
@@ -391,11 +393,11 @@ class TestXcorr(BaseXcorr):
 			# Output is a cross-corr for all image pairs
 			outarr = crosscorr(testimg_l0, shr, refim=None)
 
-			#print self.shtest
+			# Loop over shift vectors and correlation maps
 			for shi, outarr_l in zip(self.shtest, outarr):
 				for shj, corr in zip(self.shtest, outarr_l):
 					vec = calc_subpixmax(corr, offset=N.r_[corr.shape]/2)
-#					print "Resid:", vec - (N.r_[shi]-N.r_[shj])
+
 					# In some cases, the shift is too large to measure. This
 					# happens when the shift is larger than the shr or it is
 					# outside the cross-correlated area
