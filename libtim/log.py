@@ -19,7 +19,7 @@ and quite meaningful on its own.
 # license versions 3.0 or higher, see
 # http://creativecommons.org/licenses/by-sa/3.0/
 
-## @package liblog
+## @package log
 # @brief Library for logging functionality
 # @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
 # @date 20090330
