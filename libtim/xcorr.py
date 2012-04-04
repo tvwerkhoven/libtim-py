@@ -252,7 +252,7 @@ def _gauss_slow(sz, spotsz, spotpos, amp, noiamp):
 	"""
 	Calculate Gauss in matrix of size <sz> with width <spotsz> at position <spotpos> and amplitude <amp>. If <noiamp> > 0, add Poissonian noise as well.
 
-	Deprecated: please use _gauss() instead which is ~3--20x faster.
+	@deprecated please use _gauss() instead which is ~3--20x faster.
 
 	@return ndarray of shape <sz> with the Guassian function
 	"""
