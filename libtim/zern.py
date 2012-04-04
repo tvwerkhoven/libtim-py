@@ -398,11 +398,13 @@ vec = N.random.random(nmodes)
 		t_cache = t1.timeit(self.calc_iter)/self.calc_iter
 		t_nocache = t2.timeit(self.calc_iter)/self.calc_iter
 		# Caching should be at least twice as fast as no caching
-		print "test3a_timing_calc(): cached: %.3g sec/it, non-cached: %.3g sec/it" % (t_cache, t_nocache)
+		# Note that here we do not initialize the cache in the setup, it is
+		# set to an empty dict which is filled on first run. This test should
+		# test that this automatic filling works properly
 		self.assertGreater(t_nocache/2.0, t_cache)
 
 	def test3b_timing_calc(self):
-		"""Test Zernike calculation performance"""
+		"""Test Zernike calculation performance with and without cache"""
 
 		t1 = Timer("""
 a=calc_zernike(vec, rad, z_cache)
@@ -415,8 +417,19 @@ vec = N.random.random(nmodes)
 z_cache = calc_zern_basis(len(vec), rad)
 		""" % (self.rad, self.nmodes) )
 
+		t2 = Timer("""
+a=calc_zernike(vec, rad, {})
+		""", """
+from __main__ import calc_zern_basis, fit_zernike, calc_zernike
+import numpy as N
+rad = %d
+nmodes = %d
+vec = N.random.random(nmodes)
+		""" % (self.rad, self.nmodes) )
+
 		t_cached = min(t1.repeat(2, self.calc_iter))/self.calc_iter
-		print "test3b_timing_calc(): rad=257, nmodes=25 %.3g sec/it" %(t_cached)
+		t_nocache = min(t2.repeat(2, self.calc_iter))/self.calc_iter
+		print "test3b_timing_calc(): rad=257, nmodes=25 cache: %.3g s/it no cache: %.3g s/it" % (t_cached, t_nocache)
 
 	def test3c_timing_fit(self):
 		"""Test Zernike fitting performance"""
