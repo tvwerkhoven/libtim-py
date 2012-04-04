@@ -1,7 +1,15 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-Some utilities for Fourier transforming data
+@file fft.py
+@author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
+@date 20120403
+
+Created by Tim van Werkhoven on 2012-04-03. Copyright (c) 2012 Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
+
+This file is licensed under the Creative Commons Attribution-Share Alike
+license versions 3.0 or higher, see
+http://creativecommons.org/licenses/by-sa/3.0/
 """
 
 ##  @file fft.py
