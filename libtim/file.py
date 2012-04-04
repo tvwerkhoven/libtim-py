@@ -1,7 +1,15 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
+@file file.py
+@author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
+@date 20120403
+
 This module provides some file IO functions
+
+Created by Tim van Werkhoven on 2012-04-03. Copyright (c) 2012 Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
+
+This file is licensed under the Creative Commons Attribution-Share Alike license versions 3.0 or higher, see http://creativecommons.org/licenses/by-sa/3.0/
 """
 
 ##  @file file.py
@@ -62,35 +70,7 @@ def read_file(fpath, dtype=None):
 	return read_func(fpath)
 
 def read_files(flist, dtype=None):
-	"""Read files from <flist>. If <dtype> is set, force reading routines
-	with this datatype, otherwise guess from extension or simply try.
-
-	This routine will always return the data in a list, even if <flist>
-	only contains one filename.
-
-	@param [in] flist List of file paths to read
-	@param [in] dtype Datatype to read. If absent, guess.
-	@return List of of data matrices.
-	"""
-
-	# If we have only one file, put in single-element list
-	if (flist.__class__ == str):
-		flist = [flist]
-
-	# Check datatype, if not set: detect from file extension
-	if (dtype == None):
-		dtype = os.path.splitext(flist[0])[1].lower()[1:]
-
-	# Check correct read function
-	if (dtype == 'fits'):
-		# FITS needs pyfits
-		read_func = pyfits.getdata
-	else:
-		# Anything else should work with PIL's imread(). If not, it will throw anyway so we don't need to check
-		read_func = mpimg.imread
-
-	# Read files
-	return [read_func(path) for path in flist]
+	raise DeprecationWarning("Use '[read_file(f) for f in flist]' instead")
 
 def filenamify(str):
 	"""
