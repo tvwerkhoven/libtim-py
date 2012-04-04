@@ -220,9 +220,11 @@ def calc_subpixmax(data, offset=(0,0), dimension=2, error=False):
 # Unittesting
 #=============================================================================
 
-def _gauss(sz, spotsz, spotpos, amp, noiamp):
+def _gauss_slow(sz, spotsz, spotpos, amp, noiamp):
 	"""
 	Calculate Gauss in matrix of size <sz> with width <spotsz> at position <spotpos> and amplitude <amp>. If <noiamp> > 0, add Poissonian noise as well.
+
+	Deprecated: please use _gauss() instead which is ~3--20x faster.
 
 	@return ndarray of shape <sz> with the Guassian function
 	"""
@@ -239,6 +241,77 @@ def _gauss(sz, spotsz, spotpos, amp, noiamp):
 		return im + N.random.poisson(noiamp, N.product(sz)).reshape(*sz)
 	else:
 		return im
+
+def _gauss(sz, spotsz, spotpos, amp, noiamp):
+	"""
+	Calculate Gauss in matrix of size <sz> with width <spotsz> at position <spotpos> and amplitude <amp>. If <noiamp> > 0, add Poissonian noise as well.
+
+	@return ndarray of shape <sz> with the Guassian function
+	"""
+
+	# Coordinate grid
+	r0 = (N.arange(sz[0]) - sz[0]/2.0).reshape(-1,1)
+	r1 = (N.arange(sz[1]) - sz[1]/2.0).reshape(1,-1)
+
+	# Make shifted Gaussian peak
+	im = amp*N.exp(-((r0-spotpos[1])/spotsz)**2.0) * N.exp(-((r1-spotpos[0])/spotsz)**2.0)
+
+	# Add noise if requested
+	if (noiamp > 0):
+		return im + N.random.poisson(noiamp, N.product(sz)).reshape(*sz)
+	else:
+		return im
+
+class TestGaussFuncs(unittest.TestCase):
+	def setUp(self):
+		# Gauss function settings
+		self.sz_l = [(37, 43), (257, 509)]
+		self.spotsz_l = [1.,8.]
+		self.pos_l = [(1,1), (15,13), (20,1)]
+		self.amp = 255
+		self.noi = 0
+		# Timing parameters
+		self.niter = 100
+
+	# api: _gauss[2](sz, spotsz, spotpos, amp, noiamp)
+
+	def test1a_equal(self):
+		"""Test if two functions give identical results"""
+		for sz in self.sz_l:
+			for spsz in self.spotsz_l:
+				for pos in self.pos_l:
+					g1 = _gauss_slow(sz, spsz, pos, self.amp, self.noi)
+					g2 = _gauss(sz, spsz, pos, self.amp, self.noi)
+					##! @todo Proper way to assert two ndarrays identicity?
+					#print sz, spsz, pos, N.mean(g1-g2), 0.0
+					self.assertAlmostEqual(N.mean(g1-g2), 0.0)
+
+	def test2a_timing(self):
+		"""Test timing for two functions"""
+		print "test2a_timing(): timings in msec/iter"
+		for sz in self.sz_l:
+			for spsz in self.spotsz_l:
+				for pos in self.pos_l:
+					setup_str = """
+from __main__ import _gauss, _gauss_slow
+import numpy as N
+sz = (%d,%d)
+spsz = %g
+pos = (%d,%d)
+amp = %g
+noi = %g
+					""" % (sz + (spsz,) + pos + (self.amp, self.noi))
+
+					t1 = Timer("""
+g=_gauss_slow(sz, spsz, pos, amp, noi)
+					""", setup_str)
+					t2 = Timer("""
+a=_gauss(sz, spsz, pos, amp, noi)
+					""", setup_str)
+					t_g1 = 1000*min(t1.repeat(3, self.niter))/self.niter
+					t_g2 = 1000*min(t2.repeat(3, self.niter))/self.niter
+					print "test2a_timing(): sz:", sz, "g1: %.3g, g2: %.3g, speedup: %.3g" % (t_g1, t_g2, t_g1/t_g2)
+
 
 class TestSubpixmax(unittest.TestCase):
 	def setUp(self):
@@ -399,4 +472,5 @@ class PlotXcorr(BaseXcorr):
 
 if __name__ == "__main__":
 	import sys
+	from timeit import Timer
 	sys.exit(unittest.main())
