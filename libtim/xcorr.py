@@ -68,16 +68,18 @@ def crosscorr(imlst, shrange, dsh=(1,1), refim=None):
 		xcorr_mat = [[
 			N.r_[ [[
 			N.sum(refim[sh0+shi:imsz0-sh0+shi, sh1+shj:imsz1-sh1+shj] * refim[sm_crop])
-			for shi in xrange(-sh0, sh0+1, dsh0)]
-				for shj in xrange(-sh1, sh1+1, dsh1)] ]
+			for shj in xrange(-sh1, sh1+1, dsh1)]
+				for shi in xrange(-sh0, sh0+1, dsh0)]
+				] # // N.r_
 					for fj in imlst]]
 	# Calculate correlation for all files with each other (output NxN)
 	else:
 		xcorr_mat = [[
 			N.r_[ [[
 			N.sum(fi[sh0+shi:imsz0-sh0+shi, sh1+shj:imsz1-sh1+shj] * fj[sm_crop])
-			for shi in xrange(-sh0, sh0+1, dsh0)]
-				for shj in xrange(-sh1, sh1+1, dsh1)] ]
+			for shj in xrange(-sh1, sh1+1, dsh1)]
+				for shi in xrange(-sh0, sh0+1, dsh0)]
+				] # // N.r_
 					for fj in imlst]
 						for fi in imlst]
 
