@@ -369,6 +369,7 @@ class TestGaussFuncs(unittest.TestCase):
 					##! @todo Proper way to assert two ndarrays identicity?
 					#print sz, spsz, pos, N.mean(g1-g2), 0.0
 					self.assertAlmostEqual(N.mean(g1-g2), 0.0)
+					self.assertTrue(N.allclose(g1, g2))
 
 	def test2a_timing(self):
 		"""Test timing for two functions"""
