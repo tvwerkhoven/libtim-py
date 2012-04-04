@@ -288,6 +288,64 @@ def _gauss(sz, spotsz, spotpos, amp, noiamp):
 	else:
 		return im
 
+class TestShift(unittest.TestCase):
+	def setUp(self):
+		# Make init gauss
+		self.sz = (257, 509)
+		self.sz = (31, 29)
+		self.spotsz = 2.
+		self.pos_l = [(1,1), (2*self.spotsz, -2*self.spotsz), (5,8)]
+		self.amp = 255
+
+		self.refim = _gauss(self.sz, self.spotsz, (0,0), self.amp, 0)
+
+	# shift_img(im, shvec, method="pixel", zoomfac=8)
+	def test1a_identity(self):
+		"""Test if move function does not change a (0,0) shift"""
+		shift = (0,0)
+		im_sh1 = shift_img(self.refim, shift, method="pixel", zoomfac=8)
+		im_sh2 = shift_img(self.refim, shift, method="fourier")
+
+		self.assertLess(N.mean(im_sh1-self.refim), 1e-6)
+		self.assertLess(N.mean(im_sh2-self.refim), 1e-6)
+
+
+	def test1b_diff(self):
+		"""Test if a non-zero shift changes the image"""
+		shift = (2*self.spotsz, 2*self.spotsz)
+		im_sh1 = shift_img(self.refim, shift, method="pixel", zoomfac=8)
+		im_sh2 = shift_img(self.refim, shift, method="fourier")
+
+		# Total summed diff should be zero because the shape doesn't change
+		# Pixel shifting is not very accurate, so the residual is bigger
+		self.assertLess(N.mean(im_sh1-self.refim), self.amp/100.)
+		self.assertLess(N.mean(im_sh2-self.refim), 1e-6)
+
+		# The absolute difference should be very nonzero
+		self.assertGreater(N.sum(N.abs(im_sh1-self.refim)), self.amp)
+		self.assertGreater(N.sum(N.abs(im_sh2-self.refim)), self.amp)
+
+	def test2a_plot(self):
+		"""Plot shifted images"""
+
+		plrn = (-self.sz[0]/2, self.sz[0]/2, -self.sz[1]/2, self.sz[1]/2)
+		plt.figure(0)
+		plt.clf()
+		plt.title("Reference image")
+		plt.imshow(self.refim, extent=plrn)
+		for sh in self.pos_l:
+			im_sh1 = shift_img(self.refim, sh, method="pixel", zoomfac=8)
+			im_sh2 = shift_img(self.refim, sh, method="fourier")
+			plt.figure(1)
+			plt.clf()
+			plt.title("Pixel-shifted with: " + str(sh))
+			plt.imshow(im_sh1, extent=plrn)
+			plt.figure(2)
+			plt.clf()
+			plt.title("Fourier-shifted with: " + str(sh))
+			plt.imshow(im_sh2, extent=plrn)
+			raw_input()
+
 class TestGaussFuncs(unittest.TestCase):
 	def setUp(self):
 		# Gauss function settings
@@ -501,4 +559,5 @@ class PlotXcorr(BaseXcorr):
 if __name__ == "__main__":
 	import sys
 	from timeit import Timer
+	import pylab as plt
 	sys.exit(unittest.main())
