@@ -70,9 +70,9 @@ def mk_apod_mask(masksz, apodpos=None, apodsz=None, shape='rect', wsize=-0.3, ap
 			apod_func = lambda x: 0.5 * (1.0 - N.cos(N.pi*x))
 		elif (apod_f[:4] == 'hamm'):
 			apod_func = lambda x: 0.54 - 0.46 *N.cos(N.pi*x)
-		elif (apod_f == 'cosine' or apod_f == 'sine'):
+		elif (apod_f[:3] == 'cos' or apod_f[:3] == 'sin'):
 			apod_func = lambda x: N.sin(N.pi*x*0.5)
-		elif (apod_f == 'lanczos'):
+		elif (apod_f[:4] == 'lanc'):
 			apod_func = lambda x: N.sinc(x-1.0)
 		else:
 			raise ValueError("<apod_f> not supported!")
