@@ -115,35 +115,61 @@ def plot_img_mat(img_mat, fignum=0, pause=True, pltit="", titles=(), **kwargs):
 
 def shift_img(im, shvec, method="pixel", zoomfac=8):
 	"""
-	Shift <im> by <shvec> using either pixel or Fourier method.
+	Shift 2D array <im> by <shvec> using either pixel or Fourier method.
 
 	Pixel method: scale up image with scipy.ndimage.zoom() with a factor of <zoomfac>, then shift by integer number of pixels, then zoom down again to original size. The resolution of this shift is 1.0/<zoomfac>.
 
-	Fourier method: shift in Fourier space.
+	Fourier method: shift in Fourier space based on the Fourier transform
+	shift theorem:
+		f(x-dx,y-dy) <==> exp(-2pi i(u*dx+v*dy)) F(u,v)
+
+	The Fourier shift code is taken from fftshiftcube written by Marshall
+	Perrin at 2001-07-27. Original api:
+	FUNCTION fftshiftcube,cube,dx,dy,null=null
 	"""
+	sz = im.shape
+
 	if (method == "pixel"):
+		import scipy as S
+		import scipy.ndimage
 		# Blow up image and shift by zoomfac
 		im_zm = S.ndimage.zoom(im, zoomfac)
-		sh_zm = N.round(N.r_[shvec]*zoomfac)
+		shvec_zm = N.round(N.r_[shvec]*zoomfac)
 
 		# Calculate real shift vector
 		realsh = N.round(N.r_[shvec]*zoomfac)/zoomfac
 
 		# Shift scaled up image
-		N.roll(im_zm, int(sh_zm[0]), axis=0)
-		N.roll(im_zm, int(sh_zm[1]), axis=1)
+		im_zm = N.roll(im_zm, int(shvec_zm[0]), axis=0)
+		im_zm = N.roll(im_zm, int(shvec_zm[1]), axis=1)
 
 		# Scale back to original size and return
 		return S.ndimage.zoom(im_zm, 1./zoomfac)
 	elif (method == "fourier"):
-		raise NotImplemented("<method>=fourier not implemented")
-		grid = N.indices(im.shape)
+		# Linear increasing array, subtract 50%, roll 50% -> sawtooth
+		u0 = N.roll(N.arange(sz[0])*1. - sz[0]/2, sz[0]/2).reshape(-1,1)
+		u1 = N.roll(N.arange(sz[1])*1. - sz[0]/2, sz[1]/2).reshape(1,-1)
+
+		# Convert to frequency, mult by shift
+		u0 = shvec[0] * u0/sz[0]
+		u1 = shvec[1] * u1/sz[1]
 
 		# Make apodisation
-		apod_mask = _fft.mk_apod_mask(im.shape, wsize=0.1, apod_f=wfunc)
+		apod_mask = _fft.mk_apod_mask(im.shape, wsize=-0.1, apod_f='cos')
+
+		# Mask images. Use the median not the mean because it's better at
+		# grabbing the sky rather than the star
+		offs = N.median(im)
+		im2 = (im-offs) * apod_mask
 
 		# FT image
-		im_ft = N.fft.fft2(im)
+		im_ft = N.fft.fft2(im2)
+
+		# Make shift mask
+		sh_mask = N.exp(-2*N.pi*1j*(u0+u1))
+
+		# Shift and return
+		return N.fft.ifft2(sh_mask*im_ft).real + offs
 	else:
 		raise ValueError("<method> %s not valid" % (method))
 
