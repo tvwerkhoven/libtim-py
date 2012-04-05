@@ -33,6 +33,7 @@ and quite meaningful on its own.
 
 import sys
 import time
+import unittest
 
 #=============================================================================
 # Defines
@@ -67,7 +68,7 @@ LOGFD = 0
 LOGLASTDAY = 0
 
 ## @brief Verbosity level to use
-VERBOSITY = 4
+VERBOSITY = 8
 
 ## @brief Reset color codes
 RESETCL = "\033[0m"
@@ -107,7 +108,7 @@ def init_logfile(logfile):
 # @param err Exit status to use for verb == ERR
 def log_msg(verb, msg, err=EXIT):
 	# First save to file if LOGFD is set...
-	if (verb < DEBUG and LOGFD):
+	if (verb <= DEBUG and LOGFD):
 		tm = time.localtime()
 		global LOGLASTDAY
 		if (LOGLASTDAY != tm[2]):
@@ -123,11 +124,10 @@ def log_msg(verb, msg, err=EXIT):
 		elif (verb == WARNING):
 			sys.stdout.write(WARNCL)
 			print LVLDESC[verb], msg, RESETCL
-		elif (verb == ERR):
+		elif (verb <= ERR):
 			sys.stdout.write(ERRORCL)
 			print LVLDESC[verb], msg, RESETCL
-			# If we have an error, close the FD! otherwise the last message(s) will
-			# be lost.
+			# If we have an error, close the file, or data might be lost
 			if LOGFD: LOGFD.close()
 			sys.exit(err)
 		else:
@@ -135,3 +135,41 @@ def log_msg(verb, msg, err=EXIT):
 
 def prNot(verb, msg, err=EXIT):
 	raise DeprecationWarning("Use log_msg() instead")
+
+class TestLogger(unittest.TestCase):
+	def setUp(self):
+		self.msg = "test message 1234567890"
+		self.longmsg = "test message 1234567890 "*10
+		self.logf = "/tmp/log.py_testing.log"
+
+	def test1a_msg(self):
+		"""Test log function"""
+		for v in range(7):
+			try:
+				log_msg(7-v, self.msg)
+				log_msg(7-v, self.longmsg)
+			except SystemExit:
+				pass
+
+	def test1b_msg_exit(self):
+		"""Test exit raise"""
+		with self.assertRaises(SystemExit):
+			log_msg(ERR, self.msg)
+
+	def test2a_logfile(self):
+		"""Test logfile output"""
+		init_logfile(self.logf)
+		for v in range(5):
+			try:
+				log_msg(7-v, self.msg)
+			except SystemExit:
+				fd = open(self.logf, "r")
+				buff = fd.read()
+				fd.close()
+				if (self.logf):
+					os.remove(self.logf)
+				self.assertGreater(len(buff), 5*len(self.msg))
+
+if __name__ == "__main__":
+	import sys, os
+	sys.exit(unittest.main())
