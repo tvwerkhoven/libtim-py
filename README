@@ -1,5 +1,5 @@
-libwfs-py: some wavefront-related tools
-==============================================================================
+libtim-py: miscellaneous data manipulation utils
+================================================
 
 About
 =====
@@ -7,7 +7,7 @@ About
 This library provides some routines to work with wavefront analysis, which can
 be useful for (offline) wavefront sensor data processing.
 
-Created by Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl).
+Created by Tim van Werkhoven (werkhoven@strw.leidenuniv.nl).
 
 Installation
 ============
@@ -27,10 +27,14 @@ Usage
 =====
 
 Documentation of routines can be found in the docstrings of the respective 
-modules.
+modules. Also, running doxygen in ./doc will extract the docstrings and present nicely formatted HTML documentation.
 
 Version history
 ===============
 
+20120407, v0.1.1
+   * Updated documentation
+20120404
+   * Resurrection, major code overhaul and restructuring
 20100519, v0.1.0:
    * Initial version
