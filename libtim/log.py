@@ -1,31 +1,16 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-This is liblog, providing logging functions
+@package libtim.log
+@brief Terminal and file logging functionality
+@author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
+@copyright Copyright (c) 2008--2012 Tim van Werkhoven
+@date 20090330
 
-This module provides logging functions to log data using prefixes, loglevels
-and permanent logfiles. This is probably only useful in more elaborate scripts
-and quite meaningful on its own.
+Logging functions to log data using prefixes, loglevels and permanent logfiles. This is probably only useful in more elaborate scripts.
+
+This file is licensed under the Creative Commons Attribution-Share Alike license versions 3.0 or higher, see http://creativecommons.org/licenses/by-sa/3.0/
 """
-
-##  @file log.py
-# @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
-# @date 20090330
-#
-# Created by Tim van Werkhoven on 2009-03-30.
-# Copyright (c) 2008-2009 Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
-#
-# This file is licensed under the Creative Commons Attribution-Share Alike
-# license versions 3.0 or higher, see
-# http://creativecommons.org/licenses/by-sa/3.0/
-
-## @package log
-# @brief Library for logging functionality
-# @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
-# @date 20090330
-#
-# This package provides some routines for printing and logging messages to
-# screen, disk or whatever.
 
 #=============================================================================
 # Import libraries here
@@ -83,14 +68,18 @@ ERRORCL = "\033[37;41m"
 # Routines
 #=============================================================================
 
-
-## @brief
-# @deprecated Use init_logfile instead
 def initLogFile(*args):
+	"""
+	@deprecated Use init_logfile instead
+	"""
 	raise DeprecationWarning("Use init_logfile() instead")
 
-## @brief (Re-)initialize logging to disk at 'logfile'
 def init_logfile(logfile):
+	"""
+	@brief (Re-)initialize logging to disk at 'logfile'
+
+	@param logfile file to use for loggin
+	"""
 	global LOGFD
 	if (not LOGFD):
 		LOGFD = open(logfile, "a+")
@@ -98,15 +87,17 @@ def init_logfile(logfile):
 		LOGFD.close()
 		LOGFD = open(logfile, "a+")
 
-## @brief Print log message with a certain verbosity.
-#
-# Print a log message. If LOGFD is set, it is also written to the file that
-# file descriptor is poiting to. Status levels are prepended to the output.
-#
-# @param verb The status level of the message
-# @param msg The message to print
-# @param err Exit status to use for verb == ERR
+
 def log_msg(verb, msg, err=EXIT):
+	"""
+	@brief Print log message with a certain verbosity.
+
+	Print a log message. If LOGFD is set, it is also written to the file that file descriptor is poiting to. Status levels are prepended to the output.
+
+	@param verb The status level of the message
+	@param msg The message to print
+	@param err Exit status to use for verb == ERR
+	"""
 	# First save to file if LOGFD is set...
 	if (verb <= DEBUG and LOGFD):
 		tm = time.localtime()
@@ -134,6 +125,9 @@ def log_msg(verb, msg, err=EXIT):
 			print LVLDESC[verb], msg
 
 def prNot(verb, msg, err=EXIT):
+	"""
+	@deprecated Use log_msg instead
+	"""
 	raise DeprecationWarning("Use log_msg() instead")
 
 class TestLogger(unittest.TestCase):

@@ -1,26 +1,16 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-im, providing some image manipulation routines
+@package libtim.im
+@brief Image manipulation routines
+@author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
+@copyright Copyright (c) 2012 Tim van Werkhoven
+@date 20120403
+
+Image manipulation functions
+
+This file is licensed under the Creative Commons Attribution-Share Alike license versions 3.0 or higher, see http://creativecommons.org/licenses/by-sa/3.0/
 """
-
-##  @file im.py
-# @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
-# @date 20120403
-#
-# Created by Tim van Werkhoven on 2012-04-03.
-# Copyright (c) 2012 Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
-#
-# This file is licensed under the Creative Commons Attribution-Share Alike
-# license versions 3.0 or higher, see
-# http://creativecommons.org/licenses/by-sa/3.0/
-
-## @package im
-# @brief Image manipulation routines
-# @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
-# @date 20120403
-#
-# This package provides image manipulation function
 
 #=============================================================================
 # Import libraries here

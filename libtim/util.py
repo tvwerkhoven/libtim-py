@@ -1,28 +1,17 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
+@package libtim.util
+@brief Miscellaneous string manipulation functions
+@author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
+@copyright Copyright (c) 2012 Tim van Werkhoven
+@date 20120403
+
 This module provides some miscellaneous utility functions for parsing strings,
-filenames, etc.
+filenames, making headers etc.
+
+This file is licensed under the Creative Commons Attribution-Share Alike license versions 3.0 or higher, see http://creativecommons.org/licenses/by-sa/3.0/
 """
-
-##  @file util.py
-# @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
-# @date 20120403
-#
-# Created by Tim van Werkhoven on 2012-04-03.
-# Copyright (c) 2012 Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
-#
-# This file is licensed under the Creative Commons Attribution-Share Alike
-# license versions 3.0 or higher, see
-# http://creativecommons.org/licenses/by-sa/3.0/
-
-## @package util
-# @brief Library for miscellaneous utility
-# @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
-# @date 20120403
-#
-# This package provides some miscellaneous utility functions for parsing
-# strings, filenames, etc.
 
 #=============================================================================
 # Import libraries here
@@ -44,7 +33,10 @@ import unittest
 #=============================================================================
 
 def find_uniq(strlist, tokenize=True, tokens=['.', '-', '_']):
-	"""In a list of strings <strlist> of equal length (e.g. filenames), find the shortest continuous part of the string that uniquely identifies each item in the list. If <tokenize> is True, the string is split only at any of the characters in <tokens>, otherwise it is split at any letter.
+	"""
+	Find shortest substring that uniquely identifies all strlist entries.
+
+	In a list of strings <strlist> of equal length (e.g. filenames), find the shortest continuous part of the string that uniquely identifies each item in the list. If <tokenize> is True, the string is split only at any of the characters in <tokens>, otherwise it is split at any letter.
 
 	Example, given these strings:
 	unibrain-frame-20110916_0000.ppm.png
@@ -122,9 +114,10 @@ def find_uniq(strlist, tokenize=True, tokens=['.', '-', '_']):
 		return (prelen, postlen)
 
 def find_tok_pos(tokstr, tokens=['.', '-', '_'], rev=False, past=True):
-	"""Given a string <tokstr>, return a sorted list of the positions of all
-	the tokens in <tokens>. If rev(erse) is True, search from the back instead
-	of the front. If <past> is True, store the position of the token plus one so we exclude it in substrings.
+	"""
+	Find positions of <tokens> in <tokstr>.
+
+	Given a string <tokstr>, return a sorted list of the positions of all the tokens in <tokens>. If rev(erse) is True, search from the back instead of the front. If <past> is True, store the position of the token plus one so we exclude it in substrings.
 	"""
 	# Reverse string to search from back
 	if (rev):
@@ -158,6 +151,8 @@ def find_tok_pos(tokstr, tokens=['.', '-', '_'], rev=False, past=True):
 
 def parse_range_str(rstr, sep=",", rsep="-", offs=0):
 	"""
+	Expand numerical ranges in <rstr> to all integers.
+
 	Expand a string <rstr> represents a range of integers, such as:
 	1,2,3,7-10,19-25
 	which would expand to 1,2,3,7,8,9,19,20,21,22,23,24,25
@@ -195,6 +190,8 @@ def parse_range_str(rstr, sep=",", rsep="-", offs=0):
 
 def gen_metadata(metadata, *args, **kwargs):
 	"""
+	Generate metadata dict to use for identifying program executions.
+
 	Generate metadata dictionary with data about current program execution. <metadata> should be a dict holding extra information, furthermore these default values will be added as well:
 
 	- current filename (sys.argv[0])
@@ -204,6 +201,8 @@ def gen_metadata(metadata, *args, **kwargs):
 	- SHA1 hexdigest of current executable
 
 	and additionally save everything in *args and **kwargs.
+
+	@see store_metadata
 	"""
 
 	# Hash a file without reading it fully
@@ -240,6 +239,8 @@ def gen_metadata(metadata, *args, **kwargs):
 def store_metadata(metadict, basename, dir='./', aspickle=False, asjson=True):
 	"""
 	Store metadata in <metadict> to disk, using <basename> as identifier.
+
+	@see gen_metadata
 	"""
 	# Prepend directory to output path
 	basepath = os.path.join(dir, basename)

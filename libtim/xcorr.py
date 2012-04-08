@@ -1,18 +1,15 @@
 #!/usr/bin/env python2.7
 # -*- coding: utf-8 -*-
-
 """
-@file xcorr.py
-@brief Cross-correlation utils for measuring image shifts
+@package libtim.xcorr
+@brief Measure image shift using cross-correlation
 @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
+@copyright Copyright (c) 2012 Tim van Werkhoven
 @date 20120402
 
-Created by Tim van Werkhoven (werkhoven@strw.leidenuniv.nl) on 2012-04-02
-Copyright (c) 2012 Tim van Werkhoven. All rights reserved.
+Package for some utilities for Fourier transforms
 
-This file is licensed under the Creative Commons Attribution-Share Alike
-license versions 3.0 or higher, see
-http://creativecommons.org/licenses/by-sa/3.0/
+This file is licensed under the Creative Commons Attribution-Share Alike license versions 3.0 or higher, see http://creativecommons.org/licenses/by-sa/3.0/
 """
 
 #=============================================================================
@@ -32,7 +29,8 @@ import fft as _fft
 #=============================================================================
 
 def crosscorr(imlst, shrange, dsh=(1,1), refim=None):
-	"""Cross-correlate images from <imlst> to measure image shifts. If <refim> is given, compare all images from <imlist> with this image, otherwise cross-correlate all pairs of images in <imlist>
+	"""
+	Cross-correlate images from <imlst> to measure image shifts. If <refim> is given, compare all images from <imlist> with this image, otherwise cross-correlate all pairs of images in <imlist>
 
 	@param [in] imlst list of images to cross correlate
 	@param [in] shrange shift range to calculate, format (sh0, sh1)
@@ -86,7 +84,8 @@ def crosscorr(imlst, shrange, dsh=(1,1), refim=None):
 	return xcorr_mat
 
 def plot_img_mat(img_mat, fignum=0, pause=True, pltit="", titles=(), **kwargs):
-	"""Plot grid of images
+	"""
+	Plot grid of images in one figure.
 
 	@param [in] img_mat A matrix of 2D images
 	@param [in] fignum pylab plot figure to use
@@ -177,6 +176,8 @@ def shift_img(im, shvec, method="pixel", zoomfac=8):
 
 def calc_subpixmax(data, offset=(0,0), dimension=2, error=False):
 	"""
+	Find extrema of <data> with subpixel accuracy.
+
 	Find the extrema of 'data' using a two-dimensional 9-point quadratic
 	interpolation (QI formulae by Yi & Molowny Horas (1992, Eq. (10)), also
 	available in M.G. Löfdahl (2010), table 2.). The subpixel maximum will be

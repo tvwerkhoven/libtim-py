@@ -26,3 +26,5 @@ __version__ = "v0.1.0"
 # @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
 #
 # This is libtim, providing various useful things
+
+import log
