@@ -4,12 +4,10 @@
 @package libtim.im
 @brief Image manipulation routines
 @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
-@copyright Copyright (c) 2012 Tim van Werkhoven
+@copyright Creative Commons Attribution-Share Alike license versions 3.0 or higher, see http://creativecommons.org/licenses/by-sa/3.0/
 @date 20120403
 
-Image manipulation functions
-
-This file is licensed under the Creative Commons Attribution-Share Alike license versions 3.0 or higher, see http://creativecommons.org/licenses/by-sa/3.0/
+Image manipulation functions.
 """
 
 #=============================================================================
@@ -28,11 +26,13 @@ import unittest
 
 def mk_rad_prof(data, maxrange=None):
 	"""
-	Make radial profile of <data> up to <maxrange> pixels from the center or min(data.shape)/2 if not set.
+	Make radial profile of **data**.
 
-	@param [in] data 2D array of data to make radial profile for
-	@param [in] maxrange Range of profile to make in pixels, or min(data.shape)/2 if None
-	@return Radial profile binned per pixel as Numpy array.
+	Make a radial profile of **data** up to **maxrange** pixels from the center or min(data.shape)/2 if not set.
+
+	@param [in] data 2D array of data
+	@param [in] maxrange Range of profile to make in pixels (min(data.shape)/2 if None)
+	@return Radial profile binned per pixel as numpy.ndarray.
 	"""
 
 	step = 1
@@ -57,14 +57,23 @@ def mk_rad_prof(data, maxrange=None):
 
 def df_corr(data, flatfield=None, darkfield=None, darkfac=[1.0, 1.0]):
 	"""
-	Correct 2-d array <data> with <flatfield> and <darkfield>.
+	Correct 2-d array **data** with **flatfield** and **darkfield**.
 
-	Use darkfac to scale the darkfield in case of incorrect exposure. Final
-	returned data will be:
+	Use **darkfac** to scale the darkfield in case of incorrect exposure.
 
+	Final returned data will be:
+
+	\code
 	(data - darkfac[0] * darkfield) / (flatfield - darkfac[1] * darkfield)
+	\endcode
 
-	or a part of that in case only dark or flatfield is given
+	or a part of that in case only dark- or flatfield is given.
+
+	@param [in] data Image to flat/dark-field
+	@param [in] flatfield Flatfield image to use
+	@param [in] darkfield Darkfield image to use
+	@param [in] darkfac Correction factors for darkfield to use if exposure is mismatched
+	@return Corrected image as numpy.ndarray
 	"""
 
 	# If no FF and DF, return original data
@@ -88,15 +97,16 @@ def df_corr(data, flatfield=None, darkfield=None, darkfac=[1.0, 1.0]):
 	return data
 
 def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plrange=(None, None), log=False, rollaxes=False, cmap='RdYlBu', xlab='X [pix]', ylab='Y [pix]', hdr=()):
-	"""Store <data> to disk as FITS (toggle with <fits>) or plot as annotated plot in PDF	(toggle with <plot>).
+	"""
+	Store **data** to disk as FITS and/or plot as annotated plot in PDF.
 
 	@param [in] data 2D data array to show
 	@param [in] fname Filename base to use (also fallback for plot title)
 	@param [in] pltitle Plot title (if given)
 	@param [in] dir Output directory
 	@param [in] fits Toggle FITS output
-	@param [in] pdf Toggle 2D plot output as PDF
-	@param [in] range Use this range for plotting in imshow() (None for autoscale)
+	@param [in] plot Toggle 2D plot output as PDF
+	@param [in] plrange Use this range for plotting in imshow() (None for autoscale)
 	@param [in] log Take logarithm of data before storing.
 	@param [in] rollaxes Roll axes for PDF plot such that (0,0) is the center
 	@param [in] cmap Colormap to use for PDF

@@ -4,12 +4,10 @@
 @package libtim.file
 @brief File I/O utilities
 @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
-@copyright Copyright (c) 2012 Tim van Werkhoven
+@copyright Creative Commons Attribution-Share Alike license versions 3.0 or higher, see http://creativecommons.org/licenses/by-sa/3.0/
 @date 20120403
 
 This module provides some file IO functions.
-
-This file is licensed under the Creative Commons Attribution-Share Alike license versions 3.0 or higher, see http://creativecommons.org/licenses/by-sa/3.0/
 """
 
 #=============================================================================
@@ -28,12 +26,14 @@ import string
 #=============================================================================
 
 def read_file(fpath, dtype=None):
-	"""Read file at <fpath>. If <dtype> is set, force reading routines
-	with this datatype, otherwise guess from extension or simply try.
+	"""
+	Try to read datafile at **fpath**.
+
+	Try to read **fpath** and return contents. If **dtype** is set, force reading routines with this datatype, otherwise guess from extension or simply try.
 
 	@param [in] fpath Path to a file
 	@param [in] dtype Datatype to read. If absent, guess.
-	@return Data from file
+	@return Data from file, usually as numpy.ndarray
 	"""
 
 	# Check datatype, if not set: detect from file extension
@@ -52,11 +52,23 @@ def read_file(fpath, dtype=None):
 	return read_func(fpath)
 
 def read_files(flist, dtype=None):
+	"""
+	@deprecated Use '[read_file(f) for f in flist]' instead
+	"""
 	raise DeprecationWarning("Use '[read_file(f) for f in flist]' instead")
 
 def filenamify(str):
 	"""
-	Convert any string into a valid filename by rejecting unknown characters. Valid characters are ascii letters, digits and -_.(). (internally using %s%s" % (string.ascii_letters, string.digits)).
+	Convert any string into a valid filename.
+
+	Given an input string, convert it to a reasonable filename by rejecting unknown characters. Valid characters are ASCII letters, digits and -_.().
+
+	Internally this uses:
+
+	\code
+	>>> "-_.()%s%s" % (string.ascii_letters, string.digits))
+	'-_.()abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+	\endcode
 
 	@param str [in] String to convert
 	@return Filtered filename
@@ -70,7 +82,6 @@ def filenamify(str):
 	# Rebuild string filtering out unknown chars
 	fbase = ''.join(c for c in fbase if c in valid_chars)
 	return fbase
-
 
 if __name__ == "__main__":
 	import sys

@@ -4,13 +4,11 @@
 @package libtim.util
 @brief Miscellaneous string manipulation functions
 @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
-@copyright Copyright (c) 2012 Tim van Werkhoven
+@copyright Creative Commons Attribution-Share Alike license versions 3.0 or higher, see http://creativecommons.org/licenses/by-sa/3.0/
 @date 20120403
 
 This module provides some miscellaneous utility functions for parsing strings,
 filenames, making headers etc.
-
-This file is licensed under the Creative Commons Attribution-Share Alike license versions 3.0 or higher, see http://creativecommons.org/licenses/by-sa/3.0/
 """
 
 #=============================================================================
@@ -36,16 +34,31 @@ def find_uniq(strlist, tokenize=True, tokens=['.', '-', '_']):
 	"""
 	Find shortest substring that uniquely identifies all strlist entries.
 
-	In a list of strings <strlist> of equal length (e.g. filenames), find the shortest continuous part of the string that uniquely identifies each item in the list. If <tokenize> is True, the string is split only at any of the characters in <tokens>, otherwise it is split at any letter.
+	In a list of strings **strlist** of equal length (e.g. filenames), find the shortest continuous part of the string that uniquely identifies each item in the list. If **tokenize** is True, the string is split only at any of the characters in **tokens**, otherwise it is split at any letter.
 
 	Example, given these strings:
-	unibrain-frame-20110916_0000.ppm.png
-	unibrain-frame-20110916_0001.ppm.png
-	unibrain-frame-20110916_0002.ppm.png
-	the shortest unique id would be the 0, 1 and 2 in the filenames (the rest
-	are similar). If <tokenize> is True, this will be 0000, 0001 and 0002.
 
+		unibrain-frame-20110916_0000.ppm.png
+		unibrain-frame-20110916_0001.ppm.png
+		unibrain-frame-20110916_0002.ppm.png
+
+	the shortest unique id would be
+
+		0
+		1
+		2
+
+	in the filenames (the rest are similar). If **tokenize** is True, this will be
+
+		0000
+		0001
+		0002
+
+	@param [in] strlist List of strings to find unique subset for
+	@param [in] tokenize Split by tokens instead of characters
+	@param [in] tokens List of tokens to use for **tokenize**
 	@return Two indices which denote the start and end of the unique substring as a tuple.
+	@see find_tok_pos() used to tokenize input strings
 	"""
 
 	# If we only have one item, the whole string is unique
@@ -115,9 +128,14 @@ def find_uniq(strlist, tokenize=True, tokens=['.', '-', '_']):
 
 def find_tok_pos(tokstr, tokens=['.', '-', '_'], rev=False, past=True):
 	"""
-	Find positions of <tokens> in <tokstr>.
+	Find positions of **tokens** in **tokstr**.
 
-	Given a string <tokstr>, return a sorted list of the positions of all the tokens in <tokens>. If rev(erse) is True, search from the back instead of the front. If <past> is True, store the position of the token plus one so we exclude it in substrings.
+	Given a string **tokstr**, return a sorted list of the positions of all the tokens in **tokens**. If **rev**(erse) is True, search from the back instead of the front. If **past** is True, store the position of the token plus one so we exclude it in substrings.
+
+	@param [in] tokstr String to tokenize
+	@param [in] tokens List of tokens to find
+	@param [in] rev Reverse search order
+	@param [in] past Give position+1 instead of position (i.e. 'past' the token)
 	"""
 	# Reverse string to search from back
 	if (rev):
@@ -151,16 +169,28 @@ def find_tok_pos(tokstr, tokens=['.', '-', '_'], rev=False, past=True):
 
 def parse_range_str(rstr, sep=",", rsep="-", offs=0):
 	"""
-	Expand numerical ranges in <rstr> to all integers.
+	Expand numerical ranges in **rstr** to all integers.
 
-	Expand a string <rstr> represents a range of integers, such as:
-	1,2,3,7-10,19-25
-	which would expand to 1,2,3,7,8,9,19,20,21,22,23,24,25
+	Given a string **rstr** representing a range of integers, expand it to all integers in that range. For example, the string
 
-	<sep> is a string separating elements, <rsep> indicates ranges.  <offs> is an offset added to all
+		instr = '1,2,3,7-10,19-25'
 
+	would expand to
+
+		[1, 2, 3, 7, 8, 9, 19, 20, 21, 22, 23, 24, 25]
+
+	i.e.:
+
+	\code
 	>>> parse_range_str("1,2,3,7-10,19-25")
 	[1, 2, 3, 7, 8, 9, 10, 19, 20, 21, 22, 23, 24, 25]
+	\endcode
+
+	@param [in] rstr String to expand
+	@param [in] sep Separator to use
+	@param [in] rsep Range indicator to use
+	@param [in] offs Offset to add to output
+	@returns List of integers in expanded range
 	"""
 	if (rsep == sep):
 		raise ValueError("<sep> and <rsep> cannot be identical")
@@ -192,16 +222,21 @@ def gen_metadata(metadata, *args, **kwargs):
 	"""
 	Generate metadata dict to use for identifying program executions.
 
-	Generate metadata dictionary with data about current program execution. <metadata> should be a dict holding extra information, furthermore these default values will be added as well:
-
-	- current filename (sys.argv[0])
-	- program arguments (sys.argv[1:])
+	Generate metadata dictionary with data about current program execution. **metadata** should be a dict holding extra information, furthermore these default values will be added as well:
+	- current filename (**sys.argv[0]**)
+	- program arguments (**sys.argv[1:]**)
 	- time / date (as epoch, utc, localtime)
 	- size of current executable
 	- SHA1 hexdigest of current executable
 
 	and additionally save everything in *args and **kwargs.
 
+	This is intended to store all program execution parameters to disk such that this batch can later be reproduced, and the origin of the output can be traced back.
+
+	@param [in] metadata Dict of other values to store
+	@param [in] *args Additional values to store
+	@param [in] **kwargs Additional key-value pairs to store
+	@returns Dictionary containing all values
 	@see store_metadata
 	"""
 
@@ -238,8 +273,17 @@ def gen_metadata(metadata, *args, **kwargs):
 
 def store_metadata(metadict, basename, dir='./', aspickle=False, asjson=True):
 	"""
-	Store metadata in <metadict> to disk, using <basename> as identifier.
+	Store metadata in **metadict** to disk.
 
+	Given a dictionary, store it to disk in various formats. Currently pickle and JSON are supported, although the latter is preferred.
+
+	This function is intended to be used in conjunction with gen_metadata() to store data about a data processing job.
+
+	@param [in] metadict Dictionary of values to store.
+	@param [in] basename Basename to store data to.
+	@param [in] dir Output directory
+	@param [in] aspickle Store as pickle format
+	@param [in] asjson Store as JSON format
 	@see gen_metadata
 	"""
 	# Prepend directory to output path
@@ -258,9 +302,9 @@ def store_metadata(metadict, basename, dir='./', aspickle=False, asjson=True):
 
 def mkfitshdr(cards):
 	"""
-	Make a FITS file header of all arguments supplied in the dict <cards>.
-	Also add default header items:
+	Make a FITS file header of all arguments supplied in the dict **cards**.
 
+	Besides **cards**, also add default header items:
 	- Program name (sys.argv[0])
 	- epoch (time()
 	- utctime / localtime

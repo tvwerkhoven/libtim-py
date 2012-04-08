@@ -4,12 +4,10 @@
 @package libtim.zern
 @brief Zernike basis function utilities
 @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
-@copyright Copyright (c) 2012 Tim van Werkhoven
+@copyright Creative Commons Attribution-Share Alike license versions 3.0 or higher, see http://creativecommons.org/licenses/by-sa/3.0/
 @date 20120403
 
 Construct and analyze Zernike basis functions
-
-This file is licensed under the Creative Commons Attribution-Share Alike license versions 3.0 or higher, see http://creativecommons.org/licenses/by-sa/3.0/
 """
 
 #=============================================================================
@@ -30,12 +28,12 @@ import unittest
 from scipy.misc import factorial as fac
 def zernike_rad(m, n, rho):
 	"""
-	Make radial Zernike polynomial on grid <rho>.
+	Make radial Zernike polynomial on coordinate grid **rho**.
 
-	@param [in] m
-	@param [in] n
+	@param [in] m Radial Zernike index
+	@param [in] n Azimuthal Zernike index
 	@param [in] rho Radial coordinate grid
-	@return Radial polynomial with identical shape as <rho>
+	@return Radial polynomial with identical shape as **rho**
 	"""
 	if (N.mod(n-m, 2) == 1):
 		return rho*0.0
@@ -48,16 +46,17 @@ def zernike_rad(m, n, rho):
 
 def zernike(m, n, rho, phi, norm=True):
 	"""
-	Calculate Zernike mode (m,n) on grid <rho> and <phi>.
+	Calculate Zernike mode (m,n) on grid **rho** and **phi**.
 
-	@see <http://research.opt.indiana.edu/Library/VSIA/VSIA-2000_taskforce/TOPS4_2.html> and <http://research.opt.indiana.edu/Library/HVO/Handbook.html>.
+	**rho** and **phi** should be radial and azimuthal coordinate grids of identical shape, respectively.
 
-	@param [in] m
-	@param [in] n
+	@param [in] m Radial Zernike index
+	@param [in] n Azimuthal Zernike index
 	@param [in] rho Radial coordinate grid
 	@param [in] phi Azimuthal coordinate grid
 	@param [in] norm Normalize modes to unit variance
 	@return Zernike mode (m,n) with identical shape as rho, phi
+	@see <http://research.opt.indiana.edu/Library/VSIA/VSIA-2000_taskforce/TOPS4_2.html> and <http://research.opt.indiana.edu/Library/HVO/Handbook.html>.
 	"""
 	nc = 1.0
 	if (norm):
@@ -72,9 +71,9 @@ def noll_to_zern(j):
 
 	j is the linear Noll coordinate, n is the radial Zernike index and m is the azimuthal Zernike index.
 
-	@see <https://oeis.org/A176988>.
 	@param [in] j Zernike mode Noll index
 	@return (n, m) tuple of Zernike indices
+	@see <https://oeis.org/A176988>.
 	"""
 	if (j == 0):
 		raise ValueError("Noll indices start at 1, 0 is invalid.")
@@ -106,9 +105,9 @@ def zernikel(j, rho, phi, norm=True):
 
 def noll_to_zern_broken(j):
 	"""
-	This is the previous and incorrect Noll-to-Zernike conversion. Stored for
-	reference purposes. Fixed around 1321970330.98158 or Tue Nov 22 13:59:10
-	2011 UTC. All data generated before this has invalid mapping.
+	Previous and incorrect Noll-to-Zernike conversion.
+
+	Stored for reference purposes. Fixed around 1321970330.98158 or Tue Nov 22 13:59:10 2011 UTC. All data generated before this has invalid mapping.
 	@deprecated Incorrect mapping, use noll_to_zern instead
 	"""
 	raise DeprecatedWarning("Incorrect mapping, use noll_to_zern instead")
@@ -124,7 +123,7 @@ def fix_noll_map(max):
 	"""
 	Translate old incorrect Noll coordinates to correct values.
 
-	noll_to_zern_broken() is broken, this function repairs data generated with this broken function.
+	This function repairs data generated with noll_to_zern_broken().
 	"""
 	return [(jold, jnew)
 		for jold in xrange(max)
@@ -135,8 +134,9 @@ def zern_normalisation(nmodes=30):
 	"""
 	Calculate normalisation vector.
 
-	This function calculates a <nmodes> element vector with normalisation constants for Zernike modes that have not already been normalised.
+	This function calculates a **nmodes** element vector with normalisation constants for Zernike modes that have not already been normalised.
 
+	@param [in] nmodes Size of normalisation vector.
 	@see <http://research.opt.indiana.edu/Library/VSIA/VSIA-2000_taskforce/TOPS4_2.html> and <http://research.opt.indiana.edu/Library/HVO/Handbook.html>.
 	"""
 
@@ -148,11 +148,16 @@ def zern_normalisation(nmodes=30):
 
 def calc_zern_basis(nmodes, rad, mask=True):
 	"""
-	Calculate a basis of <nmodes> Zernike modes with radius <rad>.
+	Calculate a basis of **nmodes** Zernike modes with radius **rad**.
 
-	If <mask> is true, set everything outside of radius <rad> to zero (default). If this is not done, the set of Zernikes will be <rad> by <rad> square and are not orthogonal anymore.
+	If **mask** is true, set everything outside of radius **rad** to zero (default). If this is not done, the set of Zernikes will be **rad** by **rad** square and are not orthogonal anymore.
 
-	Returns a dict with entries <basis> a list of Zernike modes and <covmat> a covariance matrix for all these modes and <covmat_in> the inverse.
+	This output of this function can be used as cache for other functions.
+
+	@param [in] nmodes Number of modes to generate
+	@param [in] rad Radius of Zernike modes
+	@param [in] mask Mask area outside Zernike modes or not
+	@return Dict with entries 'basis' a list of Zernike modes and 'covmat' a covariance matrix for all these modes with 'covmat_in' its inverse.
 	"""
 
 	if (rad <= 0):
@@ -186,18 +191,28 @@ def calc_zern_basis(nmodes, rad, mask=True):
 
 def fit_zernike(wavefront, zern_data={}, nmodes=10, fitweight=None, center=(-0.5, -0.5), rad=-0.5, err=None):
 	"""
-	Fit <nmodes> Zernike modes to a <wavefront>.
+	Fit **nmodes** Zernike modes to a **wavefront**.
 
-	The wavefront will be fit to Zernike modes for a circle with radius <rad> with origin at <center>. If <center> or <rad> are between 0 and -1, the values will be interpreted as fractions of the image shape. <weigh> is a weighting mask used when fitting the modes.
+	The **wavefront** will be fit to Zernike modes for a circle with radius **rad** with origin at **center**. **weigh** is a weighting mask used when fitting the modes.
 
-	If <err> is an empty list, it will be filled with measures for the fitting error:
-	1) Mean squared difference
-	2) Mean absolute difference
-	3) Mean absolute difference squared
+	If **center** or **rad** are between 0 and -1, the values will be interpreted as fractions of the image shape.
 
-	This function uses zern_data as cache. If this is not given, it will be generated. See calc_zern_basis() for details.
+	If **err** is an empty list, it will be filled with measures for the fitting error:
+	1. Mean squared difference
+	2. Mean absolute difference
+	3. Mean absolute difference squared
 
-	The return value is a tuple of (wf_zern_vec, wf_zern_rec, fitdiff) where the first element is a vector of Zernike mode amplitudes, the second element is a full Zernike reconstruction and the last element is the difference between the input wavefront and the full reconstruction.
+	This function uses **zern_data** as cache. If this is not given, it will be generated. See calc_zern_basis() for details.
+
+	@param [in] wavefront Input wavefront to fit
+	@param [in] zern_data Zernike basis cache
+	@param [in] nmodes Number of modes to fit
+	@param [in] fitweight Mask to use as weights when fitting
+	@param [in] center Center of Zernike modes to fit
+	@param [in] rad Radius of Zernike modes to fit
+	@param [out] err Fitting errors
+	@return Tuple of (wf_zern_vec, wf_zern_rec, fitdiff) where the first element is a vector of Zernike mode amplitudes, the second element is a full 2D Zernike reconstruction and the last element is the 2D difference between the input wavefront and the full reconstruction.
+	@see See calc_zern_basis() for details on **zern_data** cache
 	"""
 
 	if (rad < -1 or min(center) < -1):
@@ -269,9 +284,16 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, fitweight=None, center=(-0.5
 
 def calc_zernike(zern_vec, rad, zern_data={}):
 	"""
-	Given vector <zern_vec> with the amplitude of Zernike modes, return the reconstructed wavefront with radius <rad>.
+	Construct wavefront with Zernike amplitudes **zern_vec**.
 
-	This function uses zern_data as cache. If this is not given, it will be generated. See calc_zern_basis() for details.
+	Given vector **zern_vec** with the amplitude of Zernike modes, return the reconstructed wavefront with radius **rad**.
+
+	This function uses **zern_data** as cache. If this is not given, it will be generated. See calc_zern_basis() for details.
+
+	@param [in] zern_vec 1D vector of Zernike amplitudes
+	@param [in] rad Radius for Zernike modes to construct
+	@param [in] zern_data Zernike basis cache
+	@see See calc_zern_basis() for details on **zern_data** cache
 	"""
 
 	# Compute Zernike list if necessary

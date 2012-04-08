@@ -4,12 +4,10 @@
 @package libtim.log
 @brief Terminal and file logging functionality
 @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
-@copyright Copyright (c) 2008--2012 Tim van Werkhoven
+@copyright Creative Commons Attribution-Share Alike license versions 3.0 or higher, see http://creativecommons.org/licenses/by-sa/3.0/
 @date 20090330
 
 Logging functions to log data using prefixes, loglevels and permanent logfiles. This is probably only useful in more elaborate scripts.
-
-This file is licensed under the Creative Commons Attribution-Share Alike license versions 3.0 or higher, see http://creativecommons.org/licenses/by-sa/3.0/
 """
 
 #=============================================================================
@@ -76,7 +74,7 @@ def initLogFile(*args):
 
 def init_logfile(logfile):
 	"""
-	@brief (Re-)initialize logging to disk at 'logfile'
+	(Re-)initialize logging to disk at **logfile**
 
 	@param logfile file to use for loggin
 	"""
@@ -90,9 +88,9 @@ def init_logfile(logfile):
 
 def log_msg(verb, msg, err=EXIT):
 	"""
-	@brief Print log message with a certain verbosity.
+	Print log message with a certain verbosity.
 
-	Print a log message. If LOGFD is set, it is also written to the file that file descriptor is poiting to. Status levels are prepended to the output.
+	Print a log message **msg**. If global LOGFD is set, it is also written to the file that file descriptor is poiting to. Status levels are prepended to the output.
 
 	@param verb The status level of the message
 	@param msg The message to print
