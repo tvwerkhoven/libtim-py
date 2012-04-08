@@ -1,18 +1,16 @@
 #!/usr/bin/env python2.7
 # -*- coding: utf-8 -*-
-
 """
 @file xcorr.py
-@brief Cross-correlation utils for measuring image shifts
+@brief Measure image shift using cross-correlation
+
+@package libtim.xcorr
+@brief Measure image shift using cross-correlation
 @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
+@copyright Creative Commons Attribution-Share Alike license versions 3.0 or higher, see http://creativecommons.org/licenses/by-sa/3.0/
 @date 20120402
 
-Created by Tim van Werkhoven (werkhoven@strw.leidenuniv.nl) on 2012-04-02
-Copyright (c) 2012 Tim van Werkhoven. All rights reserved.
-
-This file is licensed under the Creative Commons Attribution-Share Alike
-license versions 3.0 or higher, see
-http://creativecommons.org/licenses/by-sa/3.0/
+Measure image shifts using cross-correlation and other utilities.
 """
 
 #=============================================================================
@@ -32,13 +30,22 @@ import fft as _fft
 #=============================================================================
 
 def crosscorr(imlst, shrange, dsh=(1,1), refim=None):
-	"""Cross-correlate images from <imlst> to measure image shifts. If <refim> is given, compare all images from <imlist> with this image, otherwise cross-correlate all pairs of images in <imlist>
+	"""
+	Cross-correlate images in **imlst**.
+
+	**shrange** determines the range of shifts to cross-correlate for, and **dsh** indicates the step-size to use, i.e. dsh = (2,2) means every second shift distance is used.
+
+	If **refim** is given, compare all images from **imlist** with this image, otherwise cross-correlate all pairs of images in **imlist**.
+
+	The returned data is a list of lists with correlation maps. The correlation maps themselves have shape (2*shrange+1)/dsh. If refim is given, the list of lists is Nx1 big, otherwise it is NxN big.
+
+	Correlation maps are only square if shrange[0] == shrange[1] and dsh[0] == dsh[1].
 
 	@param [in] imlst list of images to cross correlate
 	@param [in] shrange shift range to calculate, format (sh0, sh1)
-	@param [in] dsh shift range jumps
+	@param [in] dsh shift range cadence
 	@param [in] refim Reference image to cross correlate others against. If None, will use cross correlate all pairs from imlst
-	@return NxN (refim==None) or Nx1 (refim!=None) list of cross-correlation maps. Each map is (2*shrange[0]+1, 2*shrange[1]+1) big)
+	@return NxN (refim==None) or Nx1 (refim!=None) list of cross-correlation maps. Each map is (2*shrange+1)/dsh big)
 	"""
 
 	# Check if imlst is malformed
@@ -85,11 +92,14 @@ def crosscorr(imlst, shrange, dsh=(1,1), refim=None):
 
 	return xcorr_mat
 
-def plot_img_mat(img_mat, fignum=0, pause=True, pltit="", titles=(), **kwargs):
-	"""Plot grid of images
+def plot_img_mat(img_mat, fignum=0, pause=True, pltit="", **kwargs):
+	"""
+	Plot grid of images in one figure.
 
-	@param [in] img_mat A matrix of 2D images
+	@param [in] img_mat A list of lists of 2D images
 	@param [in] fignum pylab plot figure to use
+	@param [in] pause Pause after showing or not
+	@param [in] pltit Plot title
 	@param [in] **kwargs additional arguments for pylab.imshow
 	"""
 
@@ -117,17 +127,21 @@ def plot_img_mat(img_mat, fignum=0, pause=True, pltit="", titles=(), **kwargs):
 
 def shift_img(im, shvec, method="pixel", zoomfac=8):
 	"""
-	Shift 2D array <im> by <shvec> using either pixel or Fourier method.
+	Shift 2D array **im** by **shvec** using either pixel or Fourier method.
 
-	Pixel method: scale up image with scipy.ndimage.zoom() with a factor of <zoomfac>, then shift by integer number of pixels, then zoom down again to original size. The resolution of this shift is 1.0/<zoomfac>.
+	Pixel method: scale up image with scipy.ndimage.zoom() with a factor of **zoomfac**, then shift by integer number of pixels, then zoom down again to original size. The resolution of this shift is 1.0/**zoomfac**.
 
 	Fourier method: shift in Fourier space based on the Fourier transform
 	shift theorem:
 		f(x-dx,y-dy) <==> exp(-2pi i(u*dx+v*dy)) F(u,v)
 
-	The Fourier shift code is taken from fftshiftcube written by Marshall
-	Perrin at 2001-07-27. Original api:
-	FUNCTION fftshiftcube,cube,dx,dy,null=null
+	The Fourier shift code is taken from fftshiftcube written by Marshall Perrin at 2001-07-27. Original api: FUNCTION fftshiftcube,cube,dx,dy,null=null
+
+	@param [in] im 2D image to shift
+	@param [in] shvec Vector to shift by
+	@param [in] method Shifting method to use
+	@param [in] zoomfac Zoom factor for pixel shifting method
+	@return 2D image of identical shape as **im** shifted with **shvec**
 	"""
 	sz = im.shape
 
@@ -177,23 +191,26 @@ def shift_img(im, shvec, method="pixel", zoomfac=8):
 
 def calc_subpixmax(data, offset=(0,0), dimension=2, error=False):
 	"""
-	Find the extrema of 'data' using a two-dimensional 9-point quadratic
-	interpolation (QI formulae by Yi & Molowny Horas (1992, Eq. (10)), also
-	available in M.G. Löfdahl (2010), table 2.). The subpixel maximum will be
-	examined around the coordinate of the pixel with the maximum intensity.
+	Find extrema of **data** with subpixel accuracy.
 
-	'offset' must be set to the shift-range that the correlation map in 'data'
-	corresponds to to find the pixel corresponding to a shift of 0.
+	The subpixel maximum will be searched around the pixel with the maximum intensity, i.e. numpy.argwhere(data == data.max())[0]. The coordinate found will be in data-space.
 
-	'dimension' indicates the dimension of the quadratic interpolation, this can be either 2, 1 or 0 for no interpolation.
+	For **dimension** == 2: use 9-point quadratic interpolation (QI formulae by Yi & Molowny Horas (1992, Eq. (10)), also available in M.G. Löfdahl (2010), table 2.).
 
-	If 2D quadratic interpolation fails (i.e. shift > 1), a 1D QI is done. If
-	this fails (i.e. shift > 1), the integer coordinates of the pixel with the
-	maximum intensity is returned.
+	For **dimension** == 1: use 5-point 1D quadratic interpolation
 
-	Warnings are shown if <error> is set.
+	For **dimension** == 0: use the integer position of the maximum intensity pixel.
+
+	If any interpolation failed, the next-lower dimension is tried.
+
+	Warnings are shown if **error** is set.
 
 	This routine is implemented in pure Python, formerly known quadInt2dPython
+
+	@param [in] data Data to search for subpixel maximum
+	@param [in] offset Add offset to output
+	@param [in] dimension Interpolation dimensionality to use
+	@param [in] error Toggle error display
 	"""
 	if (not 0 <= dimension <= 2):
 		raise ValueError("Interpolation <dimension> should be 0 <= d <= 2")
@@ -250,11 +267,7 @@ def calc_subpixmax(data, offset=(0,0), dimension=2, error=False):
 
 def _gauss_slow(sz, spotsz, spotpos, amp, noiamp):
 	"""
-	Calculate Gauss in matrix of size <sz> with width <spotsz> at position <spotpos> and amplitude <amp>. If <noiamp> > 0, add Poissonian noise as well.
-
 	@deprecated please use _gauss() instead which is ~3--20x faster.
-
-	@return ndarray of shape <sz> with the Guassian function
 	"""
 
 	# Coordinate grid
@@ -270,11 +283,18 @@ def _gauss_slow(sz, spotsz, spotpos, amp, noiamp):
 	else:
 		return im
 
-def _gauss(sz, spotsz, spotpos, amp, noiamp):
+def _gauss(sz, spotsz, spotpos, amp, noiamp=0):
 	"""
-	Calculate Gauss in matrix of size <sz> with width <spotsz> at position <spotpos> and amplitude <amp>. If <noiamp> > 0, add Poissonian noise as well.
+	Calculate 2D Gauss function.
 
-	@return ndarray of shape <sz> with the Guassian function
+	Gauss will be in a matrix of size **sz** with width **spotsz** at position **spotpos** and amplitude **amp**. Poissonian noise will be added with **noiamp** if > 0.
+
+	@param [in] sz Size of output array
+	@param [in] spotsz Size of Gaussian spot
+	@param [in] spotpos Position of Gauss peak
+	@param [in] amp Gauss amplitude
+	@param [in] noiamp Poissonian noise amplitude
+	@return ndarray of shape **sz** with the Guassian function
 	"""
 
 	# Coordinate grid

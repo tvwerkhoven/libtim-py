@@ -2,33 +2,16 @@
 # encoding: utf-8
 """
 @file fft.py
+@brief Utilities for Fourier transforms
+
+@package libtim.fft
+@brief Utilities for Fourier transforms
 @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
+@copyright Creative Commons Attribution-Share Alike license versions 3.0 or higher, see http://creativecommons.org/licenses/by-sa/3.0/
 @date 20120403
 
-Created by Tim van Werkhoven on 2012-04-03. Copyright (c) 2012 Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
-
-This file is licensed under the Creative Commons Attribution-Share Alike
-license versions 3.0 or higher, see
-http://creativecommons.org/licenses/by-sa/3.0/
+Package for some utilities for Fourier transforms
 """
-
-##  @file fft.py
-# @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
-# @date 20120403
-#
-# Created by Tim van Werkhoven on 2012-04-03.
-# Copyright (c) 2012 Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
-#
-# This file is licensed under the Creative Commons Attribution-Share Alike
-# license versions 3.0 or higher, see
-# http://creativecommons.org/licenses/by-sa/3.0/
-
-## @package fft
-# @brief Utilities for Fourier transforms
-# @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
-# @date 20120403
-#
-# Some utilities for Fourier transforms
 
 #=============================================================================
 # Import libraries here
@@ -48,21 +31,30 @@ from collections import Iterable
 
 def mk_apod_mask(masksz, apodpos=None, apodsz=None, shape='rect', wsize=-0.3, apod_f=lambda x: 0.5 * (1.0 - N.cos(N.pi*x))):
 	"""
-	Generate apodisation mask. The returned array will have size <masksz>, with the apodisation mask centered at <apodpos> (element coordinates) with size <apodsz>. <apodpos> defaults to the center, <apodsz> defaults to <masksz>
+	Generate apodisation mask with custom size, shape, edge.
 
-	<shape> should be either 'rectangle' or 'circular'.
-	<wsize> is the size of the window used.
-	<apod_f> is the windowing function used. It should take one float coordinate between 1 and 0 as input and return the value of the window at that position.
+	The output array mask will be **masksz**, while the actual apodisation masked will **apodsz** big. The position of the mask is given with **apodpos**.
 
-	<apodpos>, <wsize> and <apodsz> can either as fraction (if < 0) or as absolute number of pixels (if > 0). Both can either be one int or float such that the same (fractional) size will be used in all dimensions, or it can be a tuple with a size for each dimension of <masksz>. In the latter case, all elements should either be absolute or fractional.
+	**apodpos** defaults to the center, **apodsz** defaults to **masksz**
 
-	When <apodsz> is fractional, it is relative to <masksz>. Fractional <wsize>'s are relative to <masksz>.
+	**apodpos**, **apodsz** and **wsize** can either be given as fraction (if < 0) or as absolute number of pixels (if > 0). If these are given in int or float, the result will be square, if these are tuples, the size can be different in both dimensions.
 
-	Some apodisation functions:
-	* Hann: lambda x: 0.5 * (1.0 - N.cos(N.pi*x))
-	* Hamming: lambda x: 0.54 - 0.46 *N.cos(N.pi*x)
-	* (Co)sine window: lambda x: N.sin(N.pi*x*0.5)
-	* Lanczos: lambda x: N.sinc(x-1.0)
+	If **apodpos** or **apodsz** are fractional, they are relative to **masksz**. Fractional **wsize** is relative to **apodsz**.
+
+	**apod_f** is the windowing function used. It can be a string (see list below), or a lambda function. In the latter case it should take one float coordinate between 1 and 0 as input and return the value of the window at that position.
+
+	Some apodisation functions (for **apod_f**):
+	- 'Hann': lambda x: 0.5 * (1.0 - N.cos(N.pi*x))
+	- 'Hamming': lambda x: 0.54 - 0.46 *N.cos(N.pi*x)
+	- '(Co)sine' window: lambda x: N.sin(N.pi*x*0.5)
+	- 'Lanczos': lambda x: N.sinc(x-1.0)
+
+	@param [in] masksz Size of the output array containing the apodisation mask
+	@param [in] apodpos Position of the apodisation mask
+	@param [in] apodsz Size of the apodisation mask
+	@param [in] shape Apodisation mask shape, 'rect' or 'circular'
+	@param [in] wsize Size of the apodisation window, i.e. the transition region to go from 0 to 1.
+	@param [in] apod_f Apodisation function to use. Can be lambda function
 	"""
 
 	# Check apodpos and apodsz, if not set, use defaults
@@ -170,7 +162,15 @@ def mk_apod_mask(masksz, apodpos=None, apodsz=None, shape='rect', wsize=-0.3, ap
 		return (mask[0])
 
 def descramble(data, direction=1):
-	"""(de)scramble data, usually used for Fourier transform data"""
+	"""
+	(de)scramble **data**, usually used for Fourier transform.
+
+	'Scrambling' data means to swap around quadrant 1 with 3 and 2 with 4 in a data matrix. The effect is that the zero frequency is no longer at **data[0,0]** but in the middle of the matrix
+
+	@param [in] data Data to (de)scramble
+	@param [in] direction 1: scramble, -1: descramble
+	@return (de)scrambled data
+	"""
 
 	for ax,rollvec in enumerate(N.r_[data.shape]/2):
 		data = N.roll(data, direction*rollvec, ax)
@@ -179,11 +179,15 @@ def descramble(data, direction=1):
 
 def embed_data(indata, direction=1):
 	"""
-	Embed <indata> in a zero-filled rectangular array of twice the size for
-	Fourier analysis.
+	Embed **indata** in a zero-filled rectangular array.
 
-	If <direction> is 1, <indata> will be embedded, if it is -1, it will be
-	dis-embedded.
+	To prevent wrapping artifacts in Fourier analysis, this function can  embed data in a zero-filled rectangular array of twice the size.
+
+	If **direction** = 1, **indata** will be embedded, if **direction** = -1, it will be dis-embedded.
+
+	@param [in] indata Data to embed
+	@param [in] direction 1: embed, -1: dis-embed
+	@return (dis)-embedded data, either 2*indata.shape or 0.5*indata.shape
 	"""
 
 	if (direction == 1):
