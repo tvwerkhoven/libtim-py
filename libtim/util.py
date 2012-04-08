@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
+@file util.py
+@brief Miscellaneous string manipulation functions
+
 @package libtim.util
 @brief Miscellaneous string manipulation functions
 @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)

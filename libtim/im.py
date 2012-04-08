@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
+@file im.py
+@brief Image manipulation routines
+
 @package libtim.im
 @brief Image manipulation routines
 @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)

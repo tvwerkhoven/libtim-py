@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
+@file log.py
+@brief Terminal and file logging functionality
+
 @package libtim.log
 @brief Terminal and file logging functionality
 @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)

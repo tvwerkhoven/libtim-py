@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
+@file zern.py
+@brief Zernike basis function utilities
+
 @package libtim.zern
 @brief Zernike basis function utilities
 @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)

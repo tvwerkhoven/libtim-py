@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
+@file fft.py
+@brief Utilities for Fourier transforms
+
 @package libtim.fft
 @brief Utilities for Fourier transforms
 @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)

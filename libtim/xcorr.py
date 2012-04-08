@@ -1,6 +1,9 @@
 #!/usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 """
+@file xcorr.py
+@brief Measure image shift using cross-correlation
+
 @package libtim.xcorr
 @brief Measure image shift using cross-correlation
 @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
@@ -264,11 +267,7 @@ def calc_subpixmax(data, offset=(0,0), dimension=2, error=False):
 
 def _gauss_slow(sz, spotsz, spotpos, amp, noiamp):
 	"""
-	Calculate Gauss in matrix of size <sz> with width <spotsz> at position <spotpos> and amplitude <amp>. If <noiamp> > 0, add Poissonian noise as well.
-
 	@deprecated please use _gauss() instead which is ~3--20x faster.
-
-	@return ndarray of shape <sz> with the Guassian function
 	"""
 
 	# Coordinate grid

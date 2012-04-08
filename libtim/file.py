@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
+@file file.py
+@brief File I/O utilities
+
 @package libtim.file
 @brief File I/O utilities
 @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)

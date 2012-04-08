@@ -12,6 +12,8 @@ Copyright (c) 2010--2012 Tim van Werkhoven. All rights reserved.
 """
 
 """
+@file __init__.py
+@brief Main package in libtim
 @package libtim
 @brief Main package in libtim
 @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
