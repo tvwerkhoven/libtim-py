@@ -230,7 +230,7 @@ def gen_metadata(metadata, *args, **kwargs):
 	- program arguments (**sys.argv[1:]**)
 	- time / date (as epoch, utc, localtime)
 	- size of current executable
-	- SHA1 hexdigest of current executable
+	- SHA1 hex digest of current executable (sha1(sys.argv[0]))
 
 	and additionally save everything in *args and **kwargs.
 
@@ -252,14 +252,14 @@ def gen_metadata(metadata, *args, **kwargs):
 	fhash = sha1_h.hexdigest()
 
 	# Start metadata dictionary with pre-set values
-	metadict = {'fname': sys.argv[0],
+	metadict = {'program': sys.argv[0],
 		'argv': " ".join(sys.argv[1:]),
 		'epoch': time(),
 		'utctime': asctime(gmtime(time())),
 		'localtime':asctime(localtime(time())),
 		'hostid': os.uname()[1],
-		'size': os.stat(sys.argv[0]).st_size,
-		'hexdigest': fhash}
+		'progsize': os.stat(sys.argv[0]).st_size,
+		'sha1digest': fhash}
 
 	# Add user-supplied values
 	metadict.update(metadata)
