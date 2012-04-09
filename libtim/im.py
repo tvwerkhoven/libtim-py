@@ -124,7 +124,7 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 	@param [in] cmap Colormap to use for PDF
 	@param [in] xlab X-axis label
 	@param [in] ylab Y-axis label
-	@param [in] hdr Additional FITS header items
+	@param [in] hdr Additional FITS header items, give a list of tuples: [(key1, val1), (key2, val2)]
 	"""
 
 	# Do not store empty data
@@ -140,13 +140,15 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 		extent = (-sh[1]/2., sh[1]/2., -sh[0]/2., sh[0]/2.)
 
 	outbase = os.path.join(dir, filenamify(fname))
+	fitsfile = outbase+'.fits'
+	plotfile = outbase+'.pdf'
 
 	if (fits):
 		# Generate some metadata
 		hdr_dict = dict({'filename':'fa_%s.fits', 'desc':fname, 'title':pltitle}.items() + dict(hdr).items())
 		hdr = mkfitshdr(hdr_dict)
 		# Store data to disk
-		pyfits.writeto(outbase+'.fits', data_arr, header=hdr, clobber=True, checksum=True)
+		pyfits.writeto(fitsfile, data_arr, header=hdr, clobber=True, checksum=True)
 
 	if (plot):
 		pltit = fname
@@ -166,7 +168,57 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 		ax.set_ylabel(ylab)
 		fig.colorbar(img, orientation='horizontal')
 		canvas = FigureCanvas(fig)
-		canvas.print_figure(outbase+'.pdf')
+		canvas.print_figure(plotfile)
+
+	return (fitsfile, plotfile)
+
+class TestStoreData(unittest.TestCase):
+	def setUp(self):
+		self.im1 = N.random.random((640,480))
+
+		axis = N.linspace(0,4*N.pi,320)
+		self.im2 = 2.*N.sin(3*axis).reshape(1,-1) * 3.*N.cos(2*axis).reshape(-1,1)
+
+	def test0a_show(self):
+		"""Dummy test, show image"""
+		plt.figure(0)
+		plt.title('Image one, random rectangle')
+		plt.imshow(self.im1)
+		plt.colorbar()
+		plt.figure(1)
+		plt.title('Image two, wavy square')
+		plt.imshow(self.im2)
+		plt.colorbar()
+		raw_input()
+
+	def test1a_store_error(self):
+		"""Store images as FITS and PDF, check for errors"""
+		fpaths = store_2ddata(self.im1, 'TestStoreData_im1', pltitle='Random image', dir='/tmp/', fits=True, plot=True, plrange=(None, None), log=False, rollaxes=True, cmap='RdYlBu', xlab='X [pix]', ylab='Y [pix]', hdr=[('author', 'TestStoreData')])
+
+		if (fpaths[0]): os.remove(fpaths[0])
+		if (fpaths[1]): os.remove(fpaths[1])
+
+		fpaths = store_2ddata(self.im1, 'TestStoreData_im2', pltitle='Wavy image', dir='/tmp/', fits=True, plot=True, plrange=(0, 1), log=False, rollaxes=True, cmap='RdYlBu', xlab='X [pix]', ylab='Y [pix]', hdr=[('author', 'TestStoreData')])
+
+		if (fpaths[0]): os.remove(fpaths[0])
+		if (fpaths[1]): os.remove(fpaths[1])
+
+	def test1a_store_filesize(self):
+		"""Store images as FITS and PDF, check for filesize > 0"""
+
+		fpaths = store_2ddata(self.im1, 'TestStoreData_im1', pltitle='Random image', dir='/tmp/', fits=True, plot=True, plrange=(None, None), log=False, rollaxes=True, cmap='RdYlBu', xlab='X [pix]', ylab='Y [pix]', hdr=[('author', 'TestStoreData')])
+
+		# Check existence
+		self.assertTrue(os.path.isfile(fpaths[0]))
+		self.assertTrue(os.path.isfile(fpaths[1]))
+
+		# Check filesize
+		self.assertGreater(os.path.getsize(fpaths[0]), 0)
+		self.assertGreater(os.path.getsize(fpaths[1]), 0)
+
+		# Remove files
+		if (fpaths[0]): os.remove(fpaths[0])
+		if (fpaths[1]): os.remove(fpaths[1])
 
 class TestDarkFlatfield(unittest.TestCase):
 	def setUp(self):
