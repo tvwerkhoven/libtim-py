@@ -19,6 +19,9 @@ This module provides some file IO functions.
 
 import matplotlib.image as mpimg
 import string
+import os
+
+import unittest
 
 #=============================================================================
 # Defines
@@ -86,7 +89,23 @@ def filenamify(str):
 	fbase = ''.join(c for c in fbase if c in valid_chars)
 	return fbase
 
+class TestCalling(unittest.TestCase):
+	def setUp(self):
+		pass
+
+	def test1a_filenamify(self):
+		"""Test filenamify"""
+		self.assertEqual(filenamify('hello world'), 'hello_world')
+
+	def test1b_read_file(self):
+		"""Test read_file calls"""
+
+		# These should both raise an IOerror
+		with self.assertRaisesRegexp(IOError, "No such file or directory"):
+			read_file('nonexistent.file', None)
+		with self.assertRaisesRegexp(IOError, "No such file or directory"):
+			read_file('nonexistent.file', 'fits')
+
 if __name__ == "__main__":
 	import sys
-	import unittest
 	sys.exit(unittest.main())
