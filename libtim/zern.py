@@ -241,12 +241,21 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, fitweight=None, center=(-0.5
 	xslice = slice(center[0]-rad, center[0]+rad)
 	yslice = slice(center[1]-rad, center[1]+rad)
 
-	# Compute Zernike list if necessary
-	if (not zern_data or zern_data['modes'][0].shape != grid_mask.shape):
+	# Compute Zernike basis if absent
+	if (not zern_data.has_key('modes')):
 		tmp_zern = calc_zern_basis(nmodes, rad)
 		zern_data['modes'] = tmp_zern['modes']
 		zern_data['covmat'] = tmp_zern['covmat']
 		zern_data['covmat_in'] = tmp_zern['covmat_in']
+	# Compute Zernike basis if insufficient
+	elif (nmodes > len(zern_data['modes']) or
+		zern_data['modes'][0].shape != grid_mask.shape):
+		tmp_zern = calc_zern_basis(nmodes, rad)
+		# This data already exists, overwrite it with new data
+		zern_data['modes'] = tmp_zern['modes']
+		zern_data['covmat'] = tmp_zern['covmat']
+		zern_data['covmat_in'] = tmp_zern['covmat_in']
+	zern_basis = zern_data['modes']
 
 	zern_basis = zern_data['modes'][:nmodes]
 	zern_covmat_in = zern_data['covmat_in'][:nmodes, :nmodes]
@@ -299,13 +308,19 @@ def calc_zernike(zern_vec, rad, zern_data={}):
 	@see See calc_zern_basis() for details on **zern_data** cache
 	"""
 
-	# Compute Zernike list if necessary
-	if (not zern_data):
+	# Compute Zernike basis if absent
+	if (not zern_data.has_key('modes')):
 		tmp_zern = calc_zern_basis(len(zern_vec), rad)
 		zern_data['modes'] = tmp_zern['modes']
 		zern_data['covmat'] = tmp_zern['covmat']
 		zern_data['covmat_in'] = tmp_zern['covmat_in']
-
+	# Compute Zernike basis if insufficient
+	elif (len(zern_vec) > len(zern_data['modes'])):
+		tmp_zern = calc_zern_basis(len(zern_vec), rad)
+		# This data already exists, overwrite it with new data
+		zern_data['modes'] = tmp_zern['modes']
+		zern_data['covmat'] = tmp_zern['covmat']
+		zern_data['covmat_in'] = tmp_zern['covmat_in']
 	zern_basis = zern_data['modes']
 
 	# Reconstruct the wavefront by summing modes
