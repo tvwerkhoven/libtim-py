@@ -18,6 +18,7 @@ This module provides some file IO functions.
 #=============================================================================
 
 import matplotlib.image as mpimg
+import pyfits
 import string
 import os
 
