@@ -17,7 +17,16 @@ Image manipulation functions.
 # Import libraries here
 #=============================================================================
 
+import os
+import pyfits
+import numpy as N
+from matplotlib.figure import Figure
+from matplotlib import cm
+from matplotlib.backends.backend_pdf import FigureCanvasPdf as FigureCanvas
 import unittest
+
+from file import filenamify
+from util import mkfitshdr
 
 #=============================================================================
 # Defines
@@ -253,5 +262,5 @@ class TestDarkFlatfield(unittest.TestCase):
 
 if __name__ == "__main__":
 	import sys
-	import numpy as N
+	import pylab as plt
 	sys.exit(unittest.main())
