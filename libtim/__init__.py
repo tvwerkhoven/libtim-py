@@ -23,4 +23,4 @@ This is libtim, providing various useful things
 """
 
 __all__ = ["libtim"]
-__version__ = "v0.1.0"
+__version__ = "v0.1.2"

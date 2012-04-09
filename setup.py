@@ -19,7 +19,7 @@ except:
 
 # Setup
 setup(name = 'libtim',
-	version = 'v0.1.1',
+	version = 'v0.1.2',
 	description = 'Miscellaneous image manipulation tools library',
 	keywords = 'wavefronts, zernike, FFT, cross-correlation',
 	author = 'Tim van Werkhoven',
