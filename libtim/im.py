@@ -125,6 +125,7 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 	@param [in] xlab X-axis label
 	@param [in] ylab Y-axis label
 	@param [in] hdr Additional FITS header items, give a list of tuples: [(key1, val1), (key2, val2)]
+	@returns Tuple of (fitsfile path, plotfile path)
 	"""
 
 	# Do not store empty data
