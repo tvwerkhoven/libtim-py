@@ -143,23 +143,66 @@ def filenamify(str):
 	fbase = ''.join(c for c in fbase if c in valid_chars)
 	return fbase
 
-class TestCalling(unittest.TestCase):
+class TestReadWriteFiles(unittest.TestCase):
 	def setUp(self):
-		pass
+		self.formats = ['fits', 'npy', 'npz', 'csv', 'png']
+		self.files = []
+
+	def tearDown(self):
+		"""Delete files produces in this test"""
+		for file in self.files:
+			if (file and os.path.isfile(file)):
+				os.remove(file)
 
 	def test1a_filenamify(self):
-		"""Test filenamify"""
+		"""Test filenamify calls"""
 		self.assertEqual(filenamify('hello world'), 'hello_world')
 
-	def test1b_read_file(self):
+	def test1b_read_file_calls(self):
 		"""Test read_file calls"""
 
-		# These should both raise an IOerror
+		# These should all raise an IOerror
 		with self.assertRaisesRegexp(IOError, "No such file or directory"):
 			read_file('nonexistent.file', None)
-		with self.assertRaisesRegexp(IOError, "No such file or directory"):
-			read_file('nonexistent.file', 'fits')
+
+		for fmt in self.formats:
+			with self.assertRaisesRegexp(IOError, "No such file or.*"):
+				read_file('nonexistent.file', fmt)
+
+	def test1c_write_file(self):
+		"""Test write_file"""
+		# Generate data
+		sz = (67, 47)
+		data1 = N.random.random(sz).astype(N.float)
+		data2 = (N.random.random(sz)*255).astype(N.uint8)
+
+		# Store as all formats
+		for fmt in self.formats:
+			fpath = store_file('/tmp/TestReadWriteFiles_data1.'+fmt, data1)
+			self.files.append(fpath)
+			fpath = store_file('/tmp/TestReadWriteFiles_data2.'+fmt, data2)
+			self.files.append(fpath)
+
+	def test2a_read_file_data(self):
+		"""Test read_file reconstruction"""
+		# Generate data
+		sz = (67, 47)
+		data1 = N.random.random(sz).astype(N.float)
+		data2 = (N.random.random(sz)*255).astype(N.uint8)
+
+		# Store as all formats
+		for fmt in self.formats:
+			fpath = store_file('/tmp/TestReadWriteFiles_data1.'+fmt, data1)
+			self.files.append(fpath)
+			fpath = store_file('/tmp/TestReadWriteFiles_data2.'+fmt, data2)
+			self.files.append(fpath)
+
+		# Try to read everything again
+		for fmt in self.formats:
+			read1 = read_file('/tmp/TestReadWriteFiles_data1.'+fmt)
+			read2 = read_file('/tmp/TestReadWriteFiles_data2.'+fmt)
 
 if __name__ == "__main__":
+	import numpy as N
 	import sys
 	sys.exit(unittest.main())
