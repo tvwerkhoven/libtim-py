@@ -211,7 +211,7 @@ def inter_imshow(data, desc="", doshow=True, dowait=True, log=False, rollaxes=Fa
 	ax = fig.add_subplot(111)
 	ax.set_title(desc)
 
-	img = ax.imshow(data, cmap=plt.get_cmap(cmap), **kwargs)
+	img = ax.imshow(data_arr, cmap=plt.get_cmap(cmap), **kwargs)
 	fig.colorbar(img)
 
 	# If we want to wait, ask user for input, discard it and continue
