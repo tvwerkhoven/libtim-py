@@ -369,6 +369,66 @@ def mkfitshdr(cards, usedefaults=True):
 
 	return pyfits.Header(cards=clist)
 
+class TestMetaData(unittest.TestCase):
+	def setUp(self):
+		self.meta = {'hello': 'world'}
+		self.outfiles = {}
+
+	def tearDown(self):
+		"""Delete testfiles if necessary"""
+		for format, file in self.outfiles.iteritems():
+			if (file and os.path.isfile(file)):
+				os.remove(file)
+
+	def test1a_gen_meta_plain(self):
+		"""Test metadata generation"""
+		data = gen_metadata(self.meta)
+
+	def test1b_gen_meta_args(self):
+		"""Test metadata generation with *args"""
+		data = gen_metadata(self.meta, 1, 'hello', [3,4,5], (1,2), 7.0)
+
+	def test1c_gen_meta_kwargs(self):
+		"""Test metadata generation with **kwargs"""
+		data = gen_metadata(self.meta, extra=True, world='Earth', planets=7, names=['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune'])
+
+	def test2a_store_meta(self):
+		"""Test metadata storing"""
+		thismeta = gen_metadata(self.meta)
+		self.outfiles = store_metadata(thismeta, 'TestMetaData', dir='/tmp/', aspickle=True, asjson=True)
+
+		# Files should exist
+		self.assertTrue(os.path.isfile(self.outfiles['pickle']), 'Pickle file not stored correctly')
+		self.assertTrue(os.path.isfile(self.outfiles['json']), 'JSON file not stored correctly')
+
+		# File should be larger than len(repr(thismeta))
+		inlen = len(repr(thismeta))
+		self.assertGreater(os.path.getsize(self.outfiles['pickle']), inlen, 'Pickle file too small?')
+		self.assertGreater(os.path.getsize(self.outfiles['json']), inlen, 'JSON file too small?')
+
+	def test2b_store_meta_recover(self):
+		"""Test metadata storing & reloading"""
+		thismeta = gen_metadata(self.meta)
+		self.outfiles = store_metadata(thismeta, 'TestMetaData', dir='/tmp/', aspickle=True, asjson=True)
+
+		# Load all formats, compare with input dict
+		for format, file in self.outfiles.iteritems():
+			if (file and os.path.isfile(file)):
+				self.assertTrue(os.path.isfile(file))
+				inmeta = load_metadata(file, format)
+				self.assertEqual(thismeta, inmeta)
+
+class TestFITSutils(unittest.TestCase):
+	def setUp(self):
+		self.cards = {'hello': 'world', 'name':'testprogram'}
+
+	def test1a_mkfitshdr(self):
+		"""Test mkfitshdr calls"""
+		mkfitshdr({})
+		mkfitshdr({}, usedefaults=False)
+		mkfitshdr(self.cards)
+		mkfitshdr(self.cards, usedefaults=False)
+
 class TestParsestr(unittest.TestCase):
 	def setUp(self):
 		pass
@@ -422,7 +482,6 @@ class TestParsestr(unittest.TestCase):
 			rng_calc = parse_range_str("0", rsep='0')
 		with self.assertRaisesRegexp(ValueError, "should not parse to int"):
 			rng_calc = parse_range_str("0", sep='0')
-
 
 class TestTokenize(unittest.TestCase):
 	def setUp(self):
