@@ -24,6 +24,8 @@ import hashlib
 import pyfits
 from time import asctime, gmtime, time, localtime
 import unittest
+import cPickle
+import json
 
 #=============================================================================
 # Defines
@@ -240,7 +242,7 @@ def gen_metadata(metadata, *args, **kwargs):
 	@param [in] *args Additional values to store
 	@param [in] **kwargs Additional key-value pairs to store
 	@returns Dictionary containing all values
-	@see store_metadata
+	@see store_metadata, load_metadata
 	"""
 
 	# Hash a file without reading it fully
@@ -287,21 +289,54 @@ def store_metadata(metadict, basename, dir='./', aspickle=False, asjson=True):
 	@param [in] dir Output directory
 	@param [in] aspickle Store as pickle format
 	@param [in] asjson Store as JSON format
-	@see gen_metadata
+	@returns Dict of files written to in format:path syntax
+	@see gen_metadata, load_metadata
 	"""
 	# Prepend directory to output path
 	basepath = os.path.join(dir, basename)
 
+	# Store output files here
+	outfiles = {}
+
 	if (aspickle):
-		import cPickle
-		fp = open(basepath + "_meta.pickle", 'w')
+		pickle_file = basepath + "_meta.pickle"
+		fp = open(pickle_file, 'w')
 		cPickle.dump(metadict, fp)
 		fp.close()
+		outfiles['pickle'] = pickle_file
 	if (asjson):
-		import json
-		fp = open(basepath + "_meta.json", 'w')
+		json_file = basepath + "_meta.json"
+		fp = open(json_file, 'w')
 		json.dump(metadict, fp, indent=2)
 		fp.close()
+		outfiles['json'] = json_file
+
+	return outfiles
+
+def load_metadata(infile, format='json'):
+	"""
+	Load metadata from **infile**.
+
+	Load metadata stored in general by store_metadata(), specify format withis **format**.
+
+	@param [in] infile filepath to read
+	@param [in] format Format of filepath (json or pickle)
+	@return Dict of metadata, like the input of store_metadata()
+	@see gen_metadata, store_metadata
+	"""
+
+	metad = {}
+
+	if (format.lower() == 'json'):
+		fp = open(infile, 'r')
+		metad = json.load(fp)
+		fp.close()
+	elif (format.lower() == 'pickle'):
+		fp = open(infile, 'r')
+		metad = cPickle.load(fp)
+		fp.close()
+
+	return metad
 
 def mkfitshdr(cards):
 	"""
