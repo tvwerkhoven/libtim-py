@@ -18,6 +18,7 @@ This module provides some file IO functions.
 #=============================================================================
 
 import matplotlib.image as mpimg
+import numpy
 import pyfits
 import string
 import os
@@ -32,7 +33,7 @@ import unittest
 # Routines
 #=============================================================================
 
-def read_file(fpath, dtype=None):
+def read_file(fpath, dtype=None, **kwargs):
 	"""
 	Try to read datafile at **fpath**.
 
@@ -40,6 +41,7 @@ def read_file(fpath, dtype=None):
 
 	@param [in] fpath Path to a file
 	@param [in] dtype Datatype to read. If absent, guess.
+	@param [in] **kwargs Extra parameters passed on directly to read function
 	@return Data from file, usually as numpy.ndarray
 	"""
 
@@ -50,10 +52,22 @@ def read_file(fpath, dtype=None):
 	# Check correct read function
 	if (dtype == 'fits'):
 		# FITS needs pyfits
-		read_func = pyfits.getdata
+		return pyfits.getdata(fpath, **kwargs)
+	elif (dtype == 'npy'):
+		# NPY needs numpy
+		return numpy.load(fpath, **kwargs)
+	elif (dtype == 'npz'):
+		# NPZ needs numpy
+		datadict = numpy.load(fpath, **kwargs)
+		if (len(datadict.keys()) > 1):
+			print >> sys.stderr, "Warning! Multiple files stored in archive '%s', returning only the first" % (fpath)
+		return datadict[datadict.keys()[0]]
+	elif (dtype == 'csv'):
+		# CSV needs Numpy.loadtxt
+		return numpy.loadtxt(fpath, delimiter=',', **kwargs)
 	else:
 		# Anything else should work with PIL's imread(). If not, it will throw anyway so we don't need to check
-		read_func = mpimg.imread
+		return mpimg.imread(fpath, **kwargs)
 
 	# Read files
 	return read_func(fpath)
