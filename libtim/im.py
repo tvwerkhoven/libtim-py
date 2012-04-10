@@ -173,6 +173,80 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 
 	return (fitsfile, plotfile)
 
+def inter_imshow(data, desc="", doshow=True, dowait=True, log=False, rollaxes=False, cmap='RdYlBu', **kwargs):
+	"""Show data using matplotlib.imshow if **doshow** is true.
+
+	Additionally, print **desc** just before plotting so users know what they see. If **dowait** is True (default), wait for input before continuing.
+
+	This function is used to show intermediate results of analysis programs conditionally, i.e. only when a certain flag is set.
+
+	@param [in] data 2D data to plot
+	@param [in] desc Text to print before plot and plot title
+	@param [in] doshow Show only if this is True
+	@param [in] dowait If set, wait before continuing
+	@param [in] log Take logarithm of data before plotting
+	@param [in] rollaxes Roll axes for plot such that (0,0) is the center
+	@param [in] cmap Colormap to use (RdYlBu or YlOrBr are nice)
+	@param [in] **kwargs Additional arguments passed to imshow()
+	"""
+
+	if (not doshow):
+		return
+
+	import pylab as plt
+	print "inter_imshow(): " + desc
+
+	# Pre-format data
+	data_arr = N.asanyarray(data)
+	if (log):
+		data_arr = N.log10(data_arr)
+
+	# Check if we want to roll the axis
+	extent = None
+	if (rollaxes):
+		sh = data_arr.shape
+		extent = (-sh[1]/2., sh[1]/2., -sh[0]/2., sh[0]/2.)
+
+	fig = plt.figure()
+	ax = fig.add_subplot(111)
+	ax.set_title(desc)
+
+	img = ax.imshow(data, cmap=plt.get_cmap(cmap), **kwargs)
+	fig.colorbar(img)
+
+	# If we want to wait, ask user for input, discard it and continue
+	if (dowait):
+		raw_input()
+
+class TestInterImshow(unittest.TestCase):
+	def setUp(self):
+		self.data = N.random.random((128,256))
+
+	# inter_imshow(data, desc="", doshow=True, dowait=True, log=False, rollaxes=False, cmap='RdYlBu', **kwargs):
+	def test0a_show(self):
+		"""Test simple plot with default args"""
+		inter_imshow(self.data, dowait=False)
+
+	def test1a_show_desc(self):
+		"""Test plot with desc"""
+		inter_imshow(self.data, "hello world", dowait=False)
+
+	def test1a_show_doshow(self):
+		"""Test plot without doshow"""
+		inter_imshow(self.data, "hello world", doshow=False, dowait=False)
+
+	def test1a_show_log(self):
+		"""Test plot with log"""
+		inter_imshow(self.data, "hello world", log=True, dowait=False)
+
+	def test1a_show_rollaxes(self):
+		"""Test plot with rollaxes"""
+		inter_imshow(self.data, "hello world", rollaxes=True, dowait=False)
+
+	def test1a_show_cmap(self):
+		"""Test plot with cmap"""
+		inter_imshow(self.data, "hello world", cmap='YlOrBr', dowait=False)
+
 class TestStoreData(unittest.TestCase):
 	def setUp(self):
 		self.im1 = N.random.random((640,480))
