@@ -338,27 +338,30 @@ def load_metadata(infile, format='json'):
 
 	return metad
 
-def mkfitshdr(cards):
+
+def mkfitshdr(cards, usedefaults=True):
 	"""
 	Make a FITS file header of all arguments supplied in the dict **cards**.
 
-	Besides **cards**, also add default header items:
+	If **usedefaults** is set, also add default header items:
 	- Program name (sys.argv[0])
 	- epoch (time()
 	- utctime / localtime
 	- hostname
 
 	@params [in] cards Dict containing key=value pairs for the header
+	@params [in] usedefaults Also store default parameters in header
 	@return pyfits header object
 	"""
 	# Init list
 	clist = pyfits.CardList()
 
 	# Add default fields
-	clist.append(pyfits.Card('prog', sys.argv[0]) )
-	clist.append(pyfits.Card('epoch', time()) )
-	clist.append(pyfits.Card('utctime', asctime(gmtime(time()))) )
-	clist.append(pyfits.Card('loctime', asctime(localtime(time()))) )
+	if (usedefaults):
+		clist.append(pyfits.Card('prog', sys.argv[0]) )
+		clist.append(pyfits.Card('epoch', time()) )
+		clist.append(pyfits.Card('utctime', asctime(gmtime(time()))) )
+		clist.append(pyfits.Card('loctime', asctime(localtime(time()))) )
 
 	# Add custom fields
 	for key, val in cards.iteritems():
