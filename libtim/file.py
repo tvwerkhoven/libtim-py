@@ -69,8 +69,47 @@ def read_file(fpath, dtype=None, **kwargs):
 		# Anything else should work with PIL's imread(). If not, it will throw anyway so we don't need to check
 		return mpimg.imread(fpath, **kwargs)
 
-	# Read files
-	return read_func(fpath)
+def store_file(fpath, data, **kwargs):
+	"""
+	Store **data** to disk at **fpath**.
+
+	Inverse of read_file(). Datatype is guessed from fpath.
+
+	Supported datatypes:
+	- FITS through pyfits.writeto
+	- NPY through numpy.save
+	- NPZ through numpy.savez
+	- CSV through numpy.savetxt
+	- PNG through matplotlib.image.imsave
+
+	@param [in] data Data to store. Should be something that converts to a numpy.ndarray
+	@param [in] fpath Full path to store to
+	@param [in] **kwargs Extra parameters passed on directly to write function
+	@returns Path the data is stored to, when successful
+	"""
+
+	# Guess dtype from filepath
+	dtype = os.path.splitext(fpath)[1].lower()[1:]
+
+	# Check correct write function
+	if (dtype == 'fits'):
+		# FITS needs pyfits
+		pyfits.writeto(fpath, data, **kwargs)
+	elif (dtype == 'npy'):
+		# NPY needs numpy
+		numpy.save(fpath, data, **kwargs)
+	elif (dtype == 'npz'):
+		# NPY needs numpy
+		numpy.savez(fpath, data, **kwargs)
+	elif (dtype == 'csv'):
+		# CSV needs Numpy.loadtxt
+		numpy.savetxt(fpath, data, delimiter=',', **kwargs)
+	elif (dtype == 'png'):
+		mpimg.imsave(fpath, data, **kwargs)
+	else:
+		raise ValueError("Unsupported filetype '%s'" % (dtype))
+
+	return fpath
 
 def read_files(flist, dtype=None):
 	"""
