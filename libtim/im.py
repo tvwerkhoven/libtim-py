@@ -146,7 +146,7 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 
 	if (fits):
 		# Generate some metadata
-		hdr_dict = dict({'filename':'fa_%s.fits', 'desc':fname, 'title':pltitle}.items() + dict(hdr).items())
+		hdr_dict = dict({'filename':fitsfile, 'desc':fname, 'title':pltitle}.items() + dict(hdr).items())
 		hdr = mkfitshdr(hdr_dict)
 		# Store data to disk
 		pyfits.writeto(fitsfile, data_arr, header=hdr, clobber=True, checksum=True)
