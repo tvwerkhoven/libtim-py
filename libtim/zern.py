@@ -192,13 +192,15 @@ def calc_zern_basis(nmodes, rad, mask=True):
 	# Create and return dict
 	return {'modes': zern_modes, 'covmat':cov_mat, 'covmat_in':cov_mat_in}
 
-def fit_zernike(wavefront, zern_data={}, nmodes=10, fitweight=None, center=(-0.5, -0.5), rad=-0.5, err=None):
+def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None, center=(-0.5, -0.5), rad=-0.5, err=None):
 	"""
 	Fit **nmodes** Zernike modes to a **wavefront**.
 
 	The **wavefront** will be fit to Zernike modes for a circle with radius **rad** with origin at **center**. **weigh** is a weighting mask used when fitting the modes.
 
 	If **center** or **rad** are between 0 and -1, the values will be interpreted as fractions of the image shape.
+
+	**startmode** indicates the Zernike mode (Noll index) to start fitting with, i.e. ***startmode**=4 will skip piston, tip and tilt modes. Modes below this one will be set to zero, which means that if **startmode** == **nmodes**, the returned vector will be all zeroes. This parameter is intended to ignore low order modes when fitting (piston, tip, tilt) as these can sometimes not be derived from data.
 
 	If **err** is an empty list, it will be filled with measures for the fitting error:
 	1. Mean squared difference
@@ -210,6 +212,7 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, fitweight=None, center=(-0.5
 	@param [in] wavefront Input wavefront to fit
 	@param [in] zern_data Zernike basis cache
 	@param [in] nmodes Number of modes to fit
+	@param [in] startmode Start fitting at this mode (Noll index)
 	@param [in] fitweight Mask to use as weights when fitting
 	@param [in] center Center of Zernike modes to fit
 	@param [in] rad Radius of Zernike modes to fit
@@ -224,6 +227,8 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, fitweight=None, center=(-0.5
 		raise ValueError("radius exceeds wavefront shape?")
 	elif (max(center) > max(wavefront.shape)-rad):
 		raise ValueError("fitmask shape exceeds wavefront shape?")
+	elif (startmode	< 1):
+		raise ValueError("startmode<1 is not a valid Noll index")
 
 	# Convert rad and center if coordinates are fractional
 	if (rad < 0):
@@ -280,6 +285,7 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, fitweight=None, center=(-0.5
 
 	# Calculate Zernike amplitudes
 	wf_zern_vec = N.dot(zern_covmat_in, wf_zern_inprod)
+	wf_zern_vec[:startmode-1] = 0
 
 	# Calculate full Zernike phase
 	wf_zern_rec = calc_zernike(wf_zern_vec, zern_data=zern_data, rad=min(wavefront.shape)/2)
@@ -432,6 +438,19 @@ class TestZernikes(unittest.TestCase):
 		fitvec = fitdata[0]
 		self.assertAlmostEqual(N.mean(self.vec[:10] / fitvec), 1.0, delta=0.1)
 		self.assertTrue(N.allclose(self.vec[:10]/fitvec, 1.0, rtol=0.1))
+
+	def test2f_fit_startmode(self):
+		"""Test startmode parameter in fit_zernike"""
+		# startmode == 0 should raise an error, as this is not a valid Noll
+		# index
+		with self.assertRaises(ValueError):
+			fitdata = fit_zernike(self.wf, nmodes=10, startmode=0)
+
+		# Setting startmode higher should block out the first few modes
+		for s in range(10):
+			fitdata = fit_zernike(self.wf, nmodes=10, startmode=s+1)
+			fitvec = fitdata[0]
+			self.assertEqual(tuple(fitvec[:s]), (0,)*s)
 
 class TestZernikeSpeed(unittest.TestCase):
 	def setUp(self):
