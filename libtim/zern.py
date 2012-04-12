@@ -290,8 +290,9 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None,
 	# Calculate full Zernike phase
 	wf_zern_rec = calc_zernike(wf_zern_vec, zern_data=zern_data, rad=min(wavefront.shape)/2)
 	# Calculate errors
-	fitdiff = wf_zern_rec - wavefront[yslice, xslice]*weight
-#	fitsum = wf_zern_rec + wavefront[yslice, xslice]*weight
+	fitdiff = wf_zern_rec - wavefront[yslice, xslice]
+	# Make sure value outside mask is same as mean inside mask
+	fitdiff[grid_mask == False] = fitdiff[grid_mask].mean()
 
 	if (err != None):
 		err.append((fitdiff**2.0).mean())
