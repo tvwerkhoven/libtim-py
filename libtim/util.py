@@ -369,6 +369,50 @@ def mkfitshdr(cards, usedefaults=True):
 
 	return pyfits.Header(cards=clist)
 
+def git_rev(fpath):
+	"""
+	Query and return git revision of a certain path.
+
+	@param [in] fpath Path to investigate. Can be filename, in which case only the path will be use
+	@returns Output of `git describe --always HEAD`
+	"""
+
+	# CD to path of file
+	try:
+		fdir = os.path.dirname(fpath)
+	except:
+		raise TypeError("Cannot get dirname from <fpath>")
+
+	if (not fdir): fdir = './'
+
+	# Execute `git describe --always HEAD'
+	import subprocess
+	cmd = ['git', 'describe', '--always', 'HEAD']
+	proc = subprocess.Popen(cmd, cwd=fdir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	out = proc.communicate()
+	rev = out[0].rstrip()
+	return rev
+
+class TestGitRev(unittest.TestCase):
+	def setUp(self):
+		pass
+
+	def test0_call(self):
+		"""Call function, check for failure"""
+		git_rev('./')
+		git_rev('')
+		with self.assertRaisesRegexp(TypeError, "Cannot get dirname"):
+			git_rev(1)
+		git_rev('no file')
+
+	def test1_rev_lib(self):
+		"""Query revision of this lib"""
+		rev = git_rev(sys.argv[0])
+		#print rev
+		self.assertTrue(rev.__class__ == 'string'.__class__)
+		self.assertGreater(len(rev), 1)
+		self.assertLess(len(rev), 32)
+
 class TestMetaData(unittest.TestCase):
 	def setUp(self):
 		self.meta = {'hello': 'world'}
