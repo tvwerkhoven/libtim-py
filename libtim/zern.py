@@ -275,13 +275,17 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None,
 #	global GLOB_ZERN_COVMAT_IN # will be updated by calc_zern_basis()
 
 	# Calculate inner products
+	## @bug This weight is wrong, it modifies the data instead of weighing it in the fit.
 	weight = grid_mask
 	wf_zern_inprod = 0
 	if (fitweight != None):
-		weight = fitweight[yslice, xslice] * grid_mask
-		wf_zern_inprod = N.array([N.sum(wavefront[yslice, xslice] * zmode * weight) for zmode in zern_basis])
-	else:
-		wf_zern_inprod = N.array([N.sum(wavefront[yslice, xslice] * zmode) for zmode in zern_basis])
+		raise RuntimeWarning("Warning: weighed fitting is broken, not using")
+# 		weight = fitweight[yslice, xslice] * grid_mask
+# 		# Normalize weight such that the mean is 1
+# 		weight /= weight[grid_mask].mean()
+# 		wf_zern_inprod = N.array([N.sum(wavefront[yslice, xslice] * zmode * weight) for zmode in zern_basis])
+# 	else:
+	wf_zern_inprod = N.array([N.sum(wavefront[yslice, xslice] * zmode) for zmode in zern_basis])
 
 	# Calculate Zernike amplitudes
 	wf_zern_vec = N.dot(zern_covmat_in, wf_zern_inprod)
