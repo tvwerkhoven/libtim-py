@@ -36,15 +36,24 @@ from util import mkfitshdr
 # Routines
 #=============================================================================
 
-def mk_rad_mask(rad):
+def mk_rad_mask(r0, r1=None):
 	"""
-	Make a square matrix where the value of each element is the distance to the center normalized to the radius. I.e. the center edge has value 1, the corners have value sqrt(2)
+	Make a rectangular matrix where the value of each element is the distance to the center normalized to the radius **rad**. I.e. the center edge has value 1, the corners have value sqrt(2).
+
+	If only r0 is given, the matrix will be (r0, r0). If ry is also given, the matrix will be (r0, r1)
+
+	@param [in] r0 The width (and height if r1==None) of the mask.
+	@param [in] r1 The height of the mask.
 	"""
 
-	rvec = ((N.arange(2*rad) - rad)/rad)
-	r0 = rvec.reshape(-1,1)
-	r1 = rvec.reshape(1,-1)
-	grid_rad = (r0**2. + r1**2.)**0.5
+	if (not r1):
+		r1 = r0
+	if (r0 < 1 or r1 < 1):
+		raise ValueError("r0, r1 should be > 0")
+
+	r0v = ((N.arange(2.0*r0) - r0)/r0).reshape(-1,1)
+	r1v = ((N.arange(2.0*r1) - r1)/r1).reshape(1,-1)
+	grid_rad = (r0v**2. + r1v**2.)**0.5
 	return grid_rad
 
 def mk_rad_prof(data, maxrange=None):
@@ -228,6 +237,26 @@ def inter_imshow(data, desc="", doshow=True, dowait=True, log=False, rollaxes=Fa
 	# If we want to wait, ask user for input, discard it and continue
 	if (dowait):
 		raw_input()
+
+class TestUtilFuncs(unittest.TestCase):
+	def setUp(self):
+		self.data = N.random.random((128,256))
+
+	def test0a_mkradmask(self):
+		"""Test mk_rad_mask"""
+		mk_rad_mask(1)
+		mk_rad_mask(25.0)
+		mk_rad_mask(128.0)
+		mk_rad_mask(10, 64)
+
+	def test0b_mkradmask(self):
+		"""Test mk_rad_mask fails"""
+		with self.assertRaises(ValueError):
+			mk_rad_mask(0)
+		with self.assertRaises(ValueError):
+			mk_rad_mask(-1)
+		with self.assertRaises(ValueError):
+			mk_rad_mask(-10, -10)
 
 class TestInterImshow(unittest.TestCase):
 	def setUp(self):
