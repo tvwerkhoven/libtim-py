@@ -19,6 +19,8 @@ Construct and analyze Zernike basis functions
 
 import numpy as N
 import unittest
+import libtim as tim
+import libtim.im
 
 #=============================================================================
 # Defines
@@ -149,25 +151,25 @@ def zern_normalisation(nmodes=30):
 
 ### Higher level Zernike generating / fitting functions
 
-def calc_zern_basis(nmodes, rad, mask=True):
+def calc_zern_basis(nmodes, rad):
 	"""
 	Calculate a basis of **nmodes** Zernike modes with radius **rad**.
 
-	If **mask** is true, set everything outside of radius **rad** to zero (default). If this is not done, the set of Zernikes will be **rad** by **rad** square and are not orthogonal anymore.
+	((If **mask** is true, set everything outside of radius **rad** to zero (default). If this is not done, the set of Zernikes will be **rad** by **rad** square and are not orthogonal anymore.)) --> Nothing is masked, do this manually using the 'mask' entry in the returned dict.
 
 	This output of this function can be used as cache for other functions.
 
 	@param [in] nmodes Number of modes to generate
 	@param [in] rad Radius of Zernike modes
 	@param [in] mask Mask area outside Zernike modes or not
-	@return Dict with entries 'modes' a list of Zernike modes, 'modesmat' a matrix of (nmodes, npixels), 'covmat' a covariance matrix for all these modes with 'covmat_in' its inverse.
+	@return Dict with entries 'modes' a list of Zernike modes, 'modesmat' a matrix of (nmodes, npixels), 'covmat' a covariance matrix for all these modes with 'covmat_in' its inverse, 'mask' is a binary mask to crop only the orthogonal part of the modes.
 	"""
 
 	if (rad <= 0):
 		raise ValueError("radius should be > 0")
 
 	if (nmodes <= 0):
-		return {'modes':[], 'covmat':0, 'covmat_in':0}
+		return {'modes':[], 'modesmat':[], 'covmat':0, 'covmat_in':0, 'mask':[[0]]}
 
 	# Use vectors instead of a grid matrix
 	rvec = ((N.arange(2.0*rad) - rad)/rad)
@@ -176,24 +178,21 @@ def calc_zern_basis(nmodes, rad, mask=True):
 	grid_rad = (r1**2. + r0**2.)**0.5
 	grid_ang = N.arctan2(r0, r1)
 
-	if (mask):
-		grid_mask = grid_rad <= 1
-	else:
-		grid_mask = 1
+	grid_mask = grid_rad <= 1
 
-	# Build list of Zernike modes
-	zern_modes = [zernikel(zmode+1, grid_rad, grid_ang) * grid_mask for zmode in xrange(nmodes)]
+	# Build list of Zernike modes, these are *not* masked/cropped
+	zern_modes = [zernikel(zmode+1, grid_rad, grid_ang) for zmode in xrange(nmodes)]
 
 	# Convert modes to (nmodes, npixels) matrix
 	zern_modes_mat = N.r_[zern_modes].reshape(nmodes, -1)
 
 	# Calculate covariance matrix
-	cov_mat = N.array([[N.sum(zerni * zernj) for zerni in zern_modes] for zernj in zern_modes])
+	cov_mat = N.array([[N.sum(zerni * zernj * grid_mask) for zerni in zern_modes] for zernj in zern_modes])
 	# Invert covariance matrix using SVD
 	cov_mat_in = N.linalg.pinv(cov_mat)
 
 	# Create and return dict
-	return {'modes': zern_modes, 'modesmat': zern_modes_mat, 'covmat':cov_mat, 'covmat_in':cov_mat_in}
+	return {'modes': zern_modes, 'modesmat': zern_modes_mat, 'covmat':cov_mat, 'covmat_in':cov_mat_in, 'mask': grid_mask}
 
 def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None, center=(-0.5, -0.5), rad=-0.5, err=None):
 	"""
@@ -239,13 +238,7 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None,
 	if (min(center) < 0):
 		center = -N.r_[center] * min(wavefront.shape)
 
-	# Use vectors instead of grid
-	rvec = ((N.arange(2*rad) - rad)/rad)
-	r0 = rvec.reshape(-1,1)
-	r1 = rvec.reshape(1,-1)
-	grid_rad = (r0**2. + r1**2.)**0.5
-	grid_mask = grid_rad <= 1
-
+	# Make cropping slices to select only central part of the wavefront
 	xslice = slice(center[0]-rad, center[0]+rad)
 	yslice = slice(center[1]-rad, center[1]+rad)
 
@@ -256,21 +249,22 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None,
 		zern_data['modesmat'] = tmp_zern['modesmat']
 		zern_data['covmat'] = tmp_zern['covmat']
 		zern_data['covmat_in'] = tmp_zern['covmat_in']
+		zern_data['mask'] = tmp_zern['mask']
 	# Compute Zernike basis if insufficient
 	elif (nmodes > len(zern_data['modes']) or
-		zern_data['modes'][0].shape != grid_mask.shape):
+		zern_data['modes'][0].shape != (2*rad, 2*rad)):
 		tmp_zern = calc_zern_basis(nmodes, rad)
 		# This data already exists, overwrite it with new data
 		zern_data['modes'] = tmp_zern['modes']
 		zern_data['modesmat'] = tmp_zern['modesmat']
 		zern_data['covmat'] = tmp_zern['covmat']
 		zern_data['covmat_in'] = tmp_zern['covmat_in']
-
-	#zern_basis = zern_data['modes']
+		zern_data['mask'] = tmp_zern['mask']
 
 	zern_basis = zern_data['modes'][:nmodes]
 	zern_covmat_in = zern_data['covmat_in'][:nmodes, :nmodes]
 	zern_basismat = zern_data['modesmat'][:nmodes]
+	grid_mask = zern_data['mask']
 	# Calculate Zernike covariance matrix
 # 	cov_mat = N.zeros((nmodes, nmodes))
 # 	for modei in xrange(nmodes):
@@ -283,24 +277,28 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None,
 
 	# Calculate inner products
 	wf_zern_vec = 0
+	grid_vec = grid_mask.reshape(-1)
 	if (fitweight != None):
+		# Weighed LSQ fit with data. Only fit inside grid_mask
+
 		# Multiply weight with binary mask, reshape to vector
-		weight = (fitweight[yslice, xslice] * grid_mask).reshape(1,-1)
-# 		weight /= weight[grid_mask].mean()
+		weight = ((fitweight[yslice, xslice])[grid_mask]).reshape(1,-1)
 
 		# LSQ fit with weighed data
-		wf_w = (wavefront[yslice, xslice] * grid_mask).reshape(1,-1) * weight
-		wf_zern_vec = N.dot(wf_w, N.linalg.pinv(zern_basismat * weight))
+		wf_w = ((wavefront[yslice, xslice])[grid_mask]).reshape(1,-1) * weight
+		wf_zern_vec = N.dot(wf_w, N.linalg.pinv(zern_basismat[:, grid_vec] * weight))
 # 		print "Weighed LSQ Zern: ", wf_zern_vec.shape, wf_zern_vec
 	else:
-		# LSQ fit with data
-		wf_w = (wavefront[yslice, xslice] * grid_mask).reshape(1,-1)
-		wf_zern_vec = N.dot(wf_w, N.linalg.pinv(zern_basismat))
+		# LSQ fit with data. Only fit inside grid_mask
+
+		# Crop out central region of wavefront, then only select the orthogonal part of the Zernike modes (grid_mask)
+ 		wf_w = ((wavefront[yslice, xslice])[grid_mask]).reshape(1,-1)
+		wf_zern_vec = N.dot(wf_w, N.linalg.pinv(zern_basismat[:, grid_vec]))
 # 		print "LSQ Zern: ", wf_zern_vec.shape, wf_zern_vec
 
 	if (False):
 		# Old method based on covariance matrix fitting
-		wf_zern_inprod = N.array([N.sum(wavefront[yslice, xslice] * zmode) for zmode in zern_basis])
+		wf_zern_inprod = N.array([N.sum((wavefront[yslice, xslice])[grid_mask] * zmode[grid_mask]) for zmode in zern_basis])
 
 		# Calculate Zernike amplitudes
 		wf_zern_vec = N.dot(zern_covmat_in, wf_zern_inprod)
@@ -326,7 +324,7 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None,
 
 	return (wf_zern_vec, wf_zern_rec, fitdiff)
 
-def calc_zernike(zern_vec, rad, zern_data={}):
+def calc_zernike(zern_vec, rad, zern_data={}, mask=True):
 	"""
 	Construct wavefront with Zernike amplitudes **zern_vec**.
 
@@ -334,29 +332,50 @@ def calc_zernike(zern_vec, rad, zern_data={}):
 
 	This function uses **zern_data** as cache. If this is not given, it will be generated. See calc_zern_basis() for details.
 
+	If **mask** is True, set everything outside radius **rad** to zero, this is the default and will use orthogonal Zernikes. If this is False, the modes will not be cropped.
+
 	@param [in] zern_vec 1D vector of Zernike amplitudes
 	@param [in] rad Radius for Zernike modes to construct
 	@param [in] zern_data Zernike basis cache
-	@see See calc_zern_basis() for details on **zern_data** cache
+	@param [in] mask If True, set everything outside the Zernike aperture to zero, otherwise leave as is.
+	@see See calc_zern_basis() for details on **zern_data** cache and **mask**
 	"""
 
 	# Compute Zernike basis if absent
 	if (not zern_data.has_key('modes')):
 		tmp_zern = calc_zern_basis(len(zern_vec), rad)
 		zern_data['modes'] = tmp_zern['modes']
+		zern_data['modesmat'] = tmp_zern['modesmat']
 		zern_data['covmat'] = tmp_zern['covmat']
 		zern_data['covmat_in'] = tmp_zern['covmat_in']
+		zern_data['mask'] = tmp_zern['mask']
 	# Compute Zernike basis if insufficient
 	elif (len(zern_vec) > len(zern_data['modes'])):
 		tmp_zern = calc_zern_basis(len(zern_vec), rad)
 		# This data already exists, overwrite it with new data
 		zern_data['modes'] = tmp_zern['modes']
+		zern_data['modesmat'] = tmp_zern['modesmat']
 		zern_data['covmat'] = tmp_zern['covmat']
 		zern_data['covmat_in'] = tmp_zern['covmat_in']
+		zern_data['mask'] = tmp_zern['mask']
 	zern_basis = zern_data['modes']
 
+	gridmask = 1
+	if (mask):
+		gridmask = zern_data['mask']
+
 	# Reconstruct the wavefront by summing modes
-	return reduce(lambda x,y: x+y[1]*zern_basis[y[0]], enumerate(zern_vec), 0)
+	return reduce(lambda x,y: x+y[1]*zern_basis[y[0]] * gridmask, enumerate(zern_vec), 0)
+
+class PlotZernikes(unittest.TestCase):
+	def test0a_masking(self):
+		"""Plot masking"""
+		rad = 128
+		zn_m = calc_zernike([1,2,3,4,5,6], rad, mask=True)
+		zn_unm = calc_zernike([1,2,3,4,5,6], rad, mask=False)
+		mask = tim.im.mk_rad_mask(2*rad) <= 1
+		inter_imshow(zn_m, desc="Masked Zernike")
+		inter_imshow(zn_unm, desc="Unmasked Zernike")
 
 class TestZernikes(unittest.TestCase):
 	def setUp(self):
@@ -370,6 +389,7 @@ class TestZernikes(unittest.TestCase):
 		self.basis_data = calc_zern_basis(self.nmodes, self.rad)
 		self.basis = self.basis_data['modes']
 		self.wf = reduce(lambda x,y: x+y[1]*self.basis[y[0]], enumerate(self.vec), 0)
+		self.wf_msk = reduce(lambda x,y: x+y[1]*self.basis[y[0]]*self.basis_data['mask'], enumerate(self.vec), 0)
 
 	# Shallow data tests
 	def test0a_basis_data(self):
@@ -419,6 +439,24 @@ class TestZernikes(unittest.TestCase):
 		"""Test disk writing."""
 		pyfits.writeto('TestZernikes-modes.fits', N.r_[self.basis], clobber=True)
 
+	def test1d_masking(self):
+		"""Test if masking works"""
+		rad = 128
+		zn_m = calc_zernike([1,2,3,4,5,6], rad, mask=True)
+		zn_unm = calc_zernike([1,2,3,4,5,6], rad, mask=False)
+		mask = tim.im.mk_rad_mask(2*rad) <= 1
+
+		# Should be equal inside mask
+		self.assertAlmostEqual(N.sum(zn_unm[mask] - zn_m[mask]), 0.0)
+		self.assertTrue(N.allclose(zn_unm[mask], zn_m[mask]))
+
+		# Should be unequal outside mask
+		self.assertFalse(N.allclose(zn_unm[mask==False], zn_m[mask==False]))
+
+		# Mean outside the mask should be larger than the mean inside the mask, in general
+		self.assertGreater(N.mean(N.abs(zn_unm[mask==False])),
+			0.5*N.mean(N.abs(zn_unm[mask])))
+
 	# Deep function tests
 	# calc_zern_basis(nmodes, rad, mask=True):
 	# fit_zernike(wavefront, nmodes=10, center=(-0.5, -0.5), rad=-0.5):
@@ -429,7 +467,7 @@ class TestZernikes(unittest.TestCase):
 		vec = [0]*self.nmodes
 		for i in xrange(self.nmodes):
 			vec[i] = 1
-			testzern = calc_zernike(vec, self.rad)
+			testzern = calc_zernike(vec, self.rad, mask=False)
 			self.assertTrue(N.allclose(self.basis[i], testzern))
 			vec[i] = 0
 
@@ -452,18 +490,30 @@ class TestZernikes(unittest.TestCase):
 			self.assertAlmostEqual(N.var(m[self.mask]), 1.0, delta=1.1/(self.rad**2.)**0.5)
 
 	def test2d_equal_mode(self):
-		"""Test equal-mode Zernike reconstruction"""
-		fitdata = fit_zernike(self.wf, nmodes=self.nmodes)
-		fitvec = fitdata[0]
+		"""Test equal-mode Zernike reconstruction with non-masked input"""
+		fitvec, fitrec, fitdiff = fit_zernike(self.wf, nmodes=self.nmodes)
+
+		self.assertAlmostEqual(N.sum(self.vec - fitvec), 0.0)
+		self.assertTrue(N.allclose(self.vec, fitvec))
+
+	def test2d2_equal_mode_masked(self):
+		"""Test equal-mode Zernike reconstruction with masked input"""
+		fitvec, fitrec, fitdiff = fit_zernike(self.wf_msk, nmodes=self.nmodes)
+
 		self.assertAlmostEqual(N.sum(self.vec - fitvec), 0.0)
 		self.assertTrue(N.allclose(self.vec, fitvec))
 
 	def test2e_unequal_mode(self):
-		"""Test unequal-mode Zernike reconstruction"""
-		fitdata = fit_zernike(self.wf, nmodes=10)
-		fitvec = fitdata[0]
+		"""Test unequal-mode Zernike reconstruction with non-masked input. This will probably not be exactly equal because we try to fit a surface generated with 20 modes with only 10 modes."""
+		fitvec, fitrec, fitdiff = fit_zernike(self.wf, nmodes=10)
+
 		self.assertAlmostEqual(N.mean(self.vec[:10] / fitvec), 1.0, delta=0.1)
-		self.assertTrue(N.allclose(self.vec[:10]/fitvec, 1.0, rtol=0.1))
+
+	def test2e2_unequal_mode(self):
+		"""Test unequal-mode Zernike reconstruction with masked input. This will probably not be exactly equal because we try to fit a surface generated with 20 modes with only 10 modes."""
+		fitvec, fitrec, fitdiff = fit_zernike(self.wf_msk, nmodes=10)
+
+		self.assertAlmostEqual(N.mean(self.vec[:10] / fitvec), 1.0, delta=0.1)
 
 	def test2f_fit_startmode(self):
 		"""Test startmode parameter in fit_zernike"""
@@ -566,4 +616,6 @@ if __name__ == "__main__":
 	import sys
 	import pyfits
 	from timeit import Timer
+	import pylab as plt
+	import libtim.im
 	sys.exit(unittest.main())
