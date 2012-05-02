@@ -275,33 +275,45 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None,
 #	global GLOB_ZERN_COVMAT_IN # will be updated by calc_zern_basis()
 
 	# Calculate inner products
-	## @bug This weight is wrong, it modifies the data instead of weighing it in the fit.
-	weight = grid_mask
-	wf_zern_inprod = 0
+	wf_zern_vec1 = 0
 	if (fitweight != None):
-		raise RuntimeWarning("Warning: weighed fitting is broken, not using")
-# 		weight = fitweight[yslice, xslice] * grid_mask
-# 		# Normalize weight such that the mean is 1
+		# Multiply weight with binary mask, reshape to vector
+		weight = (fitweight[yslice, xslice] * grid_mask).reshape(1,-1)
 # 		weight /= weight[grid_mask].mean()
-# 		wf_zern_inprod = N.array([N.sum(wavefront[yslice, xslice] * zmode * weight) for zmode in zern_basis])
-# 	else:
+
+		# LSQ fit with weighed data
+		wf_w = (wavefront[yslice, xslice] * grid_mask * weight).reshape(1,-1)
+		wf_zern_vec1 = N.dot(wf_w, N.linalg.pinv(zern_basis * weight))
+		print "Weighed LSQ Zern: ", wf_zern_vec1
+
+	# LSQ fit with data
+	wf_w = (wavefront[yslice, xslice] * grid_mask).reshape(1,-1)
+	wf_zern_vec2 = N.dot(wf_w, N.linalg.pinv(zern_basis))
+	print "LSQ Zern: ", wf_zern_vec2
+
 	wf_zern_inprod = N.array([N.sum(wavefront[yslice, xslice] * zmode) for zmode in zern_basis])
 
 	# Calculate Zernike amplitudes
-	wf_zern_vec = N.dot(zern_covmat_in, wf_zern_inprod)
+	wf_zern_vec3 = N.dot(zern_covmat_in, wf_zern_inprod)
+	print "Cov. Zern: ", wf_zern_vec3
+
+	wf_zern_vec = wf_zern_vec1
 	wf_zern_vec[:startmode-1] = 0
 
 	# Calculate full Zernike phase
 	wf_zern_rec = calc_zernike(wf_zern_vec, zern_data=zern_data, rad=min(wavefront.shape)/2)
-	# Calculate errors
-	fitdiff = wf_zern_rec - wavefront[yslice, xslice]
-	# Make sure value outside mask is same as mean inside mask
+
+	# Calculate fit difference
+	fitdiff = (wf_zern_rec - wavefront[yslice, xslice])
+	# Make sure value outside mask is same as mean inside mask, better for plotting
 	fitdiff[grid_mask == False] = fitdiff[grid_mask].mean()
 
 	if (err != None):
-		err.append((fitdiff**2.0).mean())
-		err.append(N.abs(fitdiff).mean())
-		err.append(N.abs(fitdiff).mean()**2.0)
+		# For calculating scalar fitting qualities, only use the area inside the mask
+		fitresid = fitdiff[grid_mask == True]
+		err.append((fitresid**2.0).mean())
+		err.append(N.abs(fitresid).mean())
+		err.append(N.abs(fitresid).mean()**2.0)
 
 	return (wf_zern_vec, wf_zern_rec, fitdiff)
 
