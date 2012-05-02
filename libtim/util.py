@@ -399,11 +399,17 @@ class TestGitRev(unittest.TestCase):
 
 	def test0_call(self):
 		"""Call function, check for failure"""
+		# Current directory probably has a revision
 		git_rev('./')
+		# Empty string defaults to current dir
 		git_rev('')
+		# 'no file' defaults to current directory
+		git_rev('no file')
+
+		# /tmp/ probably has no git revision
+		self.assertEqual(git_rev('/tmp/'), '')
 		with self.assertRaisesRegexp(TypeError, "Cannot get dirname"):
 			git_rev(1)
-		git_rev('no file')
 
 	def test1_rev_lib(self):
 		"""Query revision of this lib"""
