@@ -238,6 +238,8 @@ def gen_metadata(metadata, *args, **kwargs):
 
 	This is intended to store all program execution parameters to disk such that this batch can later be reproduced, and the origin of the output can be traced back.
 
+	@todo Get revision tag from filename (sys.argv[0]) using git_rev()
+
 	@param [in] metadata Dict of other values to store
 	@param [in] *args Additional values to store
 	@param [in] **kwargs Additional key-value pairs to store
@@ -262,6 +264,11 @@ def gen_metadata(metadata, *args, **kwargs):
 		'hostid': os.uname()[1],
 		'progsize': os.stat(sys.argv[0]).st_size,
 		'sha1digest': fhash}
+
+	grev = git_rev(sys.argv[0])
+	if (grev):
+		metadict.update({'revision': grev})
+
 
 	# Add user-supplied values
 	metadict.update(metadata)
