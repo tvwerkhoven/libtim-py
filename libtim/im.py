@@ -38,7 +38,7 @@ from util import mkfitshdr
 
 def mk_rad_mask(r0, r1=None):
 	"""
-	Make a rectangular matrix where the value of each element is the distance to the center normalized to the radius **rad**. I.e. the center edge has value 1, the corners have value sqrt(2).
+	Make a rectangular matrix where the value of each element is the distance to the center normalized to the shape **r0** and **r1**. I.e. the center edge has value 1, the corners have value sqrt(2) in case of a square matrix.
 
 	If only r0 is given, the matrix will be (r0, r0). If ry is also given, the matrix will be (r0, r1)
 
@@ -51,8 +51,8 @@ def mk_rad_mask(r0, r1=None):
 	if (r0 < 1 or r1 < 1):
 		raise ValueError("r0, r1 should be > 0")
 
-	r0v = ((N.arange(2.0*r0) - r0)/r0).reshape(-1,1)
-	r1v = ((N.arange(2.0*r1) - r1)/r1).reshape(1,-1)
+	r0v = ((N.arange(1.0*r0) - 0.5*r0)*2/r0).reshape(-1,1)
+	r1v = ((N.arange(1.0*r1) - 0.5*r1)*2/r1).reshape(1,-1)
 	grid_rad = (r0v**2. + r1v**2.)**0.5
 	return grid_rad
 
