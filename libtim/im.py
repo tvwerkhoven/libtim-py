@@ -36,6 +36,17 @@ from util import mkfitshdr
 # Routines
 #=============================================================================
 
+def mk_rad_mask(rad):
+	"""
+	Make a square matrix where the value of each element is the distance to the center normalized to the radius. I.e. the center edge has value 1, the corners have value sqrt(2)
+	"""
+
+	rvec = ((N.arange(2*rad) - rad)/rad)
+	r0 = rvec.reshape(-1,1)
+	r1 = rvec.reshape(1,-1)
+	grid_rad = (r0**2. + r1**2.)**0.5
+	return grid_rad
+
 def mk_rad_prof(data, maxrange=None):
 	"""
 	Make radial profile of **data**.
