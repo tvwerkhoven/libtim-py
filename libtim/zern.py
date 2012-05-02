@@ -160,7 +160,7 @@ def calc_zern_basis(nmodes, rad, mask=True):
 	@param [in] nmodes Number of modes to generate
 	@param [in] rad Radius of Zernike modes
 	@param [in] mask Mask area outside Zernike modes or not
-	@return Dict with entries 'basis' a list of Zernike modes and 'covmat' a covariance matrix for all these modes with 'covmat_in' its inverse.
+	@return Dict with entries 'modes' a list of Zernike modes, 'modesmat' a matrix of (nmodes, npixels), 'covmat' a covariance matrix for all these modes with 'covmat_in' its inverse.
 	"""
 
 	if (rad <= 0):
@@ -184,13 +184,16 @@ def calc_zern_basis(nmodes, rad, mask=True):
 	# Build list of Zernike modes
 	zern_modes = [zernikel(zmode+1, grid_rad, grid_ang) * grid_mask for zmode in xrange(nmodes)]
 
+	# Convert modes to (nmodes, npixels) matrix
+	zern_modes_mat = N.r_[zern_modes].reshape(nmodes, -1)
+
 	# Calculate covariance matrix
 	cov_mat = N.array([[N.sum(zerni * zernj) for zerni in zern_modes] for zernj in zern_modes])
 	# Invert covariance matrix using SVD
 	cov_mat_in = N.linalg.pinv(cov_mat)
 
 	# Create and return dict
-	return {'modes': zern_modes, 'covmat':cov_mat, 'covmat_in':cov_mat_in}
+	return {'modes': zern_modes, 'modesmat': zern_modes_mat, 'covmat':cov_mat, 'covmat_in':cov_mat_in}
 
 def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None, center=(-0.5, -0.5), rad=-0.5, err=None):
 	"""
@@ -250,6 +253,7 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None,
 	if (not zern_data.has_key('modes')):
 		tmp_zern = calc_zern_basis(nmodes, rad)
 		zern_data['modes'] = tmp_zern['modes']
+		zern_data['modesmat'] = tmp_zern['modesmat']
 		zern_data['covmat'] = tmp_zern['covmat']
 		zern_data['covmat_in'] = tmp_zern['covmat_in']
 	# Compute Zernike basis if insufficient
@@ -258,12 +262,15 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None,
 		tmp_zern = calc_zern_basis(nmodes, rad)
 		# This data already exists, overwrite it with new data
 		zern_data['modes'] = tmp_zern['modes']
+		zern_data['modesmat'] = tmp_zern['modesmat']
 		zern_data['covmat'] = tmp_zern['covmat']
 		zern_data['covmat_in'] = tmp_zern['covmat_in']
-	zern_basis = zern_data['modes']
+
+	#zern_basis = zern_data['modes']
 
 	zern_basis = zern_data['modes'][:nmodes]
 	zern_covmat_in = zern_data['covmat_in'][:nmodes, :nmodes]
+	zern_basismat = zern_data['modesmat'][:nmodes]
 	# Calculate Zernike covariance matrix
 # 	cov_mat = N.zeros((nmodes, nmodes))
 # 	for modei in xrange(nmodes):
@@ -275,29 +282,31 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None,
 #	global GLOB_ZERN_COVMAT_IN # will be updated by calc_zern_basis()
 
 	# Calculate inner products
-	wf_zern_vec1 = 0
+	wf_zern_vec = 0
 	if (fitweight != None):
 		# Multiply weight with binary mask, reshape to vector
 		weight = (fitweight[yslice, xslice] * grid_mask).reshape(1,-1)
 # 		weight /= weight[grid_mask].mean()
 
 		# LSQ fit with weighed data
-		wf_w = (wavefront[yslice, xslice] * grid_mask * weight).reshape(1,-1)
-		wf_zern_vec1 = N.dot(wf_w, N.linalg.pinv(zern_basis * weight))
-		print "Weighed LSQ Zern: ", wf_zern_vec1
+		wf_w = (wavefront[yslice, xslice] * grid_mask).reshape(1,-1) * weight
+		wf_zern_vec = N.dot(wf_w, N.linalg.pinv(zern_basismat * weight))
+# 		print "Weighed LSQ Zern: ", wf_zern_vec.shape, wf_zern_vec
+	else:
+		# LSQ fit with data
+		wf_w = (wavefront[yslice, xslice] * grid_mask).reshape(1,-1)
+		wf_zern_vec = N.dot(wf_w, N.linalg.pinv(zern_basismat))
+# 		print "LSQ Zern: ", wf_zern_vec.shape, wf_zern_vec
 
-	# LSQ fit with data
-	wf_w = (wavefront[yslice, xslice] * grid_mask).reshape(1,-1)
-	wf_zern_vec2 = N.dot(wf_w, N.linalg.pinv(zern_basis))
-	print "LSQ Zern: ", wf_zern_vec2
+	if (False):
+		# Old method based on covariance matrix fitting
+		wf_zern_inprod = N.array([N.sum(wavefront[yslice, xslice] * zmode) for zmode in zern_basis])
 
-	wf_zern_inprod = N.array([N.sum(wavefront[yslice, xslice] * zmode) for zmode in zern_basis])
+		# Calculate Zernike amplitudes
+		wf_zern_vec = N.dot(zern_covmat_in, wf_zern_inprod)
+# 		print "Cov. Zern - LSQ: ", wf_zern_vec.shape, wf_zern_vec
 
-	# Calculate Zernike amplitudes
-	wf_zern_vec3 = N.dot(zern_covmat_in, wf_zern_inprod)
-	print "Cov. Zern: ", wf_zern_vec3
-
-	wf_zern_vec = wf_zern_vec1
+	wf_zern_vec.shape = (-1)
 	wf_zern_vec[:startmode-1] = 0
 
 	# Calculate full Zernike phase
