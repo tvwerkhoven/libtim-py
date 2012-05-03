@@ -39,6 +39,8 @@ def read_file(fpath, dtype=None, **kwargs):
 
 	Try to read **fpath** and return contents. If **dtype** is set, force reading routines with this datatype, otherwise guess from extension or simply try.
 
+	@todo Add region of interest loading? Should be dimension independent...
+
 	@param [in] fpath Path to a file
 	@param [in] dtype Datatype to read. If absent, guess.
 	@param [in] **kwargs Extra parameters passed on directly to read function
