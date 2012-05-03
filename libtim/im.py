@@ -87,11 +87,13 @@ def mk_rad_prof(data, maxrange=None):
 
 	return N.r_[profile]
 
-def df_corr(data, flatfield=None, darkfield=None, darkfac=[1.0, 1.0]):
+def df_corr(data, flatfield=None, darkfield=None, darkfac=[1.0, 1.0], thresh=0):
 	"""
 	Correct 2-d array **data** with **flatfield** and **darkfield**.
 
 	Use **darkfac** to scale the darkfield in case of incorrect exposure.
+
+	**thresh** can be used to mask the flatfield image: intensity lower than this factor times the maximum intensity will not be flatfielded.
 
 	Final returned data will be:
 
@@ -105,6 +107,7 @@ def df_corr(data, flatfield=None, darkfield=None, darkfac=[1.0, 1.0]):
 	@param [in] flatfield Flatfield image to use
 	@param [in] darkfield Darkfield image to use
 	@param [in] darkfac Correction factors for darkfield to use if exposure is mismatched
+	@param [in] thresh Threshold to use for flatfielding
 	@return Corrected image as numpy.ndarray
 	"""
 
@@ -123,7 +126,7 @@ def df_corr(data, flatfield=None, darkfield=None, darkfac=[1.0, 1.0]):
 
 	# If we have a flatfield, correct the image, but only divide for nonzero flat
 	if (flatfield != None):
-		flatmask = (flatfield != 0)
+		flatmask = (flatfield > thresh*flatfield.max())
 		data[flatmask] /= flatfield[flatmask]
 
 	return data
