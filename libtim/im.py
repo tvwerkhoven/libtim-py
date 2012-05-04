@@ -24,6 +24,7 @@ from matplotlib.figure import Figure
 from matplotlib import cm
 from matplotlib.backends.backend_pdf import FigureCanvasPdf as FigureCanvas
 import unittest
+import datetime
 
 from file import filenamify
 from util import mkfitshdr
@@ -41,6 +42,8 @@ def mk_rad_mask(r0, r1=None):
 	Make a rectangular matrix where the value of each element is the distance to the center normalized to the shape **r0** and **r1**. I.e. the center edge has value 1, the corners have value sqrt(2) in case of a square matrix.
 
 	If only r0 is given, the matrix will be (r0, r0). If ry is also given, the matrix will be (r0, r1)
+
+	To convert this to a circular binary mask, use mk_rad_mask(r0) < 1
 
 	@param [in] r0 The width (and height if r1==None) of the mask.
 	@param [in] r1 The height of the mask.
@@ -131,7 +134,7 @@ def df_corr(data, flatfield=None, darkfield=None, darkfac=[1.0, 1.0], thresh=0):
 
 	return data
 
-def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plrange=(None, None), log=False, rollaxes=False, cmap='RdYlBu', xlab='X [pix]', ylab='Y [pix]', hdr=()):
+def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plrange=(None, None), log=False, rollaxes=False, cmap='RdYlBu', xlab='X [pix]', ylab='Y [pix]', hdr=(), ident=True):
 	"""
 	Store **data** to disk as FITS and/or plot as annotated plot in PDF.
 
@@ -148,6 +151,7 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 	@param [in] xlab X-axis label
 	@param [in] ylab Y-axis label
 	@param [in] hdr Additional FITS header items, give a list of tuples: [(key1, val1), (key2, val2)]
+	@param [in] ident Add identification string to plots
 	@returns Tuple of (fitsfile path, plotfile path)
 	"""
 
@@ -179,9 +183,12 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 		if (pltitle):
 			pltit = pltitle
 
+
 		# Plot without GUI, using matplotlib internals
 		fig = Figure(figsize=(6,6))
 		ax = fig.add_subplot(111)
+		# Make margin smaller
+		plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
 		img=0
 		# Colormaps
 		# plus min: cmap=cm.get_cmap('RdYlBu')
@@ -190,8 +197,22 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 		ax.set_title(pltit)
 		ax.set_xlabel(xlab)
 		ax.set_ylabel(ylab)
-		fig.colorbar(img, orientation='horizontal')
+		# dimension 0 is height, dimension 1 is width
+		# When the width is equal or more than the height, use a horizontal bar, otherwise use vertical
+		if (data_arr.shape[0]/data_arr.shape[1] >= 1.0):
+			fig.colorbar(img, orientation='vertical', aspect=30, pad=0.05, shrink=0.8)
+		else:
+			fig.colorbar(img, orientation='horizontal', aspect=30, pad=0.12, shrink=0.8)
+
+		# Add ID string
+		if (ident):
+			# Make ID string
+			datestr = datetime.datetime.utcnow().isoformat()+'Z'
+			idstr = "%s@%s %s %s" % (os.getlogin(), os.uname()[1], datestr, sys.argv[0])
+			ax.text(0.01, 0.01, idstr, fontsize=7, transform=fig.transFigure)
+
 		canvas = FigureCanvas(fig)
+		#canvas.print_figure(plotfile, bbox_inches='tight')
 		canvas.print_figure(plotfile)
 
 	return (fitsfile, plotfile)
@@ -232,10 +253,11 @@ def inter_imshow(data, desc="", doshow=True, dowait=True, log=False, rollaxes=Fa
 
 	fig = plt.figure()
 	ax = fig.add_subplot(111)
+	plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
 	ax.set_title(desc)
 
 	img = ax.imshow(data_arr, extent=extent, cmap=plt.get_cmap(cmap), **kwargs)
-	fig.colorbar(img)
+	fig.colorbar(img, aspect=30, pad=0.05)
 
 	# If we want to wait, ask user for input, discard it and continue
 	if (dowait):
@@ -274,19 +296,19 @@ class TestInterImshow(unittest.TestCase):
 		"""Test plot with desc"""
 		inter_imshow(self.data, "hello world", dowait=False)
 
-	def test1a_show_doshow(self):
+	def test1b_show_doshow(self):
 		"""Test plot without doshow"""
 		inter_imshow(self.data, "hello world", doshow=False, dowait=False)
 
-	def test1a_show_log(self):
+	def test1c_show_log(self):
 		"""Test plot with log"""
 		inter_imshow(self.data, "hello world", log=True, dowait=False)
 
-	def test1a_show_rollaxes(self):
+	def test1d_show_rollaxes(self):
 		"""Test plot with rollaxes"""
 		inter_imshow(self.data, "hello world", rollaxes=True, dowait=False)
 
-	def test1a_show_cmap(self):
+	def test1e_show_cmap(self):
 		"""Test plot with cmap"""
 		inter_imshow(self.data, "hello world", cmap='YlOrBr', dowait=False)
 
@@ -307,6 +329,10 @@ class TestStoreData(unittest.TestCase):
 		plt.title('Image two, wavy square')
 		plt.imshow(self.im2)
 		plt.colorbar()
+
+		inter_imshow(self.im1, "random rectangle", cmap='YlOrBr', dowait=False)
+		inter_imshow(self.im2, "wavy square", cmap='YlOrBr', dowait=False)
+
 		raw_input()
 
 	def test1a_store_error(self):
@@ -316,7 +342,7 @@ class TestStoreData(unittest.TestCase):
 		if (fpaths[0]): os.remove(fpaths[0])
 		if (fpaths[1]): os.remove(fpaths[1])
 
-		fpaths = store_2ddata(self.im1, 'TestStoreData_im2', pltitle='Wavy image', dir='/tmp/', fits=True, plot=True, plrange=(0, 1), log=False, rollaxes=True, cmap='RdYlBu', xlab='X [pix]', ylab='Y [pix]', hdr=[('author', 'TestStoreData')])
+		fpaths = store_2ddata(self.im2, 'TestStoreData_im2', pltitle='Wavy image', dir='/tmp/', fits=True, plot=True, plrange=(0, 1), log=False, rollaxes=True, cmap='RdYlBu', xlab='X [pix]', ylab='Y [pix]', hdr=[('author', 'TestStoreData')])
 
 		if (fpaths[0]): os.remove(fpaths[0])
 		if (fpaths[1]): os.remove(fpaths[1])
@@ -324,19 +350,20 @@ class TestStoreData(unittest.TestCase):
 	def test1a_store_filesize(self):
 		"""Store images as FITS and PDF, check for filesize > 0"""
 
-		fpaths = store_2ddata(self.im1, 'TestStoreData_im1', pltitle='Random image', dir='/tmp/', fits=True, plot=True, plrange=(None, None), log=False, rollaxes=True, cmap='RdYlBu', xlab='X [pix]', ylab='Y [pix]', hdr=[('author', 'TestStoreData')])
+		for im, imname in zip([self.im1, self.im2], ['im1', 'im2']):
+			fpaths = store_2ddata(im, 'TestStoreData_'+imname, pltitle='Random image', dir='/tmp/', fits=True, plot=True, plrange=(None, None), log=False, rollaxes=True, cmap='RdYlBu', xlab='X [pix]', ylab='Y [pix]', hdr=[('author', 'TestStoreData')])
 
-		# Check existence
-		self.assertTrue(os.path.isfile(fpaths[0]))
-		self.assertTrue(os.path.isfile(fpaths[1]))
+			# Check existence
+			self.assertTrue(os.path.isfile(fpaths[0]))
+			self.assertTrue(os.path.isfile(fpaths[1]))
 
-		# Check filesize
-		self.assertGreater(os.path.getsize(fpaths[0]), 0)
-		self.assertGreater(os.path.getsize(fpaths[1]), 0)
+			# Check filesize
+			self.assertGreater(os.path.getsize(fpaths[0]), 0)
+			self.assertGreater(os.path.getsize(fpaths[1]), 0)
 
-		# Remove files
-		if (fpaths[0]): os.remove(fpaths[0])
-		if (fpaths[1]): os.remove(fpaths[1])
+			# Remove files
+			if (fpaths[0]): os.remove(fpaths[0])
+			if (fpaths[1]): os.remove(fpaths[1])
 
 class TestDarkFlatfield(unittest.TestCase):
 	def setUp(self):
