@@ -188,7 +188,7 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 		fig = Figure(figsize=(6,6))
 		ax = fig.add_subplot(111)
 		# Make margin smaller
-		plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
+		fig.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
 		img=0
 		# Colormaps
 		# plus min: cmap=cm.get_cmap('RdYlBu')
@@ -253,7 +253,7 @@ def inter_imshow(data, desc="", doshow=True, dowait=True, log=False, rollaxes=Fa
 
 	fig = plt.figure()
 	ax = fig.add_subplot(111)
-	plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
+	fig.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
 	ax.set_title(desc)
 
 	img = ax.imshow(data_arr, extent=extent, cmap=plt.get_cmap(cmap), **kwargs)
