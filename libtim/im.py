@@ -17,7 +17,7 @@ Image manipulation functions.
 # Import libraries here
 #=============================================================================
 
-import os
+import os, sys
 import pyfits
 import numpy as N
 from matplotlib.figure import Figure
@@ -188,7 +188,7 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 		fig = Figure(figsize=(6,6))
 		ax = fig.add_subplot(111)
 		# Make margin smaller
-		fig.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
+		fig.subplots_adjust(left=0.15, right=0.95, top=0.9, bottom=0.1)
 		img=0
 		# Colormaps
 		# plus min: cmap=cm.get_cmap('RdYlBu')
