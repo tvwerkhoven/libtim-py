@@ -20,6 +20,8 @@ This module provides some file IO functions.
 import matplotlib.image as mpimg
 import numpy
 import pyfits
+import json
+import cPickle
 import string
 import os
 
@@ -38,6 +40,14 @@ def read_file(fpath, dtype=None, **kwargs):
 	Try to read datafile at **fpath**.
 
 	Try to read **fpath** and return contents. If **dtype** is set, force reading routines with this datatype, otherwise guess from extension or simply try.
+
+	Supported datatypes:
+	- FITS through pyfits.getdata
+	- NPY through numpy.load
+	- NPZ through numpy.load
+	- CSV through numpy.loadtxt(delimiter=',')
+	- JSON through json.load
+	- pickle through cPickle.load
 
 	@todo Add region of interest loading? Should be dimension independent...
 
@@ -67,6 +77,16 @@ def read_file(fpath, dtype=None, **kwargs):
 	elif (dtype == 'csv'):
 		# CSV needs Numpy.loadtxt
 		return numpy.loadtxt(fpath, delimiter=',', **kwargs)
+	elif (dtype == 'pickle'):
+		fp = open(fpath, 'r')
+		dat = cPickle.load(fp, **kwargs)
+		fp.close()
+		return dat
+	elif (dtype == 'json'):
+		fp = open(fpath, 'r')
+		dat = json.load(fp, **kwargs)
+		fp.close()
+		return dat
 	else:
 		# Anything else should work with PIL's imread(). If not, it will throw anyway so we don't need to check
 		return mpimg.imread(fpath, **kwargs)
@@ -83,6 +103,8 @@ def store_file(fpath, data, **kwargs):
 	- NPZ through numpy.savez
 	- CSV through numpy.savetxt
 	- PNG through matplotlib.image.imsave
+	- JSON through json.dump
+	- pickle through cPickle.dump
 
 	@param [in] data Data to store. Should be something that converts to a numpy.ndarray
 	@param [in] fpath Full path to store to
@@ -108,6 +130,14 @@ def store_file(fpath, data, **kwargs):
 		numpy.savetxt(fpath, data, delimiter=',', **kwargs)
 	elif (dtype == 'png'):
 		mpimg.imsave(fpath, data, **kwargs)
+	elif (dtype == 'json'):
+		fp = open(fpath, 'w')
+		json.dump(data, fp, indent=2, **kwargs)
+		fp.close()
+	elif (dtype == 'pickle'):
+		fp = open(fpath, 'w')
+		cPickle.dump(data, fp, **kwargs)
+		fp.close()
 	else:
 		raise ValueError("Unsupported filetype '%s'" % (dtype))
 
@@ -147,12 +177,15 @@ def filenamify(str):
 
 class TestReadWriteFiles(unittest.TestCase):
 	def setUp(self):
-		self.formats = ['fits', 'npy', 'npz', 'csv', 'png']
+		self.dataformats = ['fits', 'npy', 'npz', 'csv', 'png']
+		self.metaformats = ['json', 'pickle']
+		self.allformats = self.dataformats + self.metaformats
 		self.files = []
 
 	def tearDown(self):
 		"""Delete files produces in this test"""
 		for file in self.files:
+# 			print "Removing temp files", self.files
 			if (file and os.path.isfile(file)):
 				os.remove(file)
 
@@ -167,7 +200,7 @@ class TestReadWriteFiles(unittest.TestCase):
 		with self.assertRaisesRegexp(IOError, "No such file or directory"):
 			read_file('nonexistent.file', None)
 
-		for fmt in self.formats:
+		for fmt in self.allformats:
 			with self.assertRaisesRegexp(IOError, "No such file or.*"):
 				read_file('nonexistent.file', fmt)
 
@@ -177,12 +210,17 @@ class TestReadWriteFiles(unittest.TestCase):
 		sz = (67, 47)
 		data1 = N.random.random(sz).astype(N.float)
 		data2 = (N.random.random(sz)*255).astype(N.uint8)
+		meta1 = {'meta': 'hello world', 'len': 123, 'payload': [1,4,14,4,111]}
 
 		# Store as all formats
-		for fmt in self.formats:
+		for fmt in self.dataformats:
 			fpath = store_file('/tmp/TestReadWriteFiles_data1.'+fmt, data1)
 			self.files.append(fpath)
 			fpath = store_file('/tmp/TestReadWriteFiles_data2.'+fmt, data2)
+			self.files.append(fpath)
+
+		for fmt in self.metaformats:
+			fpath = store_file('/tmp/TestReadWriteFiles_meta1.'+fmt, meta1)
 			self.files.append(fpath)
 
 	def test2a_read_file_data(self):
@@ -191,18 +229,33 @@ class TestReadWriteFiles(unittest.TestCase):
 		sz = (67, 47)
 		data1 = N.random.random(sz).astype(N.float)
 		data2 = (N.random.random(sz)*255).astype(N.uint8)
+		meta1 = {'meta': 'hello world', 'len': 123, 'payload': [1,4,14,4,111]}
 
 		# Store as all formats
-		for fmt in self.formats:
+		for fmt in self.dataformats:
 			fpath = store_file('/tmp/TestReadWriteFiles_data1.'+fmt, data1)
 			self.files.append(fpath)
 			fpath = store_file('/tmp/TestReadWriteFiles_data2.'+fmt, data2)
 			self.files.append(fpath)
 
 		# Try to read everything again
-		for fmt in self.formats:
+		for fmt in self.dataformats:
 			read1 = read_file('/tmp/TestReadWriteFiles_data1.'+fmt)
 			read2 = read_file('/tmp/TestReadWriteFiles_data2.'+fmt)
+			# PNG loses scaling, ignore
+			if fmt not in ['png']:
+				self.assertTrue(N.allclose(data1, read1))
+				self.assertTrue(N.allclose(data2, read2))
+
+		for fmt in self.metaformats:
+			fpath = store_file('/tmp/TestReadWriteFiles_meta1.'+fmt, meta1)
+			self.files.append(fpath)
+
+		for fmt in self.metaformats:
+			read1 = read_file('/tmp/TestReadWriteFiles_meta1.'+fmt)
+			self.assertEqual(meta1, read1)
+
+
 
 if __name__ == "__main__":
 	import numpy as N
