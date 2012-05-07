@@ -24,6 +24,7 @@ import json
 import cPickle
 import string
 import os
+import fnmatch
 
 import unittest
 
@@ -148,6 +149,49 @@ def read_files(flist, dtype=None):
 	@deprecated Use '[read_file(f) for f in flist]' instead
 	"""
 	raise DeprecationWarning("Use '[read_file(f) for f in flist]' instead")
+
+def read_from_dir(ddir, n=-1, purge=True, glob="*", dry=False):
+	"""
+	Read files from a directory, then remove them.
+
+	@param [in] ddir Directory to read files from
+	@param [in] n Number of files to read
+	@param [in] purge Delete all files in **ddir** after reading (also in dry)
+	@param [in] glob Pattern the files will be filtered against
+	@param [in] dry Don't read data, only return filenames
+	@return List of files
+	"""
+
+	# List all files
+	flist = os.listdir(ddir)
+
+	# Select only files that match 'glob'
+	filtlist = fnmatch.filter(flist, glob)
+
+	# Wait until we have enough files if we asked a specific amount
+	cycle = 0
+	sleeptime = 0.1
+	while (n != -1 and len(filtlist) < n):
+		time.sleep(sleeptime)
+
+		flist = os.listdir(ddir)
+		filtlist = fnmatch.filter(flist, glob)
+		cycle += 1
+		if (cycle % 10 == 0):
+			n_got = len(flist)
+			rate = n_got / (cycle * sleeptime)
+			eta = (n-n_got) / rate
+			print "read_from_dir(): still waiting for files, got %d/%d, eta: %g sec" % (n_got, n, eta)
+
+	# Read files (if not dry), return results
+	if (dry):
+		retl = filtlist
+	else:
+		retl = [read_file(f) for f in filtlist]
+
+	if (purge):
+		for f in flist:
+			os.remove(f)
 
 def filenamify(str):
 	"""
