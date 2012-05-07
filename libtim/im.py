@@ -167,22 +167,20 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 		sh = data_arr.shape
 		extent = (-sh[1]/2., sh[1]/2., -sh[0]/2., sh[0]/2.)
 
-	outbase = os.path.join(dir, filenamify(fname))
-	fitsfile = outbase+'.fits'
-	plotfile = outbase+'.pdf'
+	fitsfile = filenamify(fname)+'.fits'
+	plotfile = filenamify(fname)+'.pdf'
 
 	if (fits):
 		# Generate some metadata
 		hdr_dict = dict({'filename':fitsfile, 'desc':fname, 'title':pltitle}.items() + dict(hdr).items())
 		hdr = mkfitshdr(hdr_dict)
 		# Store data to disk
-		pyfits.writeto(fitsfile, data_arr, header=hdr, clobber=True, checksum=True)
+		pyfits.writeto(os.path.join(dir, fitsfile), data_arr, header=hdr, clobber=True, checksum=True)
 
 	if (plot):
 		pltit = fname
 		if (pltitle):
 			pltit = pltitle
-
 
 		# Plot without GUI, using matplotlib internals
 		fig = Figure(figsize=(6,6))
@@ -213,7 +211,7 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 
 		canvas = FigureCanvas(fig)
 		#canvas.print_figure(plotfile, bbox_inches='tight')
-		canvas.print_figure(plotfile)
+		canvas.print_figure(os.path.join(dir, plotfile))
 
 	return (fitsfile, plotfile)
 
