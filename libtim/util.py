@@ -489,6 +489,13 @@ class TestFITSutils(unittest.TestCase):
 		mkfitshdr(self.cards)
 		mkfitshdr(self.cards, usedefaults=False)
 
+	def test1b_mkfitdhdr_long(self):
+		"""Test longer calls"""
+		mkfitshdr({'filename': "reproc2_slide3"})
+		mkfitshdr({'filename': "reproc2_slide3-tgMOV-0.5-cosine-0.75"})
+		mkfitshdr({'filename': "reproc2_slide3-tgMOV-0.5-cosine-0.75/"})
+		mkfitshdr({'filename': "reproc2_slide3-tgMOV-0.5-cosine-0.75/0_141132-463_Zernike_reconstruction.fits"})
+
 class TestParsestr(unittest.TestCase):
 	def setUp(self):
 		pass
