@@ -35,7 +35,7 @@ import json
 # Routines
 #=============================================================================
 
-def find_uniq(strlist, tokenize=True, tokens=['.', '-', '_']):
+def find_uniq(strlist, tokenize=True, tokens=['.', '-', '_', '/']):
 	"""
 	Find shortest substring that uniquely identifies all strlist entries.
 
