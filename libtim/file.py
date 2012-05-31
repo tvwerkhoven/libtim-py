@@ -173,6 +173,8 @@ def read_from_dir(ddir, n=-1, purge=True, glob="*", dry=False, movedir=False):
 	"""
 	Read files from a directory, then remove them.
 
+	We always wait for n+1 frames, and ignore the last one. This is to ensure that we don't copy/read/process frames that are being written. (This works if the files are properly timestamped.).
+
 	@param [in] ddir Directory to read files from
 	@param [in] n Number of files to read (-1 for all)
 	@param [in] purge Delete all files in **ddir** after reading (also in dry)
@@ -193,7 +195,7 @@ def read_from_dir(ddir, n=-1, purge=True, glob="*", dry=False, movedir=False):
 	# Wait until we have enough files if we asked a specific amount
 	cycle = 0
 	sleeptime = 0.1
-	while (n != -1 and len(filtlist) < n):
+	while (n != -1 and len(filtlist) < n+1):
 		cycle += 1
 		if (cycle % 10 == 0):
 			n_got = len(filtlist)
@@ -206,6 +208,9 @@ def read_from_dir(ddir, n=-1, purge=True, glob="*", dry=False, movedir=False):
 		flist = os.listdir(ddir)
 		filtlist = fnmatch.filter(flist, glob)
 		time.sleep(sleeptime)
+
+	# Always take one extra frame, and ignore this one. This is to ensure that we don't copy/read/process frames that are being written. (The list is ordered alphabetically, which works if the files are properly timestamped)
+	filtlist = filtlist[-n-1:-1]
 
 	# If move is set, move files to that directory before returning the files (or filenames)
 	if (movedir):
