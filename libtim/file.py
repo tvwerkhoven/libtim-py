@@ -23,8 +23,9 @@ import pyfits
 import json
 import cPickle
 import string
-import os
+import os, shutil
 import fnmatch
+import time
 
 import unittest
 
@@ -143,6 +144,24 @@ def store_file(fpath, data, **kwargs):
 		raise ValueError("Unsupported filetype '%s'" % (dtype))
 
 	return fpath
+
+def backup_file(path):
+	"""
+	Given a path (which can be anything that can be moved), append .bakX with X the lowest numeric suffix that does not exist, then move the path to that name.
+
+	@param [in] path Path to move
+	@return Moved path
+	"""
+
+	newpath = path + '.bak000000'
+	for i in xrange(1000000):
+		newpath = path + '.bak%06d' % (i)
+		if (not os.path.exists(newpath)):
+			break
+
+	os.rename(path, newpath)
+	return newpath
+
 
 def read_files(flist, dtype=None):
 	"""
