@@ -37,7 +37,7 @@ import unittest
 # Routines
 #=============================================================================
 
-def read_file(fpath, dtype=None, **kwargs):
+def read_file(fpath, dtype=None, roi=None, **kwargs):
 	"""
 	Try to read datafile at **fpath**.
 
@@ -55,6 +55,7 @@ def read_file(fpath, dtype=None, **kwargs):
 
 	@param [in] fpath Path to a file
 	@param [in] dtype Datatype to read. If absent, guess.
+	@param [in] roi Region of interest to read from file, (0low, 0high, 1low, 1high, ..nlow, nhigh) or None
 	@param [in] **kwargs Extra parameters passed on directly to read function
 	@return Data from file, usually as numpy.ndarray
 	"""
@@ -66,32 +67,57 @@ def read_file(fpath, dtype=None, **kwargs):
 	# Check correct read function
 	if (dtype == 'fits'):
 		# FITS needs pyfits
-		return pyfits.getdata(fpath, **kwargs)
+		data = pyfits.getdata(fpath, **kwargs)
 	elif (dtype == 'npy'):
 		# NPY needs numpy
-		return numpy.load(fpath, **kwargs)
+		data = numpy.load(fpath, **kwargs)
 	elif (dtype == 'npz'):
 		# NPZ needs numpy
 		datadict = numpy.load(fpath, **kwargs)
 		if (len(datadict.keys()) > 1):
 			print >> sys.stderr, "Warning! Multiple files stored in archive '%s', returning only the first" % (fpath)
-		return datadict[datadict.keys()[0]]
+		data = datadict[datadict.keys()[0]]
 	elif (dtype == 'csv'):
 		# CSV needs Numpy.loadtxt
-		return numpy.loadtxt(fpath, delimiter=',', **kwargs)
+		data = numpy.loadtxt(fpath, delimiter=',', **kwargs)
 	elif (dtype == 'pickle'):
 		fp = open(fpath, 'r')
-		dat = cPickle.load(fp, **kwargs)
+		data = cPickle.load(fp, **kwargs)
 		fp.close()
-		return dat
+		# Return immediately, no ROI applicable
+		return data
 	elif (dtype == 'json'):
 		fp = open(fpath, 'r')
-		dat = json.load(fp, **kwargs)
+		data = json.load(fp, **kwargs)
 		fp.close()
-		return dat
+		# Return immediately, no ROI applicable
+		return data
 	else:
 		# Anything else should work with PIL's imread(). If not, it will throw anyway so we don't need to check
-		return mpimg.imread(fpath, **kwargs)
+		data = mpimg.imread(fpath, **kwargs)
+
+	if (roi == None):
+		return data
+	else:
+		if (len(roi) != data.ndim*2):
+			print >> sys.stderr, "Warning! Region of interst does not match with data dimension!"
+			return data
+		elif (len(roi) == 2):
+			roisl0 = slice(roi[0], None if (roi[1] == -1) else roi[1])
+			return data[roisl0]
+		elif (len(roi) == 4):
+			roisl0 = slice(roi[0], None if (roi[1] == -1) else roi[1])
+			roisl1 = slice(roi[2], None if (roi[3] == -1) else roi[3])
+			return data[roisl0, roisl1]
+		elif (len(roi) == 6):
+			roisl0 = slice(roi[0], None if (roi[1] == -1) else roi[1])
+			roisl1 = slice(roi[2], None if (roi[3] == -1) else roi[3])
+			roisl2 = slice(roi[4], None if (roi[5] == -1) else roi[5])
+			return data[roisl0, roisl1, roisl2]
+		else:
+			print >> sys.stderr, "Warning! This many dimensions is not supported by ROI"
+			return data
+
 
 def store_file(fpath, data, **kwargs):
 	"""
@@ -201,8 +227,8 @@ def read_from_dir(ddir, n=-1, purge=True, glob="*", dry=False, movedir=False):
 			n_got = len(filtlist)
 			rate = n_got / (cycle * sleeptime)
 			eta = float("inf")
-			if (rate): eta = (n-n_got) / rate
-			print "read_from_dir(): still waiting for files, got %d/%d, eta: %g sec" % (n_got, n, eta)
+			if (rate): eta = (n+1-n_got) / rate
+			print "read_from_dir(): still waiting for files, got %d/%d, eta: %g sec" % (n_got, n+1, eta)
 			#print "read_from_dir(): got: ", filtlist
 
 		flist = os.listdir(ddir)
@@ -276,6 +302,10 @@ class TestReadWriteFiles(unittest.TestCase):
 		self.metaformats = ['json', 'pickle']
 		self.allformats = self.dataformats + self.metaformats
 		self.files = []
+		for file in self.files:
+# 			print "Removing temp files", self.files
+			if (file and os.path.isfile(file)):
+				os.remove(file)
 
 	def tearDown(self):
 		"""Delete files produces in this test"""
@@ -342,6 +372,7 @@ class TestReadWriteFiles(unittest.TestCase):
 				self.assertTrue(N.allclose(data1, read1))
 				self.assertTrue(N.allclose(data2, read2))
 
+		# Do the same for metaformats
 		for fmt in self.metaformats:
 			fpath = store_file('/tmp/TestReadWriteFiles_meta1.'+fmt, meta1)
 			self.files.append(fpath)
@@ -349,6 +380,47 @@ class TestReadWriteFiles(unittest.TestCase):
 		for fmt in self.metaformats:
 			read1 = read_file('/tmp/TestReadWriteFiles_meta1.'+fmt)
 			self.assertEqual(meta1, read1)
+
+	def test2b_test_read_roi(self):
+		"""Test read_file reconstruction"""
+		# Generate data
+		szl = [(67,), (67, 47), (67, 47, 32)]
+		roil = [(50, 60), (50, 60, 20, 40), (50, 60, 20, 40, 5, 12)]
+		shapel = [(10,), (10, 20), (10, 20, 7)]
+
+		for sz, thisroi, thisshp in zip(szl, roil, shapel):
+			data1 = N.random.random(sz).astype(N.float)
+			data2 = (N.random.random(sz)*255).astype(N.uint8)
+			# Store as all formats
+			for fmt in self.dataformats:
+				if fmt in ['png']:
+					continue
+				if fmt in ['csv'] and len(sz) > 2:
+					continue
+				fn1 = '/tmp/TestReadWriteFiles_data1_'+str(sz)+'.'+fmt
+				fn2 = '/tmp/TestReadWriteFiles_data2_'+str(sz)+'.'+fmt
+
+				fpath = store_file(fn1, data1)
+				self.files.append(fpath)
+				fpath = store_file(fn2, data2)
+				self.files.append(fpath)
+
+				# Try to read everything again
+				read1 = read_file(fn1)
+				read2 = read_file(fn2)
+				# PNG loses scaling, ignore
+				if fmt not in ['png']:
+					self.assertTrue(N.allclose(data1, read1))
+					self.assertTrue(N.allclose(data2, read2))
+
+				# Try to read with ROI
+				read1 = read_file(fn1, roi=thisroi)
+				read2 = read_file(fn2, roi=thisroi)
+				# Check dimensions, should be different
+				self.assertNotEqual(read1.shape, data1.shape)
+				self.assertNotEqual(read2.shape, data2.shape)
+				self.assertEqual(read1.shape, thisshp)
+				self.assertEqual(read2.shape, thisshp)
 
 
 
