@@ -210,7 +210,7 @@ def read_from_dir(ddir, n=-1, purge=True, glob="*", dry=False, movedir=False):
 		time.sleep(sleeptime)
 
 	# Always take one extra frame, and ignore this one. This is to ensure that we don't copy/read/process frames that are being written. (The list is ordered alphabetically, which works if the files are properly timestamped)
-	filtlist = filtlist[-n-1:-1]
+	filtlist = sort(filtlist)[-n-1:-1]
 
 	# If move is set, move files to that directory before returning the files (or filenames)
 	if (movedir):
