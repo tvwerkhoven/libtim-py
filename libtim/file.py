@@ -169,17 +169,20 @@ def read_files(flist, dtype=None):
 	"""
 	raise DeprecationWarning("Use '[read_file(f) for f in flist]' instead")
 
-def read_from_dir(ddir, n=-1, purge=True, glob="*", dry=False):
+def read_from_dir(ddir, n=-1, purge=True, glob="*", dry=False, movedir=False):
 	"""
 	Read files from a directory, then remove them.
 
 	@param [in] ddir Directory to read files from
-	@param [in] n Number of files to read
+	@param [in] n Number of files to read (-1 for all)
 	@param [in] purge Delete all files in **ddir** after reading (also in dry)
 	@param [in] glob Pattern the files will be filtered against
 	@param [in] dry Don't read data, only return filenames
+	@param [in] movedir Before reading (or returning a list of files), move the files to this directory (if set). Create if necessary.
 	@return List of files
 	"""
+
+	# print "Calling read_from_dir(%s, n=%d, purge=%d, glob=%s, dry=%d, movedir=%s" % (ddir, n, purge, glob, dry, movedir)
 
 	# List all files
 	flist = os.listdir(ddir)
@@ -191,26 +194,50 @@ def read_from_dir(ddir, n=-1, purge=True, glob="*", dry=False):
 	cycle = 0
 	sleeptime = 0.1
 	while (n != -1 and len(filtlist) < n):
-		time.sleep(sleeptime)
+		cycle += 1
+		if (cycle % 10 == 0):
+			n_got = len(filtlist)
+			rate = n_got / (cycle * sleeptime)
+			eta = float("inf")
+			if (rate): eta = (n-n_got) / rate
+			print "read_from_dir(): still waiting for files, got %d/%d, eta: %g sec" % (n_got, n, eta)
+			#print "read_from_dir(): got: ", filtlist
 
 		flist = os.listdir(ddir)
 		filtlist = fnmatch.filter(flist, glob)
-		cycle += 1
-		if (cycle % 10 == 0):
-			n_got = len(flist)
-			rate = n_got / (cycle * sleeptime)
-			eta = (n-n_got) / rate
-			print "read_from_dir(): still waiting for files, got %d/%d, eta: %g sec" % (n_got, n, eta)
+		time.sleep(sleeptime)
+
+	# If move is set, move files to that directory before returning the files (or filenames)
+	if (movedir):
+		# Create directory if it does not exist
+		if (not os.path.isdir(movedir)):
+			os.makedirs(movedir)
+		# Now move all files to this directory
+		for f in filtlist:
+# 			print "moving %s (%d) to %s (%d)" % (os.path.join(ddir, f), os.path.exists(os.path.join(ddir, f)), movedir, os.path.isdir(movedir))
+# 			print "shutil.copy2(os.path.join(%s, %s)=%s, %s)" % (ddir, f, os.path.join(ddir, f), movedir)
+			shutil.move(os.path.join(ddir, f), movedir)
+		# Update ddir, because all files are now in movedir
+		ddir = movedir
+
+	pathlist = [os.path.join(ddir,f) for f in filtlist]
+
+	# Mak list mask if n != -1, but don't alter pathlist, we need it to purge
+	fmask = slice(None)
+	if (n != -1): fmask = slice(-n, None)
 
 	# Read files (if not dry), return results
 	if (dry):
-		retl = filtlist
+		retl = pathlist[fmask]
 	else:
-		retl = [read_file(f) for f in filtlist]
+		retl = [read_file(f) for f in pathlist[fmask]]
 
+	# Purge if requested
 	if (purge):
-		for f in flist:
+		for f in pathlist:
 			os.remove(f)
+
+	return retl
 
 def filenamify(str):
 	"""
