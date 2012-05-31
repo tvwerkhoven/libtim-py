@@ -18,6 +18,7 @@ Image manipulation functions.
 #=============================================================================
 
 import os, sys
+import getpass
 import pyfits
 import numpy as N
 from matplotlib.figure import Figure
@@ -191,6 +192,7 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 		# Colormaps
 		# plus min: cmap=cm.get_cmap('RdYlBu')
 		# linear: cmap=cm.get_cmap('YlOrBr')
+		# gray: cmap=cm.get_cmap('gray')
 		img = ax.imshow(data_arr, interpolation='nearest', cmap=cm.get_cmap(cmap), aspect='equal', extent=extent, vmin=plrange[0], vmax=plrange[1])
 		ax.set_title(pltit)
 		ax.set_xlabel(xlab)
@@ -206,7 +208,12 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 		if (ident):
 			# Make ID string
 			datestr = datetime.datetime.utcnow().isoformat()+'Z'
-			idstr = "%s@%s %s %s" % (os.getlogin(), os.uname()[1], datestr, sys.argv[0])
+			# Put this in try-except because os.getlogin() fails in screen(1)
+			try:
+				idstr = "%s@%s %s %s" % (os.getlogin(), os.uname()[1], datestr, sys.argv[0])
+			except OSError:
+				idstr = "%s@%s %s %s" % (getpass.getuser(), os.uname()[1], datestr, sys.argv[0])
+
 			ax.text(0.01, 0.01, idstr, fontsize=7, transform=fig.transFigure)
 
 		canvas = FigureCanvas(fig)
@@ -254,7 +261,7 @@ def inter_imshow(data, desc="", doshow=True, dowait=True, log=False, rollaxes=Fa
 	fig.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
 	ax.set_title(desc)
 
-	img = ax.imshow(data_arr, extent=extent, cmap=plt.get_cmap(cmap), **kwargs)
+	img = ax.imshow(data_arr, extent=extent, cmap=cm.get_cmap(cmap), **kwargs)
 	fig.colorbar(img, aspect=30, pad=0.05)
 
 	# If we want to wait, ask user for input, discard it and continue
