@@ -51,7 +51,7 @@ def read_file(fpath, dtype=None, roi=None, **kwargs):
 	- JSON through json.load
 	- pickle through cPickle.load
 
-	@todo Add region of interest loading? Should be dimension independent...
+	@todo Make region of dimension independent
 
 	@param [in] fpath Path to a file
 	@param [in] dtype Datatype to read. If absent, guess.
