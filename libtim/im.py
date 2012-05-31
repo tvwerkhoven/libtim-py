@@ -222,7 +222,7 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 
 	return (fitsfile, plotfile)
 
-def inter_imshow(data, desc="", doshow=True, dowait=True, log=False, rollaxes=False, cmap='RdYlBu', **kwargs):
+def inter_imshow(data, desc="", doshow=True, dowait=True, log=False, rollaxes=False, cmap='RdYlBu', figid=None, **kwargs):
 	"""Show data using matplotlib.imshow if **doshow** is true.
 
 	Additionally, print **desc** just before plotting so users know what they see. If **dowait** is True (default), wait for input before continuing.
@@ -236,6 +236,7 @@ def inter_imshow(data, desc="", doshow=True, dowait=True, log=False, rollaxes=Fa
 	@param [in] log Take logarithm of data before plotting
 	@param [in] rollaxes Roll axes for plot such that (0,0) is the center
 	@param [in] cmap Colormap to use (RdYlBu or YlOrBr are nice)
+	@param [in] figid Figure id to use in plt.figure(figid), can be used to re-use plot windows.
 	@param [in] **kwargs Additional arguments passed to imshow()
 	"""
 
@@ -256,13 +257,15 @@ def inter_imshow(data, desc="", doshow=True, dowait=True, log=False, rollaxes=Fa
 		sh = data_arr.shape
 		extent = (-sh[1]/2., sh[1]/2., -sh[0]/2., sh[0]/2.)
 
-	fig = plt.figure()
+	fig = plt.figure(figid)
+	fig.clf()
 	ax = fig.add_subplot(111)
 	fig.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
 	ax.set_title(desc)
 
 	img = ax.imshow(data_arr, extent=extent, cmap=cm.get_cmap(cmap), **kwargs)
 	fig.colorbar(img, aspect=30, pad=0.05)
+	plt.draw()
 
 	# If we want to wait, ask user for input, discard it and continue
 	if (dowait):
