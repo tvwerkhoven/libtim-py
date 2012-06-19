@@ -169,7 +169,7 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 		extent = (-sh[1]/2., sh[1]/2., -sh[0]/2., sh[0]/2.)
 
 	# Check if dir exists, or create
-	if (not os.path.dir(dir))
+	if (not os.path.dir(dir)):
 		os.makedirs(dir)
 
 	fitsfile = filenamify(fname)+'.fits'
