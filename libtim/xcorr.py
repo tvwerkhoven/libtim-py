@@ -74,7 +74,7 @@ def crosscorr(imlst, shrange, dsh=(1,1), refim=None):
 	if (refim != None):
 		xcorr_mat = [[
 			N.r_[ [[
-			N.sum(refim[sh0+shi:imsz0-sh0+shi, sh1+shj:imsz1-sh1+shj] * refim[sm_crop])
+			N.sum(refim[sh0+shi:imsz0-sh0+shi, sh1+shj:imsz1-sh1+shj] * fj[sm_crop])
 			for shj in xrange(-sh1, sh1+1, dsh1)]
 				for shi in xrange(-sh0, sh0+1, dsh0)]
 				] # // N.r_
