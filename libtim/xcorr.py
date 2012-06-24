@@ -92,6 +92,34 @@ def crosscorr(imlst, shrange, dsh=(1,1), refim=None):
 
 	return xcorr_mat
 
+def crosscorr1(img, refim, shrange, dsh=(1,1)):
+	"""
+	Calculate cross-correlation for only 1 image.
+	"""
+
+	if (img.shape != refim.shape):
+		raise ValueError("<refim> should be same size as <img>")
+
+	sh0, sh1 = shrange
+	dsh0, dsh1 = dsh
+	imsz0, imsz1 = img.shape
+
+	# Shift ranges need to be larger than 0
+	if (sh0 < 1 or sh1 < 1):
+		raise ValueError("<shrange> should be larger than 0")
+
+	# We need a crop window to allow for image shifting
+	sm_crop = [slice(sh0, -sh0), slice(sh1, -sh1)]
+
+	# Calculate correlation for img with <refim>
+	xcorr = N.r_[ [[
+		N.sum(refim[sh0+shi:imsz0-sh0+shi, sh1+shj:imsz1-sh1+shj] * img[sm_crop])
+		for shj in xrange(-sh1, sh1+1, dsh1)]
+			for shi in xrange(-sh0, sh0+1, dsh0)]
+				] # // N.r_
+
+	return xcorr
+
 def plot_img_mat(img_mat, fignum=0, pause=True, pltit="", **kwargs):
 	"""
 	Plot grid of images in one figure.
