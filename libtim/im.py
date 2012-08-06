@@ -173,14 +173,16 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 		os.makedirs(dir)
 
 	fitsfile = filenamify(fname)+'.fits'
+	fitspath = os.path.join(dir, fitsfile)
 	plotfile = filenamify(fname)+'.pdf'
+	plotpath = os.path.join(dir, plotfile)
 
 	if (fits):
 		# Generate some metadata
 		hdr_dict = dict({'filename':fitsfile, 'desc':fname, 'title':pltitle}.items() + dict(hdr).items())
 		hdr = mkfitshdr(hdr_dict)
 		# Store data to disk
-		pyfits.writeto(os.path.join(dir, fitsfile), data_arr, header=hdr, clobber=True, checksum=True)
+		pyfits.writeto(, data_arr, header=hdr, clobber=True, checksum=True)
 
 	if (plot):
 		pltit = fname
@@ -222,9 +224,9 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 
 		canvas = FigureCanvas(fig)
 		#canvas.print_figure(plotfile, bbox_inches='tight')
-		canvas.print_figure(os.path.join(dir, plotfile))
+		canvas.print_figure(plotpath)
 
-	return (fitsfile, plotfile)
+	return (fitspath, plotpath)
 
 def inter_imshow(data, desc="", doshow=True, dowait=True, log=False, rollaxes=False, cmap='RdYlBu', figid=None, **kwargs):
 	"""Show data using matplotlib.imshow if **doshow** is true.
