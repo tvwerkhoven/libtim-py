@@ -91,9 +91,8 @@ class TestStoreData(unittest.TestCase):
 	def test1a_store_error(self):
 		"""Store images as FITS and PDF, check for errors"""
 		fpaths = store_2ddata(self.im1, 'TestStoreData_im1', pltitle='Random image', dir='/tmp/', fits=True, plot=True, plrange=(None, None), log=False, rollaxes=True, cmap='RdYlBu', xlab='X [pix]', ylab='Y [pix]', hdr=[('author', 'TestStoreData')])
-        
-		print "removing ", fpaths
-        
+
+		# fpaths should be a touple of 2 existing file paths, delete these
 		if (fpaths[0]): os.remove(fpaths[0])
 		if (fpaths[1]): os.remove(fpaths[1])
 
