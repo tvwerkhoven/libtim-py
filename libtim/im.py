@@ -182,7 +182,7 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 		hdr_dict = dict({'filename':fitsfile, 'desc':fname, 'title':pltitle}.items() + dict(hdr).items())
 		hdr = mkfitshdr(hdr_dict)
 		# Store data to disk
-		pyfits.writeto(plotpath, data_arr, header=hdr, clobber=True, checksum=True)
+		pyfits.writeto(fitspath, data_arr, header=hdr, clobber=True, checksum=True)
 
 	if (plot):
 		pltit = fname
