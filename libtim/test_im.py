@@ -36,6 +36,27 @@ class TestUtilFuncs(unittest.TestCase):
 		with self.assertRaises(ValueError):
 			mk_rad_mask(-10, -10)
 
+	def test0c_mkradmask_offset(self):
+		"""Test mk_rad_mask with center offset"""
+		test_mask = mk_rad_mask(128.0, center=(0,0))
+		self.assertEqual(test_mask[0,0], 0)
+		self.assertEqual(test_mask[64,0], 1.0)
+		self.assertEqual(test_mask[0,64], 1.0)
+
+		test_mask = mk_rad_mask(256.0, center=(255,255))
+		self.assertEqual(test_mask[255,255], 0)
+
+	def test0d_mkradmask_norm(self):
+		"""Test mk_rad_mask normalisation"""
+		test_mask = mk_rad_mask(128.0, norm=False)
+		self.assertAlmostEqual(test_mask[0,0], (2*64.0**2)**0.5)
+		test_mask = mk_rad_mask(341.0, norm=False)
+		self.assertAlmostEqual(test_mask[0,0], (2*(341/2.)**2)**0.5)
+		test_mask = mk_rad_mask(341.0, norm=True)
+		self.assertAlmostEqual(test_mask[0,0], 2**0.5)
+		test_mask = mk_rad_mask(341, 234, norm=True)
+		self.assertAlmostEqual(test_mask[0,0], 2**0.5)
+
 class TestInterImshow(unittest.TestCase):
 	def setUp(self):
 		self.data = N.random.random((128,256))

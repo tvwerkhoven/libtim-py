@@ -37,9 +37,9 @@ from util import mkfitshdr
 # Routines
 #=============================================================================
 
-def mk_rad_mask(r0, r1=None):
+def mk_rad_mask(r0, r1=None, norm=True, center=None):
 	"""
-	Make a rectangular matrix where the value of each element is the distance to the center normalized to the shape **r0** and **r1**. I.e. the center edge has value 1, the corners have value sqrt(2) in case of a square matrix.
+	Make a rectangular matrix where the value of each element is the distance to the center to the shape **r0** and **r1**. I.e. the center edge has value 1, the corners have value sqrt(2) in case of a square matrix.
 
 	If only r0 is given, the matrix will be (r0, r0). If ry is also given, the matrix will be (r0, r1)
 
@@ -47,15 +47,25 @@ def mk_rad_mask(r0, r1=None):
 
 	@param [in] r0 The width (and height if r1==None) of the mask.
 	@param [in] r1 The height of the mask.
+	@param [in] norm Normalize the distance such that 2/(r0, r1) equals a distance of 1.
+	@param [in] center Set distance origin to **center** (defaults to the middle pixel of the rectangle)
 	"""
 
 	if (not r1):
 		r1 = r0
 	if (r0 < 1 or r1 < 1):
 		raise ValueError("r0, r1 should be > 0")
+	
+	if (not center):
+		center = (r0/2.0, r1/2.0)
 
-	r0v = ((N.arange(1.0*r0) - 0.5*r0)*2/r0).reshape(-1,1)
-	r1v = ((N.arange(1.0*r1) - 0.5*r1)*2/r1).reshape(1,-1)
+	r0v = ((N.arange(1.0*r0) - center[0])).reshape(-1,1)
+	r1v = ((N.arange(1.0*r1) - center[1])).reshape(1,-1)
+	
+	if (norm):
+		r0v *= 2.0/r0
+		r1v *= 2.0/r1
+	
 	grid_rad = (r0v**2. + r1v**2.)**0.5
 	return grid_rad
 
@@ -90,7 +100,7 @@ def mk_rad_prof(data, maxrange=None):
 
 	return N.r_[profile]
 
-def df_corr(data, flatfield=None, darkfield=None, darkfac=[1.0, 1.0], thresh=0):
+def df_corr(data, flatfield=None, darkfield=None, darkfac=[1.0, 1.0], thresh=0, copy=True):
 	"""
 	Correct 2-d array **data** with **flatfield** and **darkfield**.
 
@@ -111,6 +121,7 @@ def df_corr(data, flatfield=None, darkfield=None, darkfac=[1.0, 1.0], thresh=0):
 	@param [in] darkfield Darkfield image to use
 	@param [in] darkfac Correction factors for darkfield to use if exposure is mismatched
 	@param [in] thresh Threshold to use for flatfielding
+	@param [in] copy Non-destructive: copy input before correcting
 	@return Corrected image as numpy.ndarray
 	"""
 
