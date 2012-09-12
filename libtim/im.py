@@ -59,12 +59,15 @@ def mk_rad_mask(r0, r1=None, norm=True, center=None):
 	if (not center):
 		center = (r0/2.0, r1/2.0)
 
-	r0v = ((N.arange(1.0*r0) - center[0])).reshape(-1,1)
-	r1v = ((N.arange(1.0*r1) - center[1])).reshape(1,-1)
-	
+	# N.B. These are calculated separately because we cannot calculate 2.0/r0 
+	# first and multiply r0v with it depending on **norm**, this will yield 
+	# different results due to rounding errors.
 	if (norm):
-		r0v *= 2.0/r0
-		r1v *= 2.0/r1
+		r0v = ((N.arange(1.0*r0) - center[0])*2/r0).reshape(-1,1)
+		r1v = ((N.arange(1.0*r1) - center[1])*2/r1).reshape(1,-1)
+	else:
+		r0v = ((N.arange(1.0*r0) - center[0])).reshape(-1,1)
+		r1v = ((N.arange(1.0*r1) - center[1])).reshape(1,-1)
 	
 	grid_rad = (r0v**2. + r1v**2.)**0.5
 	return grid_rad
