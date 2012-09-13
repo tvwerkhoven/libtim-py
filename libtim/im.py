@@ -103,7 +103,7 @@ def mk_rad_prof(data, maxrange=None):
 
 	return N.r_[profile]
 
-def df_corr(data, flatfield=None, darkfield=None, darkfac=[1.0, 1.0], thresh=0, copy=True):
+def df_corr(indata, flatfield=None, darkfield=None, darkfac=[1.0, 1.0], thresh=0, copy=True):
 	"""
 	Correct 2-d array **data** with **flatfield** and **darkfield**.
 
@@ -119,7 +119,7 @@ def df_corr(data, flatfield=None, darkfield=None, darkfac=[1.0, 1.0], thresh=0, 
 
 	or a part of that in case only dark- or flatfield is given.
 
-	@param [in] data Image to flat/dark-field
+	@param [in] indata Image to flat/dark-field
 	@param [in] flatfield Flatfield image to use
 	@param [in] darkfield Darkfield image to use
 	@param [in] darkfac Correction factors for darkfield to use if exposure is mismatched
@@ -127,10 +127,13 @@ def df_corr(data, flatfield=None, darkfield=None, darkfac=[1.0, 1.0], thresh=0, 
 	@param [in] copy Non-destructive: copy input before correcting
 	@return Corrected image as numpy.ndarray
 	"""
-
+	
 	# If no FF and DF, return original data
 	if (flatfield == None and darkfield == None):
-		return data
+		return indata
+		
+	if (copy):
+		data = indata.copy()
 
 	if (darkfield != None):
 		# If we have a darkfield, remove it from the data, but clip at 0
