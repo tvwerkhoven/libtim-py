@@ -151,7 +151,7 @@ def df_corr(indata, flatfield=None, darkfield=None, darkfac=[1.0, 1.0], thresh=0
 
 	return data
 
-def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plrange=(None, None), log=False, rollaxes=False, cmap='RdYlBu', xlab='X [pix]', ylab='Y [pix]', hdr=(), ident=True):
+def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plrange=(None, None), log=False, rollaxes=False, cmap='RdYlBu', xlab='X [pix]', ylab='Y [pix]', cbarlab=None, hdr=(), ident=True):
 	"""
 	Store **data** to disk as FITS and/or plot as annotated plot in PDF.
 
@@ -167,6 +167,7 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 	@param [in] cmap Colormap to use for PDF
 	@param [in] xlab X-axis label
 	@param [in] ylab Y-axis label
+	@param [in] cbarlab Colorbar label (for units)
 	@param [in] hdr Additional FITS header items, give a list of tuples: [(key1, val1), (key2, val2)]
 	@param [in] ident Add identification string to plots
 	@returns Tuple of (fitsfile path, plotfile path)
@@ -234,9 +235,11 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 		# dimension 0 is height, dimension 1 is width
 		# When the width is equal or more than the height, use a horizontal bar, otherwise use vertical
 		if (data_arr.shape[0]/data_arr.shape[1] >= 1.0):
-			fig.colorbar(img, orientation='vertical', aspect=30, pad=0.05, shrink=0.8)
+			cbar = fig.colorbar(img, orientation='vertical', aspect=30, pad=0.05, shrink=0.8)
 		else:
-			fig.colorbar(img, orientation='horizontal', aspect=30, pad=0.12, shrink=0.8)
+			cbar = fig.colorbar(img, orientation='horizontal', aspect=30, pad=0.12, shrink=0.8)
+		if (cbarlab):
+			cbar.set_label(cbarlab)
 
 		# Add ID string
 		if (ident):
