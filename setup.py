@@ -41,4 +41,5 @@ setup(cmdclass = cmdclasses,
 	author_email = 'werkhoven@strw.leidenuniv.nl',
 	url = 'http://work.vanwerkhoven.org/',
 	license = "GPL",
-	packages = ['libtim'])
+	packages = ['libtim'],
+    scripts=['scripts/convert.py'])
