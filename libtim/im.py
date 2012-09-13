@@ -194,13 +194,25 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 	plotpath = os.path.join(dir, plotfile)
 
 	if (fits):
-		# Generate some metadata
-		hdr_dict = dict({'filename':fitsfile, 'desc':fname, 'title':pltitle}.items() + dict(hdr).items())
+		# Generate some metadata. Also store plot settings here
+		hdr_dict = dict({'filename':fitsfile, 
+				'desc':fname, 
+				'title':pltitle,
+				'plxlab': xlab,
+				'plylab': ylab,
+				'pllog': log,
+				'plrlxs': rollaxes,
+				'plcmap': cmap,
+				'plrng0': plrange[0] if plrange[0] else 0,
+				'plrng1': plrange[1] if plrange[1] else 0,
+				}.items()
+				+ dict(hdr).items())
 		hdr = mkfitshdr(hdr_dict)
 		# Store data to disk
 		pyfits.writeto(fitspath, data_arr, header=hdr, clobber=True, checksum=True)
 
 	if (plot):
+		#plot_from_fits(fitspath)
 		pltit = fname
 		if (pltitle):
 			pltit = pltitle
