@@ -18,7 +18,7 @@ This module provides some file IO functions.
 #=============================================================================
 
 import matplotlib.image as mpimg
-import numpy
+import numpy as np
 import pyfits
 import json
 import cPickle
@@ -46,8 +46,11 @@ def read_file(fpath, dtype=None, roi=None, **kwargs):
 	- NPY through numpy.load
 	- NPZ through numpy.load
 	- CSV through numpy.loadtxt(delimiter=',')
-	- JSON through json.load
 	- pickle through cPickle.load
+	- JSON through json.load
+
+	All other formats are read with matplotlib.image.imread(), which links to 
+	PIL for anything except PNG.
 
 	@todo Make region of dimension independent
 
@@ -68,22 +71,24 @@ def read_file(fpath, dtype=None, roi=None, **kwargs):
 		data = pyfits.getdata(fpath, **kwargs)
 	elif (dtype == 'npy'):
 		# NPY needs numpy
-		data = numpy.load(fpath, **kwargs)
+		data = np.load(fpath, **kwargs)
 	elif (dtype == 'npz'):
 		# NPZ needs numpy
-		datadict = numpy.load(fpath, **kwargs)
+		datadict = np.load(fpath, **kwargs)
 		if (len(datadict.keys()) > 1):
 			print >> sys.stderr, "Warning! Multiple files stored in archive '%s', returning only the first" % (fpath)
 		data = datadict[datadict.keys()[0]]
 	elif (dtype == 'csv'):
 		# CSV needs Numpy.loadtxt
-		data = numpy.loadtxt(fpath, delimiter=',', **kwargs)
+		data = np.loadtxt(fpath, delimiter=',', **kwargs)
 	elif (dtype == 'pickle'):
 		fp = open(fpath, 'r')
 		data = cPickle.load(fp, **kwargs)
 		fp.close()
 		# Return immediately, no ROI applicable
 		return data
+	elif (dtype == 'ppm' or dtype == 'pgm' or dtype == 'pbm'):
+		return read_ppm(fpath, **kwargs)
 	elif (dtype == 'json'):
 		fp = open(fpath, 'r')
 		data = json.load(fp, **kwargs)
@@ -117,6 +122,66 @@ def read_file(fpath, dtype=None, roi=None, **kwargs):
 			return data
 
 
+def read_ppm(fpath, endian='big'):
+	"""
+	Read binary or ASCII PGM/PPM/PBM file and return data. 16bit binary data can be interpreted as big or little endian, see <https://en.wikipedia.org/wiki/Netpbm_format#16-bit_extensions>
+
+	@param [in] fpath File path
+	@param [in] endian Endianness of the data. Binary PGM is usually big endian.
+	"""
+	
+	fp = open(fpath, 'r')
+	
+	# Read magic number. P4, P5, P6 for binary, P1, P2, P3 for ASCII
+	magic = fp.readline().strip()
+	
+	if (magic not in ('P1', 'P2', 'P3', 'P4', 'P5', 'P6')):
+		raise RuntimeError("Magic number wrong!")
+	
+	if (magic not in ('P2', 'P5')):
+		raise NotImplementedError("Only Netpbm grayscale files (PGM) are supported")
+	
+	# Read size, possibly after comments
+	size = fp.readline()
+	while (size[0] == "#"):
+		size = fp.readline()
+	
+	sizes = size.strip().split()
+	size0, size1 = int(sizes[0]), int(sizes[1])
+	
+	# Read maximum value in file
+	maxval = fp.readline()
+	while (maxval[0] == "#"):
+		maxval = fp.readline()
+	
+	maxval = float(maxval)
+	bpp = int(np.ceil(np.log2(maxval)/8.0)*8)
+	if (bpp not in (8, 16)):
+		raise NotImplementedError("Only 8 and 16-bit files are supported (this file: %d)" % (bpp))
+
+	if (magic in ('P1', 'P2', 'P3')):
+		# Read all data as text
+		imgdata = fp.read()
+		imgarr = np.fromstring(imgdata, dtype=int, sep=' ')
+	else:
+		# Read data as string, convert to numpy array
+		imgdata = fp.read(size0*size1*bpp/8)
+
+		if (bpp == 8):
+			imgarr = np.fromstring(imgdata, dtype=np.uint8)
+		elif (bpp == 16):
+			imgarr0 = np.fromstring(imgdata[::2], dtype=np.uint8)
+			imgarr1 = np.fromstring(imgdata[1::2], dtype=np.uint8)
+			if (endian == 'big'):
+				imgarr = 256*imgarr0 + imgarr1
+			else:
+				imgarr = imgarr0 + 256*imgarr1
+	
+	# Shape in proper dimension
+	imgarr.shape = (size1, size0)
+	
+	return imgarr
+	
 def store_file(fpath, data, **kwargs):
 	"""
 	Store **data** to disk at **fpath**.
@@ -131,7 +196,7 @@ def store_file(fpath, data, **kwargs):
 	- PNG through matplotlib.image.imsave
 	- JSON through json.dump
 	- pickle through cPickle.dump
-
+	
 	@param [in] data Data to store. Should be something that converts to a numpy.ndarray
 	@param [in] fpath Full path to store to
 	@param [in] **kwargs Extra parameters passed on directly to write function
@@ -147,13 +212,13 @@ def store_file(fpath, data, **kwargs):
 		pyfits.writeto(fpath, data, **kwargs)
 	elif (dtype == 'npy'):
 		# NPY needs numpy
-		numpy.save(fpath, data, **kwargs)
+		np.save(fpath, data, **kwargs)
 	elif (dtype == 'npz'):
 		# NPY needs numpy
-		numpy.savez(fpath, data, **kwargs)
+		np.savez(fpath, data, **kwargs)
 	elif (dtype == 'csv'):
 		# CSV needs Numpy.loadtxt
-		numpy.savetxt(fpath, data, delimiter=',', **kwargs)
+		np.savetxt(fpath, data, delimiter=',', **kwargs)
 	elif (dtype == 'png'):
 		mpimg.imsave(fpath, data, **kwargs)
 	elif (dtype == 'json'):
