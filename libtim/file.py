@@ -88,7 +88,7 @@ def read_file(fpath, dtype=None, roi=None, **kwargs):
 		# Return immediately, no ROI applicable
 		return data
 	elif (dtype == 'ppm' or dtype == 'pgm' or dtype == 'pbm'):
-		return read_ppm(fpath, **kwargs)
+		data = read_ppm(fpath, **kwargs)
 	elif (dtype == 'json'):
 		fp = open(fpath, 'r')
 		data = json.load(fp, **kwargs)
