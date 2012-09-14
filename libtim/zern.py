@@ -374,8 +374,8 @@ class PlotZernikes(unittest.TestCase):
 		zn_m = calc_zernike([1,2,3,4,5,6], rad, mask=True)
 		zn_unm = calc_zernike([1,2,3,4,5,6], rad, mask=False)
 		mask = tim.im.mk_rad_mask(2*rad) <= 1
-		inter_imshow(zn_m, desc="Masked Zernike")
-		inter_imshow(zn_unm, desc="Unmasked Zernike")
+		tim.im.inter_imshow(zn_m, desc="Masked Zernike")
+		tim.im.inter_imshow(zn_unm, desc="Unmasked Zernike")
 
 class TestZernikes(unittest.TestCase):
 	def setUp(self):
@@ -527,6 +527,36 @@ class TestZernikes(unittest.TestCase):
 			fitdata = fit_zernike(self.wf, nmodes=10, startmode=s+1)
 			fitvec = fitdata[0]
 			self.assertEqual(tuple(fitvec[:s]), (0,)*s)
+
+	def test2g_weighed_fit(self):
+		"""Test weighed Zernike reconstruction"""
+		this_wf = self.wf_msk.copy()
+		this_weight = self.wf_msk.copy()*0+1
+		
+		# Set region in center to random values, and set weight to 0
+		this_wf[this_wf.shape[0]*2/3:] = 2*this_wf.max()
+		this_weight[this_wf.shape[0]*2/3:] = 0
+		
+		# Now fit and plot
+		fitvecw, fitrecw, fitdiffw = fit_zernike(this_wf, fitweight=this_weight, nmodes=self.nmodes)
+		fitvec, fitrec, fitdiff = fit_zernike(this_wf, nmodes=self.nmodes)
+		
+		# When fitting the corrupted wavefront, the residual with the original 
+		# wavefront should be much bigger than with the corrupted wavefront
+		fitw_orig = N.abs(fitrecw - self.wf_msk).mean()
+		fit_orig = N.abs(fitrec - self.wf_msk).mean()
+		fitw_corr = N.abs(fitrecw - this_wf).mean()
+		fit_corr = N.abs(fitrec - this_wf).mean()
+		
+		self.assertGreater(fit_orig/1.2, fit_corr)
+		self.assertGreater(fitw_corr/10., fitw_orig)
+		self.assertGreater(fitrec.max()/1.5, fitrecw.max())
+		
+# 		tim.im.inter_imshow(self.wf_msk, desc="Input data")
+# 		tim.im.inter_imshow(this_wf, desc="Corrupted input data")
+# 		tim.im.inter_imshow(this_weight, desc="Input weight")
+# 		tim.im.inter_imshow(fitrecw, desc="Weighed Reconstruction")
+# 		tim.im.inter_imshow(fitrec, desc="Normal Reconstruction")
 
 class TestZernikeSpeed(unittest.TestCase):
 	def setUp(self):
