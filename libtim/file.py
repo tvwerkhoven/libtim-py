@@ -177,10 +177,11 @@ def read_ppm(fpath, endian='big'):
 			else:
 				imgarr = imgarr0 + 256*imgarr1
 	
-	# Shape in proper dimension
+	# Shape in proper dimension, and change origin to match 
+	# matplotlib.image.imread
 	imgarr.shape = (size1, size0)
 	
-	return imgarr
+	return imgarr[::-1]
 	
 def store_file(fpath, data, **kwargs):
 	"""
