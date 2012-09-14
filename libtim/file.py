@@ -18,7 +18,7 @@ This module provides some file IO functions.
 #=============================================================================
 
 import matplotlib.image as mpimg
-import numpy
+import numpy as np
 import pyfits
 import json
 import cPickle
@@ -26,8 +26,6 @@ import string
 import os, shutil
 import fnmatch
 import time
-
-import unittest
 
 #=============================================================================
 # Defines
@@ -48,8 +46,11 @@ def read_file(fpath, dtype=None, roi=None, **kwargs):
 	- NPY through numpy.load
 	- NPZ through numpy.load
 	- CSV through numpy.loadtxt(delimiter=',')
-	- JSON through json.load
 	- pickle through cPickle.load
+	- JSON through json.load
+
+	All other formats are read with matplotlib.image.imread(), which links to 
+	PIL for anything except PNG.
 
 	@todo Make region of dimension independent
 
@@ -70,22 +71,24 @@ def read_file(fpath, dtype=None, roi=None, **kwargs):
 		data = pyfits.getdata(fpath, **kwargs)
 	elif (dtype == 'npy'):
 		# NPY needs numpy
-		data = numpy.load(fpath, **kwargs)
+		data = np.load(fpath, **kwargs)
 	elif (dtype == 'npz'):
 		# NPZ needs numpy
-		datadict = numpy.load(fpath, **kwargs)
+		datadict = np.load(fpath, **kwargs)
 		if (len(datadict.keys()) > 1):
 			print >> sys.stderr, "Warning! Multiple files stored in archive '%s', returning only the first" % (fpath)
 		data = datadict[datadict.keys()[0]]
 	elif (dtype == 'csv'):
 		# CSV needs Numpy.loadtxt
-		data = numpy.loadtxt(fpath, delimiter=',', **kwargs)
+		data = np.loadtxt(fpath, delimiter=',', **kwargs)
 	elif (dtype == 'pickle'):
 		fp = open(fpath, 'r')
 		data = cPickle.load(fp, **kwargs)
 		fp.close()
 		# Return immediately, no ROI applicable
 		return data
+	elif (dtype == 'ppm' or dtype == 'pgm' or dtype == 'pbm'):
+		data = read_ppm(fpath, **kwargs)
 	elif (dtype == 'json'):
 		fp = open(fpath, 'r')
 		data = json.load(fp, **kwargs)
@@ -119,6 +122,67 @@ def read_file(fpath, dtype=None, roi=None, **kwargs):
 			return data
 
 
+def read_ppm(fpath, endian='big'):
+	"""
+	Read binary or ASCII PGM/PPM/PBM file and return data. 16bit binary data can be interpreted as big or little endian, see <https://en.wikipedia.org/wiki/Netpbm_format#16-bit_extensions>
+
+	@param [in] fpath File path
+	@param [in] endian Endianness of the data. Binary PGM is usually big endian.
+	"""
+	
+	fp = open(fpath, 'r')
+	
+	# Read magic number. P4, P5, P6 for binary, P1, P2, P3 for ASCII
+	magic = fp.readline().strip()
+	
+	if (magic not in ('P1', 'P2', 'P3', 'P4', 'P5', 'P6')):
+		raise RuntimeError("Magic number wrong!")
+	
+	if (magic not in ('P2', 'P5')):
+		raise NotImplementedError("Only Netpbm grayscale files (PGM) are supported")
+	
+	# Read size, possibly after comments
+	size = fp.readline()
+	while (size[0] == "#"):
+		size = fp.readline()
+	
+	sizes = size.strip().split()
+	size0, size1 = int(sizes[0]), int(sizes[1])
+	
+	# Read maximum value in file
+	maxval = fp.readline()
+	while (maxval[0] == "#"):
+		maxval = fp.readline()
+	
+	maxval = float(maxval)
+	bpp = int(np.ceil(np.log2(maxval)/8.0)*8)
+	if (bpp not in (8, 16)):
+		raise NotImplementedError("Only 8 and 16-bit files are supported (this file: %d)" % (bpp))
+
+	if (magic in ('P1', 'P2', 'P3')):
+		# Read all data as text
+		imgdata = fp.read()
+		imgarr = np.fromstring(imgdata, dtype=int, sep=' ')
+	else:
+		# Read data as string, convert to numpy array
+		imgdata = fp.read(size0*size1*bpp/8)
+
+		if (bpp == 8):
+			imgarr = np.fromstring(imgdata, dtype=np.uint8)
+		elif (bpp == 16):
+			imgarr0 = np.fromstring(imgdata[::2], dtype=np.uint8)
+			imgarr1 = np.fromstring(imgdata[1::2], dtype=np.uint8)
+			if (endian == 'big'):
+				imgarr = 256*imgarr0 + imgarr1
+			else:
+				imgarr = imgarr0 + 256*imgarr1
+	
+	# Shape in proper dimension, and change origin to match 
+	# matplotlib.image.imread
+	imgarr.shape = (size1, size0)
+	
+	return imgarr[::-1]
+	
 def store_file(fpath, data, **kwargs):
 	"""
 	Store **data** to disk at **fpath**.
@@ -133,7 +197,7 @@ def store_file(fpath, data, **kwargs):
 	- PNG through matplotlib.image.imsave
 	- JSON through json.dump
 	- pickle through cPickle.dump
-
+	
 	@param [in] data Data to store. Should be something that converts to a numpy.ndarray
 	@param [in] fpath Full path to store to
 	@param [in] **kwargs Extra parameters passed on directly to write function
@@ -149,13 +213,13 @@ def store_file(fpath, data, **kwargs):
 		pyfits.writeto(fpath, data, **kwargs)
 	elif (dtype == 'npy'):
 		# NPY needs numpy
-		numpy.save(fpath, data, **kwargs)
+		np.save(fpath, data, **kwargs)
 	elif (dtype == 'npz'):
 		# NPY needs numpy
-		numpy.savez(fpath, data, **kwargs)
+		np.savez(fpath, data, **kwargs)
 	elif (dtype == 'csv'):
 		# CSV needs Numpy.loadtxt
-		numpy.savetxt(fpath, data, delimiter=',', **kwargs)
+		np.savetxt(fpath, data, delimiter=',', **kwargs)
 	elif (dtype == 'png'):
 		mpimg.imsave(fpath, data, **kwargs)
 	elif (dtype == 'json'):
@@ -296,135 +360,3 @@ def filenamify(str):
 	fbase = ''.join(c for c in fbase if c in valid_chars)
 	return fbase
 
-class TestReadWriteFiles(unittest.TestCase):
-	def setUp(self):
-		self.dataformats = ['fits', 'npy', 'npz', 'csv', 'png']
-		self.metaformats = ['json', 'pickle']
-		self.allformats = self.dataformats + self.metaformats
-		self.files = []
-		for file in self.files:
-# 			print "Removing temp files", self.files
-			if (file and os.path.isfile(file)):
-				os.remove(file)
-
-	def tearDown(self):
-		"""Delete files produces in this test"""
-		for file in self.files:
-# 			print "Removing temp files", self.files
-			if (file and os.path.isfile(file)):
-				os.remove(file)
-
-	def test1a_filenamify(self):
-		"""Test filenamify calls"""
-		self.assertEqual(filenamify('hello world'), 'hello_world')
-
-	def test1b_read_file_calls(self):
-		"""Test read_file calls"""
-
-		# These should all raise an IOerror
-		with self.assertRaisesRegexp(IOError, "No such file or directory"):
-			read_file('nonexistent.file', None)
-
-		for fmt in self.allformats:
-			with self.assertRaisesRegexp(IOError, "No such file or.*"):
-				read_file('nonexistent.file', fmt)
-
-	def test1c_write_file(self):
-		"""Test write_file"""
-		# Generate data
-		sz = (67, 47)
-		data1 = N.random.random(sz).astype(N.float)
-		data2 = (N.random.random(sz)*255).astype(N.uint8)
-		meta1 = {'meta': 'hello world', 'len': 123, 'payload': [1,4,14,4,111]}
-
-		# Store as all formats
-		for fmt in self.dataformats:
-			fpath = store_file('/tmp/TestReadWriteFiles_data1.'+fmt, data1)
-			self.files.append(fpath)
-			fpath = store_file('/tmp/TestReadWriteFiles_data2.'+fmt, data2)
-			self.files.append(fpath)
-
-		for fmt in self.metaformats:
-			fpath = store_file('/tmp/TestReadWriteFiles_meta1.'+fmt, meta1)
-			self.files.append(fpath)
-
-	def test2a_read_file_data(self):
-		"""Test read_file reconstruction"""
-		# Generate data
-		sz = (67, 47)
-		data1 = N.random.random(sz).astype(N.float)
-		data2 = (N.random.random(sz)*255).astype(N.uint8)
-		meta1 = {'meta': 'hello world', 'len': 123, 'payload': [1,4,14,4,111]}
-
-		# Store as all formats
-		for fmt in self.dataformats:
-			fpath = store_file('/tmp/TestReadWriteFiles_data1.'+fmt, data1)
-			self.files.append(fpath)
-			fpath = store_file('/tmp/TestReadWriteFiles_data2.'+fmt, data2)
-			self.files.append(fpath)
-
-		# Try to read everything again
-		for fmt in self.dataformats:
-			read1 = read_file('/tmp/TestReadWriteFiles_data1.'+fmt)
-			read2 = read_file('/tmp/TestReadWriteFiles_data2.'+fmt)
-			# PNG loses scaling, ignore
-			if fmt not in ['png']:
-				self.assertTrue(N.allclose(data1, read1))
-				self.assertTrue(N.allclose(data2, read2))
-
-		# Do the same for metaformats
-		for fmt in self.metaformats:
-			fpath = store_file('/tmp/TestReadWriteFiles_meta1.'+fmt, meta1)
-			self.files.append(fpath)
-
-		for fmt in self.metaformats:
-			read1 = read_file('/tmp/TestReadWriteFiles_meta1.'+fmt)
-			self.assertEqual(meta1, read1)
-
-	def test2b_test_read_roi(self):
-		"""Test read_file reconstruction"""
-		# Generate data
-		szl = [(67,), (67, 47), (67, 47, 32)]
-		roil = [(50, 60), (50, 60, 20, 40), (50, 60, 20, 40, 5, 12)]
-		shapel = [(10,), (10, 20), (10, 20, 7)]
-
-		for sz, thisroi, thisshp in zip(szl, roil, shapel):
-			data1 = N.random.random(sz).astype(N.float)
-			data2 = (N.random.random(sz)*255).astype(N.uint8)
-			# Store as all formats
-			for fmt in self.dataformats:
-				if fmt in ['png']:
-					continue
-				if fmt in ['csv'] and len(sz) > 2:
-					continue
-				fn1 = '/tmp/TestReadWriteFiles_data1_'+str(sz)+'.'+fmt
-				fn2 = '/tmp/TestReadWriteFiles_data2_'+str(sz)+'.'+fmt
-
-				fpath = store_file(fn1, data1)
-				self.files.append(fpath)
-				fpath = store_file(fn2, data2)
-				self.files.append(fpath)
-
-				# Try to read everything again
-				read1 = read_file(fn1)
-				read2 = read_file(fn2)
-				# PNG loses scaling, ignore
-				if fmt not in ['png']:
-					self.assertTrue(N.allclose(data1, read1))
-					self.assertTrue(N.allclose(data2, read2))
-
-				# Try to read with ROI
-				read1 = read_file(fn1, roi=thisroi)
-				read2 = read_file(fn2, roi=thisroi)
-				# Check dimensions, should be different
-				self.assertNotEqual(read1.shape, data1.shape)
-				self.assertNotEqual(read2.shape, data2.shape)
-				self.assertEqual(read1.shape, thisshp)
-				self.assertEqual(read2.shape, thisshp)
-
-
-
-if __name__ == "__main__":
-	import numpy as N
-	import sys
-	sys.exit(unittest.main())
