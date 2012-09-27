@@ -168,10 +168,12 @@ def read_ppm(fpath, endian='big'):
 		imgdata = fp.read(size0*size1*bpp/8)
 
 		if (bpp == 8):
-			imgarr = np.fromstring(imgdata, dtype=np.uint8)
+			imgarr = np.fromstring(imgdata, dtype=np.uint8).astype(np.uint16)
 		elif (bpp == 16):
-			imgarr0 = np.fromstring(imgdata[::2], dtype=np.uint8)
-			imgarr1 = np.fromstring(imgdata[1::2], dtype=np.uint8)
+			# Convert string to ints byte by byte, but then convert those 
+			# numbers to uint16 for processing afterwards
+			imgarr0 = np.fromstring(imgdata[::2], dtype=np.uint8).astype(np.uint16)
+			imgarr1 = np.fromstring(imgdata[1::2], dtype=np.uint8).astype(np.uint16)
 			if (endian == 'big'):
 				imgarr = 256*imgarr0 + imgarr1
 			else:
