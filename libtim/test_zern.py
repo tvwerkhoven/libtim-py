@@ -17,6 +17,7 @@ import unittest
 import pylab as plt
 import pyfits
 from timeit import Timer
+import os
 
 class PlotZernikes(unittest.TestCase):
 	def test0a_masking(self):
@@ -27,6 +28,40 @@ class PlotZernikes(unittest.TestCase):
 		mask = tim.im.mk_rad_mask(2*rad) <= 1
 		tim.im.inter_imshow(zn_m, desc="Masked Zernike")
 		tim.im.inter_imshow(zn_unm, desc="Unmasked Zernike")
+	def test1_plot_basis(self):
+		"""Plot the first few Zernike basis functions, until the user quits"""
+		rad = 257
+		for idx in xrange(100):
+			vec = [0]*(idx+1)
+			vec[idx] = 1
+			mode = calc_zernike(vec, rad, mask=True)
+			tim.im.inter_imshow(mode, desc="Zernike mode %d" % (idx+1))
+		
+class StoreZernikes(unittest.TestCase):
+	def setUp(self):
+		"""Generate source image, darkfield, flatfield and simulated data"""
+		self.outdir = './test_zern_out/'
+		try:
+			os.makedirs(self.outdir)
+		except OSError:
+			pass
+		rad = 257
+		self.rad = rad
+		self.nmodes = 30
+		self.basis = []
+		self.basis_data = calc_zern_basis(self.nmodes, self.rad)
+		self.basis = self.basis_data['modes']*self.basis_data['mask']
+
+	def test1_file_write(self):
+		"""Test disk writing & plotting."""
+		# Store as one big FITS file
+		outf = os.path.join(self.outdir, 'zernike-basis.fits')
+		pyfits.writeto(outf, N.r_[self.basis], clobber=True)
+		
+		# Plot each mode
+		for n, basis in enumerate(self.basis):
+			libtim.im.store_2ddata(basis, 'zernike-basis_%02d' % (n+1), 
+				dir=self.outdir, pltitle='Zernike basis mode %d' % (n+1))
 
 class TestZernikes(unittest.TestCase):
 	def setUp(self):
@@ -85,10 +120,6 @@ class TestZernikes(unittest.TestCase):
 		self.assertEqual(len(basis), 5)
 		self.assertEqual(basis[0].shape, (128, 128))
 		self.assertEqual(basis[0].shape, basis[-1].shape)
-
-	def test1c_file_write(self):
-		"""Test disk writing."""
-		pyfits.writeto('TestZernikes-modes.fits', N.r_[self.basis], clobber=True)
 
 	def test1d_masking(self):
 		"""Test if masking works"""
