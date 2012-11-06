@@ -35,7 +35,9 @@ class PlotZernikes(unittest.TestCase):
 			vec = [0]*(idx+1)
 			vec[idx] = 1
 			mode = calc_zernike(vec, rad, mask=True)
-			tim.im.inter_imshow(mode, desc="Zernike mode %d" % (idx+1))
+			nn, mm = noll_to_zern(idx+1)
+			tim.im.inter_imshow(mode, desc="Zernike mode j=%d (n=%d, m=%d) " % (n+1, nn, mm))
+
 		
 class StoreZernikes(unittest.TestCase):
 	def setUp(self):
@@ -60,8 +62,9 @@ class StoreZernikes(unittest.TestCase):
 		
 		# Plot each mode
 		for n, basis in enumerate(self.basis):
+			nn, mm = noll_to_zern(n+1)
 			libtim.im.store_2ddata(basis, 'zernike-basis_%02d' % (n+1), 
-				dir=self.outdir, pltitle='Zernike basis mode %d' % (n+1))
+				dir=self.outdir, pltitle='Zernike mode j=%d, (n=%d, m=%d) ' % (n+1, nn, mm), xlab='X', ylab='Y', ident=False, grid=False, ticks=True)
 
 class TestZernikes(unittest.TestCase):
 	def setUp(self):
