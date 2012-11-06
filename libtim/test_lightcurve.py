@@ -119,6 +119,46 @@ ph = 2.0*np.pi*np.arange(1000)/1000.0
 		t1_min = min(t1.repeat(3, 100))/100
 		print u"test1_speed(): transit_model_dp7 %.3g ms/it" % (t1_min*1000)
 
+def plotcomp(lclist, fignum, title, pause=True):
+	"""
+	Plot list of light curves to compare
+	"""
+
+	plt.figure(fignum)
+	plt.clf()
+	plt.title(title)
+	for lc in lclist:
+		plt.plot(lc)
+	if (pause):
+		raw_input('')
+
+class ModelParamsPlot(unittest.TestCase):
+	# transit_model_dp7(ph, sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmodel=400, method=0, verb=0, plot=0)
+	def test1_param_sr(self):
+		"""Test sr parameter"""
+		lclist = [transit_model_dp7([], sr=pfac*10.36) for pfac in np.linspace(0.5, 2.0, 10)]
+		plotcomp(lclist, 1, 'sr 0.5..2.0*10.36')
+	def test2_param_ep(self):
+		"""Test ep parameter"""
+		lclist = [transit_model_dp7([], ep=pfac*5.13) for pfac in np.linspace(0.5, 2.0, 10)]
+		plotcomp(lclist, 2, 'ep 0.5...2.0*5.13')
+	def test3_param_ca(self):
+		"""Test ca parameter"""
+		lclist = [transit_model_dp7([], ca=pfac*0.03) for pfac in np.linspace(0.5, 2.0, 10)]
+		plotcomp(lclist, 3, 'ca 0.5...2.0*0.03')
+	def test4_param_g(self):
+		"""Test g parameter"""
+		lclist = [transit_model_dp7([], g=pfac*0.875) for pfac in np.linspace(0.5, 2.0, 10)]
+		plotcomp(lclist, 4, 'g 0.5...2.0*0.875')
+	def test5_param_om(self):
+		"""Test om parameter"""
+		lclist = [transit_model_dp7([], om=pfac*0.654) for pfac in np.linspace(0.5, 2.0, 10)]
+		plotcomp(lclist, 5, 'om 0.5...2.0*0.654')
+	def test6_param_nmodel(self):
+		"""Test nmodel parameter"""
+		lclist = [transit_model_dp7([], nmodel=int(pfac*400)) for pfac in np.linspace(0.5, 2.0, 10)]
+		plotcomp(lclist, 6, 'nmodel 0.5...2.0*400')
+
 if __name__ == "__main__":
         import sys
         sys.exit(unittest.main())
