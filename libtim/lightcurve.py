@@ -19,6 +19,7 @@ General light curve data functions, e.g. from Kepler or SWASP.
 
 import numpy as np
 import scipy as sp
+import scipy.interpolate
 import scipy.ndimage.filters
 import unittest
 import libtim as tim
@@ -339,7 +340,7 @@ def transit_model_dp7(phase, sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmod
 	Old default params: sr=20.865*(1.-0.63**2.)**0.5, ep=5.1, ca=0.03, g=0.874, om=0.65, nmodel=400, opoly=2
 	New default params: sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654
 	
-	@param [in] phase Vector of phases
+	@param [in] phase Vector of phases, from [0, 1]
 	@param [in] sr Crossed stellar path in degrees
 	@param [in] ep Exponential parameter for extinction drop-off
 	@param [in] ca Extinction cross-section in units of stellar area
@@ -350,8 +351,6 @@ def transit_model_dp7(phase, sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmod
 	@return Light curve with len(phase) points
 	"""
 	
-	n = len(phase)
-	
 	# NOTES - Precalculated quatities
 	# r = 0.65*R_sun
 	# a = 0.013AU in meters
@@ -359,9 +358,10 @@ def transit_model_dp7(phase, sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmod
 	# sra = sr in radians
 
 	#nmodel = 400                              # Light curve sampling
-	binsz = 2.*np.pi/float(nmodel)             # Bin size
-	azim = np.arange(nmodel)*binsz             # Azimuth vector
-	azim_ph = azim/(2.0*np.pi) - 0.5           # Azimuth as phase
+	binsz = 2.*np.pi/(nmodel)                # Bin size
+	#azim = np.linspace(0, 2*np.pi, nmodel)     # Azimuth vector [0, 2π]
+	azim = np.arange(nmodel)*binsz             # Azimuth vector [0, 2π)
+	azim_ph = azim/(2.0*np.pi) - 0.5           # Azimuth as phase [0, 1]
 	r = 4.52e8                                 # Stellar radius in meters
 	a = 1.95e9                                 # Semimajor axis in meters
 	sra = sr*0.0174533                         # Half crossed chord in radians
@@ -495,8 +495,8 @@ def transit_model_dp7(phase, sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmod
 		return lc2
 
 	# Interpolation to the input phase vector
-	lc_intp = sp.interpolate.interp1d(azim_ph, lc2, kind=[None, 'linear', 'quadratic', 'cubic'][opoly])
+	lc_intp = sp.interpolate.interp1d(azim, lc2, kind=[None, 'linear', 'quadratic', 'cubic'][opoly])
 
 	#lc_intp = np.poly1d(np.polyfit(azim, lc2, deg=opoly))
-	return lc_intp(np.asanyarray(phase))
+	return lc_intp(np.asanyarray(phase) * 2*np.pi)
 
