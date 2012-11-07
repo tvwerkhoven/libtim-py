@@ -490,9 +490,13 @@ def transit_model_dp7(phase, sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmod
 		if (plot & PLOT_INTERACTIVE):
 			raw_input("Press any key to continue...")
 
-	
+	# If phase is not given, return the raw lightcurve:	
+	if (not len(phase)):
+		return lc2
+
 	# Interpolation to the input phase vector
-	#lc_intp = sp.interpolate.interp1d(azim, lc2)
-	lc_intp = np.poly1d(np.polyfit(azim, lc2, deg=opoly))
-	return lc_intp(np.asanyarray(phase) * 2.*np.pi)
+	lc_intp = sp.interpolate.interp1d(azim_ph, lc2, kind=[None, 'linear', 'quadratic', 'cubic'][opoly])
+
+	#lc_intp = np.poly1d(np.polyfit(azim, lc2, deg=opoly))
+	return lc_intp(np.asanyarray(phase))
 
