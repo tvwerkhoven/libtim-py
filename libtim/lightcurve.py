@@ -328,7 +328,7 @@ def stellar_detrend(mflux, mtime, fluxerr, phase, mask=slice(None), opoly=2, osp
 # LIGHT CURVE MODEL
 #=============================================================================
 
-def transit_model_dp7(phase, sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmodel=400, opoly=2, method=0, verb=0, plot=0):
+def transit_model_dp7(phase, sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmodel=400, method=0, verb=0, plot=0):
 	"""
 	Disintegrating planet light curve modeling assuming an optically thin 
 	cloud. All calculations are done in one dimension (azimuth).
@@ -337,7 +337,7 @@ def transit_model_dp7(phase, sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmod
 	
 	Transcoded from dp7.pro (Matteo Brogi) to Python (Tim van Werkhoven)
 
-	Old default params: sr=20.865*(1.-0.63**2.)**0.5, ep=5.1, ca=0.03, g=0.874, om=0.65, nmodel=400, opoly=2
+	Old default params: sr=20.865*(1.-0.63**2.)**0.5, ep=5.1, ca=0.03, g=0.874, om=0.65, nmodel=400
 	New default params: sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654
 	
 	@param [in] phase Vector of phases, from [0, 1]
@@ -347,7 +347,6 @@ def transit_model_dp7(phase, sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmod
 	@param [in] g Asymmetry parameter (-1.0 .. +1.0)
 	@param [in] om Single-scattering albedo (0 .. 1)
 	@param [in] nmodel Array size for calculating model
-	@param [in] opoly Polynomial interpolation order
 	@return Light curve with len(phase) points
 	"""
 	
@@ -494,8 +493,8 @@ def transit_model_dp7(phase, sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmod
 	if (not len(phase)):
 		return lc2
 
-	# Interpolation to the input phase vector
-	lc_intp = sp.interpolate.interp1d(azim, lc2, kind=[None, 'linear', 'quadratic', 'cubic'][opoly])
+	# Interpolation to the input phase vector. If outside the interpolation range, set curve to 1.
+	lc_intp = sp.interpolate.interp1d(azim, lc2, kind='linear', bounds_error=False, fill_value=1.0)
 
 	#lc_intp = np.poly1d(np.polyfit(azim, lc2, deg=opoly))
 	return lc_intp(np.asanyarray(phase) * 2*np.pi)
