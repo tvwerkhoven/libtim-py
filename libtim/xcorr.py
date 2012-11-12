@@ -344,7 +344,7 @@ class TestShift(unittest.TestCase):
 		self.sz = (257, 509)
 		self.sz = (31, 29)
 		self.spotsz = 2.
-		self.pos_l = [(1,1), (2*self.spotsz, -2*self.spotsz), (5,8)]
+		self.pos_l = [(1,1), (2**0.5*self.spotsz, 2**0.5), (2*self.spotsz, -2*self.spotsz), (5,8)]
 		self.amp = 255
 
 		self.refim = _gauss(self.sz, self.spotsz, (0,0), self.amp, 0)
@@ -388,11 +388,11 @@ class TestShift(unittest.TestCase):
 			im_sh2 = shift_img(self.refim, sh, method="fourier")
 			plt.figure(1)
 			plt.clf()
-			plt.title("Pixel-shifted with: " + str(sh))
+			plt.title("Pixel-shifted by (%.3g, %.3g)" % sh)
 			plt.imshow(im_sh1, extent=plrn)
 			plt.figure(2)
 			plt.clf()
-			plt.title("Fourier-shifted with: " + str(sh))
+			plt.title("Fourier-shifted by (%.3g, %.3g)" % sh)
 			plt.imshow(im_sh2, extent=plrn)
 			raw_input()
 
@@ -424,7 +424,7 @@ class TestGaussFuncs(unittest.TestCase):
 	def test2a_timing(self):
 		"""Test timing for two functions"""
 		print "test2a_timing(): timings in msec/iter"
-		for sz in self.sz_l:
+		for sz in self.sz_l[:1]:
 			for spsz in self.spotsz_l:
 				for pos in self.pos_l:
 					setup_str = """
@@ -570,6 +570,7 @@ class TestXcorr(BaseXcorr):
 			# Loop over shift vectors and correlation maps
 			for shi, outarr_l in zip(self.shtest, outarr):
 				for shj, corr in zip(self.shtest, outarr_l):
+					corr = N.r_[corr]
 					vec = calc_subpixmax(corr, offset=N.r_[corr.shape]/2)
 
 					# In some cases, the shift is too large to measure. This
@@ -608,6 +609,7 @@ class PlotXcorr(BaseXcorr):
 
 			# Output is a xcorr for all image pairs
 			outarr = crosscorr(testimg_l0, shr, refim=testimg_l0[0])
+			outarr = N.r_[outarr]
 			vec = calc_subpixmax(outarr, offset=N.r_[outarr.shape]/2)
 
 			# Plot correlation maps
@@ -634,7 +636,8 @@ class PlotXcorr(BaseXcorr):
 			for shi, outarr_l in zip(self.shtest, outarr):
 				for shj, corr in zip(self.shtest, outarr_l):
 # 					print shi, shj
-# 					print N.r_[shi]-N.r_[shj]
+# 					print N.r_[shi]-N.r_[shj]r_
+					corr = N.r_[corr]
 					vec = calc_subpixmax(corr, offset=N.r_[corr.shape]/2)
 					plt.plot([shi[0]-shj[0], vec[0]], [shi[1]-shj[1], vec[1]], '+-')
 			plt.figure(1)
@@ -645,6 +648,7 @@ class PlotXcorr(BaseXcorr):
 				for shj, corr in zip(self.shtest, outarr_l):
 # 					print shi, shj
 # 					print N.r_[shi]-N.r_[shj]
+					corr = N.r_[corr]
 					vec = calc_subpixmax(corr, offset=N.r_[corr.shape]/2)
 					plt.plot([shi[0]-shj[0]-vec[0]], [shi[1]-shj[1]-vec[1]], '*')
 			raw_input()
