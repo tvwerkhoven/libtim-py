@@ -44,6 +44,8 @@ import scipy.weave
 import libtim as tim
 import libtim.file
 import libtim.im
+# Drop to ipython during execution (call 'shell()')
+from IPython import embed as shell
 
 #=============================================================================
 # Routines
@@ -82,20 +84,15 @@ def read_actmap(actmapf, verb=0):
 		# The smallest value should be 1 for actuator 1, so divide by this 
 		# value to get integers
 		map = np.round(map/min_nonzero)
-		if (verb > 0):
-			print "read_actmap(): smallest value < 1, scaling"
+		if (verb > 1):
+			print "dmmodel.read_actmap(): smallest value < 1, scaling"
 	
 	# If there are values 255, set to 0
 	if (map.max() >= 255.0):
 		map[map == 255] = 0
-		if (verb > 0):
-			print "read_actmap(): found 255, zeroing"
+		if (verb > 1):
+			print "dmmodel.read_actmap(): found 255, zeroing"
 	
-	if (verb > 1):
-		print "read_actmap(): Got actuator map with values: ", np.unique(map)
-		plt.imshow(map)
-		raw_input('...')
-
 	# Return map
 	return map
 
@@ -119,8 +116,8 @@ def parse_volts(mirror_actmap, mirror_volts, voltfunc=lambda involt: ((involt/25
 		thismask = mirror_actmap == actid+1
 		thisvolt = voltfunc(actvolt)
 		mirror_actmap[thismask] = thisvolt
-		if (verb > 0):
-			print "Act %d (n=%d) @ %g" % (actid, thismask.sum(), thisvolt)
+		if (verb > 0 and actvolt != 0):
+			print "dmmodel.parse_volts(): act %d (n=%d) @ %g" % (actid, thismask.sum(), thisvolt)
 	
 	return mirror_actmap
 
@@ -190,8 +187,8 @@ def sim_dm(mirror_actmap, mirror_apt, docrop=True, verb=0):
 		extra_compile_args= [__COMPILE_OPTS], \
 		type_converters=sp.weave.converters.blitz)
 	
-	if (verb > 0):
-		print "sim_dm(): niter=%d, final sdif=%g" % (return_val, sdif)
+	if (verb > 2):
+		print "dmmodel.sim_dm(): niter=%d, final sdif=%g" % (return_val, sdif)
 	
 	cropmask = (slice(None), slice(None))
 	if (docrop):
@@ -202,8 +199,8 @@ def sim_dm(mirror_actmap, mirror_apt, docrop=True, verb=0):
 		apt_max1 = mirror_apt.max(1)
 		crop1 = slice(np.argwhere(apt_max1 > 0)[0], np.argwhere(apt_max1 > 0)[-1], 1)
 		cropmask = (crop0, crop1)
-		if (verb > 1):
-			print "sim_dm(): cropmask:", cropmask
+		if (verb > 2):
+			print "dmmodel.sim_dm(): cropmask:", cropmask
 	
 	return mirror_resp[cropmask]
 
