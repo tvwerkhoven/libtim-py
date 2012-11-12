@@ -161,7 +161,6 @@ def calc_zern_basis(nmodes, rad):
 
 	@param [in] nmodes Number of modes to generate
 	@param [in] rad Radius of Zernike modes
-	@param [in] mask Mask area outside Zernike modes or not
 	@return Dict with entries 'modes' a list of Zernike modes, 'modesmat' a matrix of (nmodes, npixels), 'covmat' a covariance matrix for all these modes with 'covmat_in' its inverse, 'mask' is a binary mask to crop only the orthogonal part of the modes.
 	"""
 
