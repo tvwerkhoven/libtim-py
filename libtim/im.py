@@ -72,7 +72,7 @@ def mk_rad_mask(r0, r1=None, norm=True, center=None):
 	grid_rad = (r0v**2. + r1v**2.)**0.5
 	return grid_rad
 
-def mk_rad_prof(data, maxrange=None):
+def mk_rad_prof(data, maxrange=None, step=1):
 	"""
 	Make radial profile of **data**.
 
@@ -80,6 +80,7 @@ def mk_rad_prof(data, maxrange=None):
 
 	@param [in] data 2D array of data
 	@param [in] maxrange Range of profile to make in pixels (min(data.shape)/2 if None)
+	@param [in] step Stepsize in pixels (has to be >=1)
 	@return Radial profile binned per pixel as numpy.ndarray.
 	"""
 
@@ -90,16 +91,21 @@ def mk_rad_prof(data, maxrange=None):
 		maxrange = min(data.shape)/2
 
 	# Make radial mask
-	rad_mask = N.indices(data.shape) - (N.r_[data.shape]/2).reshape(-1,1,1)
-	rad_mask = N.sqrt((rad_mask**2.0).sum(0))
+	rad_mask = mk_rad_mask(data.shape[0], data.shape[1], norm=False, center=None)
+	# Above code is identical to
+	# rad_mask = N.indices(data.shape) - (N.r_[data.shape]/2).reshape(-1,1,1)
+	# rad_mask = N.sqrt((rad_mask**2.0).sum(0))
 
-	# Init radial intensity profile
-	profile = []
 
-	# Make radial profile using <step> pixel wide annuli with increasing radius.
-	for i in xrange(0, maxrange, step):
-		this_mask = (rad_mask >= i) & (rad_mask < i+step)
-		profile.append(data[this_mask].mean())
+	# Make radial profile using <step> pixel wide annuli with increasing 
+	# radius until <maxrange>. Calculate the mean in each annulus
+	profile = [data[(rad_mask >= i) & (rad_mask < i+step)].mean() for i in xrange(0, maxrange, step)]
+
+	# Code above is equivalent to:
+	#profile = []
+	#for i in xrange(0, maxrange, step):
+	#	this_mask = (rad_mask >= i) & (rad_mask < i+step)
+	#	profile.append(data[this_mask].mean())
 
 	return N.r_[profile]
 
