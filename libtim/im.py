@@ -84,8 +84,6 @@ def mk_rad_prof(data, maxrange=None, step=1):
 	@return Radial profile binned per pixel as numpy.ndarray.
 	"""
 
-	step = 1
-
 	# Set maxrange if not set
 	if (not maxrange):
 		maxrange = min(data.shape)/2
