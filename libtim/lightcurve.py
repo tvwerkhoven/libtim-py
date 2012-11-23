@@ -328,7 +328,7 @@ def stellar_detrend(mflux, mtime, fluxerr, phase, mask=slice(None), opoly=2, osp
 # LIGHT CURVE MODEL
 #=============================================================================
 
-def transit_model_dp7(phase, sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmodel=400, method=0, verb=0, plot=0):
+def transit_model_dp7(phase, sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmodel=400, asintpf=False, method=0, verb=0, plot=0):
 	"""
 	Disintegrating planet light curve modeling assuming an optically thin 
 	cloud. All calculations are done in one dimension (azimuth).
@@ -347,6 +347,8 @@ def transit_model_dp7(phase, sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmod
 	@param [in] g Asymmetry parameter (-1.0 .. +1.0)
 	@param [in] om Single-scattering albedo (0 .. 1)
 	@param [in] nmodel Array size for calculating model
+	@param [in] asintpf Return interpolation function instead of data, such that result can be evaluated at any phase.
+	@param [in] method Return subset of the data.
 	@return Light curve with len(phase) points
 	"""
 	
@@ -496,6 +498,10 @@ def transit_model_dp7(phase, sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmod
 	# Interpolation to the input phase vector. If outside the interpolation range, set curve to 1.
 	lc_intp = sp.interpolate.interp1d(azim, lc2, kind='linear', bounds_error=False, fill_value=1.0)
 
-	#lc_intp = np.poly1d(np.polyfit(azim, lc2, deg=opoly))
-	return lc_intp(np.asanyarray(phase) * 2*np.pi)
+	# If user requests the interpolation function, return that
+	if (asintpf):
+		return lc_intp
+	# Otherwise return the flux data itself.
+	else:
+		return lc_intp(np.asanyarray(phase) * 2*np.pi)
 
