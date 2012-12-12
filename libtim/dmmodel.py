@@ -153,7 +153,7 @@ def sim_dm(mirror_actmap, mirror_apt, docrop=True, verb=0):
 		// Loop over 2-D aperture
 		for (i = 1; i < Nmirror_actmap[0]-1; i++){
 			for (j = 1; j < Nmirror_actmap[1]-1; j++){
-				if (mirror_apt(i,j) > 0) {
+				//if (mirror_apt(i,j) > 0) {
 					// pixel is within membrane boundary
 	
 					// Calculate update value
@@ -166,9 +166,9 @@ def sim_dm(mirror_actmap, mirror_apt, docrop=True, verb=0):
 					mirror_resp(i,j) = mirror_resp(i,j) + omega * update;
 					sum += mirror_resp(i,j);
 					sdif += (omega * update) * (omega * update);
-				} else {
-					mirror_resp(i,j) = 0.0;
-				}
+				//} else {
+				//	mirror_resp(i,j) = 0.0;
+				//}
 			}
 		} // end of loop over aperture
 		
@@ -183,9 +183,12 @@ def sim_dm(mirror_actmap, mirror_apt, docrop=True, verb=0):
 	return_val = ii;
 	"""
 	return_val = sp.weave.inline(poisson_solver, \
-		['mirror_resp', 'mirror_actmap', 'mirror_apt', 'rho', 'omega', 'niter', 'sdif'], \
+		['mirror_resp', 'mirror_actmap', 'rho', 'omega', 'niter', 'sdif'], \
 		extra_compile_args= [__COMPILE_OPTS], \
 		type_converters=sp.weave.converters.blitz)
+
+	# Apply aperture mask
+	mirror_resp *= mirror_apt
 	
 	if (verb > 2):
 		print "dmmodel.sim_dm(): niter=%d, final sdif=%g" % (return_val, sdif)
