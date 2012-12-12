@@ -20,7 +20,7 @@ Image manipulation functions.
 import os, sys
 import getpass
 import pyfits
-import numpy as N
+import numpy as np
 from matplotlib.figure import Figure
 from matplotlib import cm
 from matplotlib.backends.backend_pdf import FigureCanvasPdf as FigureCanvas
@@ -59,18 +59,17 @@ def mk_rad_mask(r0, r1=None, norm=True, center=None):
 	if (not center):
 		center = (r0/2.0, r1/2.0)
 
-	# N.B. These are calculated separately because we cannot calculate 2.0/r0 
-	# first and multiply r0v with it depending on **norm**, this will yield 
-	# different results due to rounding errors.
+	# N.B. These are calculated separately because we cannot calculate  
+	# 2.0/r0 first and multiply r0v with it depending on **norm**, this will 
+	# yield different results due to rounding errors.
 	if (norm):
-		r0v = ((N.arange(1.0*r0) - center[0])*2/r0).reshape(-1,1)
-		r1v = ((N.arange(1.0*r1) - center[1])*2/r1).reshape(1,-1)
+		r0v = np.linspace(-1, 1, r0).reshape(-1,1)
+		r1v = np.linspace(-1, 1, r1).reshape(1,-1)
 	else:
-		r0v = ((N.arange(1.0*r0) - center[0])).reshape(-1,1)
-		r1v = ((N.arange(1.0*r1) - center[1])).reshape(1,-1)
+		r0v = np.linspace(-r0/2.0, r0/2.0, r0).reshape(-1,1)
+		r1v = np.linspace(-r1/2.0, r1/2.0, r1).reshape(1,-1)
 	
-	grid_rad = (r0v**2. + r1v**2.)**0.5
-	return grid_rad
+	return (r0v**2. + r1v**2.)**0.5
 
 def mk_rad_prof(data, maxrange=None, step=1):
 	"""
@@ -91,8 +90,8 @@ def mk_rad_prof(data, maxrange=None, step=1):
 	# Make radial mask
 	rad_mask = mk_rad_mask(data.shape[0], data.shape[1], norm=False, center=None)
 	# Above code is identical to
-	# rad_mask = N.indices(data.shape) - (N.r_[data.shape]/2).reshape(-1,1,1)
-	# rad_mask = N.sqrt((rad_mask**2.0).sum(0))
+	# rad_mask = np.indices(data.shape) - (np.r_[data.shape]/2).reshape(-1,1,1)
+	# rad_mask = np.sqrt((rad_mask**2.0).sum(0))
 
 
 	# Make radial profile using <step> pixel wide annuli with increasing 
@@ -105,7 +104,7 @@ def mk_rad_prof(data, maxrange=None, step=1):
 	#	this_mask = (rad_mask >= i) & (rad_mask < i+step)
 	#	profile.append(data[this_mask].mean())
 
-	return N.r_[profile]
+	return np.r_[profile]
 
 def df_corr(indata, flatfield=None, darkfield=None, darkfac=[1.0, 1.0], thresh=0, copy=True):
 	"""
@@ -181,9 +180,9 @@ def store_2ddata(data, fname, pltitle='', dir='./', fits=False, plot=True, plran
 	if (len(data) <= 0):
 		return
 
-	data_arr = N.asanyarray(data)
+	data_arr = np.asanyarray(data)
 	if (log):
-		data_arr = N.log10(data_arr)
+		data_arr = np.log10(data_arr)
 	extent = None
 	if (rollaxes):
 		sh = data_arr.shape
@@ -288,9 +287,9 @@ def inter_imshow(data, desc="", doshow=True, dowait=True, log=False, rollaxes=Fa
 	print "inter_imshow(): " + desc
 
 	# Pre-format data
-	data_arr = N.asanyarray(data)
+	data_arr = np.asanyarray(data)
 	if (log):
-		data_arr = N.log10(data_arr)
+		data_arr = np.log10(data_arr)
 
 	# Check if we want to roll the axis
 	extent = None
