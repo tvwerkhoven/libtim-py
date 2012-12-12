@@ -151,7 +151,7 @@ def zern_normalisation(nmodes=30):
 
 ### Higher level Zernike generating / fitting functions
 
-def calc_zern_basis(nmodes, rad):
+def calc_zern_basis(nmodes, rad, calc_covmat=False):
 	"""
 	Calculate a basis of **nmodes** Zernike modes with radius **rad**.
 
@@ -161,6 +161,7 @@ def calc_zern_basis(nmodes, rad):
 
 	@param [in] nmodes Number of modes to generate
 	@param [in] rad Radius of Zernike modes
+	@param [in] calc_covmat Return covariance matrix for Zernike modes, and its inverse
 	@return Dict with entries 'modes' a list of Zernike modes, 'modesmat' a matrix of (nmodes, npixels), 'covmat' a covariance matrix for all these modes with 'covmat_in' its inverse, 'mask' is a binary mask to crop only the orthogonal part of the modes.
 	"""
 
@@ -185,13 +186,15 @@ def calc_zern_basis(nmodes, rad):
 	# Convert modes to (nmodes, npixels) matrix
 	zern_modes_mat = N.r_[zern_modes].reshape(nmodes, -1)
 
-	# Calculate covariance matrix
-	cov_mat = N.array([[N.sum(zerni * zernj * grid_mask) for zerni in zern_modes] for zernj in zern_modes])
-	# Invert covariance matrix using SVD
-	cov_mat_in = N.linalg.pinv(cov_mat)
+	covmat = covmat_in = None
+	if (calc_covmat):
+		# Calculate covariance matrix
+		covmat = N.array([[N.sum(zerni * zernj * grid_mask) for zerni in zern_modes] for zernj in zern_modes])
+		# Invert covariance matrix using SVD
+		covmat_in = N.linalg.pinv(covmat)
 
 	# Create and return dict
-	return {'modes': zern_modes, 'modesmat': zern_modes_mat, 'covmat':cov_mat, 'covmat_in':cov_mat_in, 'mask': grid_mask}
+	return {'modes': zern_modes, 'modesmat': zern_modes_mat, 'covmat':covmat, 'covmat_in':covmat_in, 'mask': grid_mask}
 
 def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None, center=(-0.5, -0.5), rad=-0.5, err=None):
 	"""
