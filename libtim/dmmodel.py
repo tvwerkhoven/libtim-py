@@ -194,10 +194,10 @@ def sim_dm(mirror_actmap, mirror_apt, docrop=True, verb=0):
 	if (docrop):
 		# Crop response in regions where aperture mask is nonzero
 		# Find regions where mirror_apt is 0 on all rows or columns:
-		apt_max0 = mirror_apt.max(0)
-		crop0 = slice(np.argwhere(apt_max0 > 0)[0], np.argwhere(apt_max0 > 0)[-1], 1)
-		apt_max1 = mirror_apt.max(1)
-		crop1 = slice(np.argwhere(apt_max1 > 0)[0], np.argwhere(apt_max1 > 0)[-1], 1)
+		apt_max0 = mirror_apt.max(axis=0)
+		crop0 = slice(np.argwhere(apt_max0 > 0)[0], np.argwhere(apt_max0 > 0)[-1]+1, 1)
+		apt_max1 = mirror_apt.max(axis=1)
+		crop1 = slice(np.argwhere(apt_max1 > 0)[0], np.argwhere(apt_max1 > 0)[-1]+1, 1)
 		cropmask = (crop0, crop1)
 		if (verb > 2):
 			print "dmmodel.sim_dm(): cropmask:", cropmask
