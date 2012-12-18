@@ -19,6 +19,8 @@ Package for some utilities for Fourier transforms
 
 import numpy as np
 from collections import Iterable
+import libtim as tim
+from math import ceil, floor
 
 #============================================================================
 # Defines
@@ -176,9 +178,9 @@ def descramble(data, direction=1):
 
 	return data
 
-def embed_data(indata, direction=1):
+def embed_data(indata, direction=1, scale=2):
 	"""
-	Embed **indata** in a zero-filled rectangular array.
+	Embed **indata** in a zero-filled rectangular array **scale** times as big as **indata**.
 
 	To prevent wrapping artifacts in Fourier analysis, this function can  embed data in a zero-filled rectangular array of twice the size.
 
@@ -186,23 +188,32 @@ def embed_data(indata, direction=1):
 
 	@param [in] indata Data to embed
 	@param [in] direction 1: embed, -1: dis-embed
-	@return (dis)-embedded data, either 2*indata.shape or 0.5*indata.shape
+	@param [in] scale Size of embedding matrix wrt **indata**
+	@return (dis)-embedded data, either scale*indata.shape or 1/scale*indata.shape
 	"""
+	
+	s = np.r_[indata.shape]
 
 	if (direction == 1):
 		# Generate empty array
-		retdat = np.zeros(np.r_[indata.shape]*2, dtype=indata.dtype)
+		retdat = np.zeros(np.r_[s]*scale, dtype=indata.dtype)
 		# These slices denote the central region where <indata> will go
-		slice0 = slice(indata.shape[0]/2, 3*indata.shape[0]/2)
-		slice1 = slice(indata.shape[1]/2, 3*indata.shape[1]/2)
+		slice0 = slice(retdat.shape[0]/2 - floor(s[0]/2.0), 
+						retdat.shape[0]/2 + ceil(s[0]/2.0))
+		slice1 = slice(retdat.shape[1]/2 - floor(s[1]/2.0), 
+						retdat.shape[1]/2 + ceil(s[1]/2.0))
 
+		#
 		# Insert the data and return it
 		retdat[slice0, slice1] = indata
 		return retdat
 	else:
 		# These slices give the central area of the data
-		slice0 = slice(indata.shape[0]/4, 3*indata.shape[0]/4)
-		slice1 = slice(indata.shape[1]/4, 3*indata.shape[1]/4)
+		slice0 = slice(s[0]/2 - floor(s[0]/(2.*scale)), 
+						s[0]/2 + ceil(s[0]/(2.*scale)))
+		slice1 = slice(s[1]/2 - floor(s[1]/(2.*scale)), 
+						s[1]/2 + ceil(s[1]/(2.*scale)))
 
+		#tim.shell()
 		# Slice out the center and return it
 		return indata[slice0, slice1]
