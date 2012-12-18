@@ -71,15 +71,16 @@ def mk_rad_mask(r0, r1=None, norm=True, center=None):
 	
 	return (r0v**2. + r1v**2.)**0.5
 
-def mk_rad_prof(data, maxrange=None, step=1):
+def mk_rad_prof(data, maxrange=None, step=1, procf=np.mean):
 	"""
-	Make radial profile of **data**.
+	Make mean radial profile of **data**.
 
-	Make a radial profile of **data** up to **maxrange** pixels from the center or min(data.shape)/2 if not set.
+	Make a radial profile of **data** up to **maxrange** pixels from the center
 
 	@param [in] data 2D array of data
 	@param [in] maxrange Range of profile to make in pixels (min(data.shape)/2 if None)
 	@param [in] step Stepsize in pixels (has to be >=1)
+	@param [in] procf Function to apply to each annulus (np.mean
 	@return Radial profile binned per pixel as numpy.ndarray.
 	"""
 
@@ -96,13 +97,13 @@ def mk_rad_prof(data, maxrange=None, step=1):
 
 	# Make radial profile using <step> pixel wide annuli with increasing 
 	# radius until <maxrange>. Calculate the mean in each annulus
-	profile = [data[(rad_mask >= i) & (rad_mask < i+step)].mean() for i in xrange(0, maxrange, step)]
+	profile = [procf(data[(rad_mask >= i) & (rad_mask < i+step)]) for i in xrange(0, maxrange, step)]
 
 	# Code above is equivalent to:
 	#profile = []
 	#for i in xrange(0, maxrange, step):
 	#	this_mask = (rad_mask >= i) & (rad_mask < i+step)
-	#	profile.append(data[this_mask].mean())
+	#	profile.append(procf(data[this_mask]))
 
 	return np.r_[profile]
 
