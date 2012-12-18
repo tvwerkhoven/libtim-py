@@ -13,22 +13,22 @@
 Package for some utilities for Fourier transforms
 """
 
-#=============================================================================
+#============================================================================
 # Import libraries here
-#=============================================================================
+#============================================================================
 
-import numpy as N
+import numpy as np
 from collections import Iterable
 
-#=============================================================================
+#============================================================================
 # Defines
-#=============================================================================
+#============================================================================
 
-#=============================================================================
+#============================================================================
 # Routines
-#=============================================================================
+#============================================================================
 
-def mk_apod_mask(masksz, apodpos=None, apodsz=None, shape='rect', wsize=-0.3, apod_f=lambda x: 0.5 * (1.0 - N.cos(N.pi*x))):
+def mk_apod_mask(masksz, apodpos=None, apodsz=None, shape='rect', wsize=-0.3, apod_f=lambda x: 0.5 * (1.0 - np.cos(np.pi*x))):
 	"""
 	Generate apodisation mask with custom size, shape, edge.
 
@@ -43,10 +43,10 @@ def mk_apod_mask(masksz, apodpos=None, apodsz=None, shape='rect', wsize=-0.3, ap
 	**apod_f** is the windowing function used. It can be a string (see list below), or a lambda function. In the latter case it should take one float coordinate between 1 and 0 as input and return the value of the window at that position.
 
 	Some apodisation functions (for **apod_f**):
-	- 'Hann': lambda x: 0.5 * (1.0 - N.cos(N.pi*x))
-	- 'Hamming': lambda x: 0.54 - 0.46 *N.cos(N.pi*x)
-	- '(Co)sine' window: lambda x: N.sin(N.pi*x*0.5)
-	- 'Lanczos': lambda x: N.sinc(x-1.0)
+	- 'Hann': lambda x: 0.5 * (1.0 - np.cos(np.pi*x))
+	- 'Hamming': lambda x: 0.54 - 0.46 *np.cos(np.pi*x)
+	- '(Co)sine' window: lambda x: np.sin(np.pi*x*0.5)
+	- 'Lanczos': lambda x: np.sinc(x-1.0)
 
 	@param [in] masksz Size of the output array containing the apodisation mask
 	@param [in] apodpos Position of the apodisation mask
@@ -58,7 +58,7 @@ def mk_apod_mask(masksz, apodpos=None, apodsz=None, shape='rect', wsize=-0.3, ap
 
 	# Check apodpos and apodsz, if not set, use defaults
 	if (apodpos == None):
-		apodpos = tuple((N.r_[masksz]-1.)/2.)
+		apodpos = tuple((np.r_[masksz]-1.)/2.)
 	if (apodsz == None):
 		apodsz = masksz
 
@@ -66,13 +66,13 @@ def mk_apod_mask(masksz, apodpos=None, apodsz=None, shape='rect', wsize=-0.3, ap
 	if (isinstance(apod_f, str)):
 		apod_f = apod_f.lower()
 		if (apod_f[:4] == 'hann'):
-			apod_func = lambda x: 0.5 * (1.0 - N.cos(N.pi*x))
+			apod_func = lambda x: 0.5 * (1.0 - np.cos(np.pi*x))
 		elif (apod_f[:4] == 'hamm'):
-			apod_func = lambda x: 0.54 - 0.46 *N.cos(N.pi*x)
+			apod_func = lambda x: 0.54 - 0.46 *np.cos(np.pi*x)
 		elif (apod_f[:3] == 'cos' or apod_f[:3] == 'sin'):
-			apod_func = lambda x: N.sin(N.pi*x*0.5)
+			apod_func = lambda x: np.sin(np.pi*x*0.5)
 		elif (apod_f[:4] == 'lanc'):
-			apod_func = lambda x: N.sinc(x-1.0)
+			apod_func = lambda x: np.sinc(x-1.0)
 		else:
 			raise ValueError("<apod_f> not supported!")
 	elif (hasattr(apod_f, "__call__")):
@@ -115,14 +115,14 @@ def mk_apod_mask(masksz, apodpos=None, apodsz=None, shape='rect', wsize=-0.3, ap
 
 	# If apodsz or wsize are fractional, calculate the absolute size.
 	if (min(apodpos) < 0):
-		apodpos *= -N.r_[masksz]
+		apodpos *= -np.r_[masksz]
 	if (min(apodsz) < 0):
-		apodsz *= -N.r_[masksz]
+		apodsz *= -np.r_[masksz]
 	if (min(wsize) < 0):
-		wsize *= -N.r_[apodsz]
+		wsize *= -np.r_[apodsz]
 
 	# Generate base mask, which are (x,y) coordinates around the center
-	mask = N.indices(masksz, dtype=N.float)
+	mask = np.indices(masksz, dtype=np.float)
 
 	# Center the mask around <apodpos> for any number of dimensions
 	for (maski, posi) in zip(mask, apodpos):
@@ -131,12 +131,12 @@ def mk_apod_mask(masksz, apodpos=None, apodsz=None, shape='rect', wsize=-0.3, ap
 	# If the mask shape is circular, calculate the radial distance from
 	# <apodpos>
 	if (shape == 'circ'):
-		mask = N.array([N.sum(mask**2.0, 0)**0.5])
+		mask = np.array([np.sum(mask**2.0, 0)**0.5])
 
 	# Scale the pixels such that there is only a band going from 1 to 0 between <masksz>-<wsize> and <masksz>
 	for (maski, szi, wszi) in zip(mask, apodsz, wsize):
 		# First take the negative absolute value of the mask, such that 0 is at the origin and the value goes down outward from where the mask should be.
-		maski[:] = -N.abs(maski)
+		maski[:] = -np.abs(maski)
 		# Next, add the radius of the apodisation mask size to the values, such that the outside edge of the requested mask is exactly zero.
 		# TODO Should this be (szi-1)/2 or (szi)/2?
 		maski += (szi)/2.
@@ -156,7 +156,7 @@ def mk_apod_mask(masksz, apodpos=None, apodsz=None, shape='rect', wsize=-0.3, ap
 
 	# Apply apodisation function to all elements, and multiply
 	if (shape == 'rect'):
-		return N.product(mask, 0)
+		return np.product(mask, 0)
 	elif (shape == 'circ'):
 		return (mask[0])
 
@@ -171,8 +171,8 @@ def descramble(data, direction=1):
 	@return (de)scrambled data
 	"""
 
-	for ax,rollvec in enumerate(N.r_[data.shape]/2):
-		data = N.roll(data, direction*rollvec, ax)
+	for ax,rollvec in enumerate(np.r_[data.shape]/2):
+		data = np.roll(data, direction*rollvec, ax)
 
 	return data
 
@@ -191,7 +191,7 @@ def embed_data(indata, direction=1):
 
 	if (direction == 1):
 		# Generate empty array
-		retdat = N.zeros(N.r_[indata.shape]*2)
+		retdat = np.zeros(np.r_[indata.shape]*2, dtype=indata.dtype)
 		# These slices denote the central region where <indata> will go
 		slice0 = slice(indata.shape[0]/2, 3*indata.shape[0]/2)
 		slice1 = slice(indata.shape[1]/2, 3*indata.shape[1]/2)
