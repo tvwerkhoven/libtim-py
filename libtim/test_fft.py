@@ -15,6 +15,49 @@ from fft import *
 import unittest
 import pylab as plt
 
+class TestEmbed(unittest.TestCase):
+	def setUp(self):
+		self.szlist = [(32, 32), (33, 33), (64, 65), (100, 201), (512, 512)]
+		self.imlist = [np.random.random((sz)) for sz in self.szlist]
+
+	def test0_try_scale2(self):
+		"""Try to see if embed works for scale=2"""
+		for im in self.imlist:
+			emim = embed_data(im, direction=1, scale=2)
+			ememim = embed_data(emim, direction=-1, scale=2)
+			#print "test0_try_scale2(): im = %s, em = %s" % (str(im.shape), str(emim.shape))
+
+	def test0_try_scale3(self):
+		"""Try to see if embed works for scale=3"""
+		for im in self.imlist:
+			emim = embed_data(im, direction=1, scale=3)
+			ememim = embed_data(emim, direction=-1, scale=3)
+			#print "test0_try_scale3(): im = %s, em = %s" % (str(im.shape), str(emim.shape))
+
+	def test0_try_scale3_3(self):
+		"""Try to see if embed works for scale=3.3"""
+		for im in self.imlist:
+			emim = embed_data(im, direction=1, scale=3.3)
+			ememim = embed_data(emim, direction=-1, scale=3.3)
+			#print "test0_try_scale3_3(): im = %s, em = %s" % (str(im.shape), str(emim.shape))
+
+	def test1_unity_scale2(self):
+		"""Try to see if embed and disembedding is unity"""
+		for im in self.imlist:
+			emim = embed_data(im, direction=1, scale=2)
+			ememim = embed_data(emim, direction=-1, scale=2)
+			#print "test1_unity_scale2(): im = %s, em = %s" % (str(im.shape), str(emim.shape))
+			self.assertTrue(np.allclose(ememim, im))
+
+	def test1_unity_scale3(self):
+		"""Try to see if embed and disembedding is unity"""
+		for im in self.imlist:
+			emim = embed_data(im, direction=1, scale=3)
+			ememim = embed_data(emim, direction=-1, scale=3)
+			#print "test1_unity_scale3(): im = %s, em = %s" % (str(im.shape), str(emim.shape))
+			self.assertTrue(np.allclose(ememim, im))
+
+
 class TestApodMask(unittest.TestCase):
 	def setUp(self):
 		"""Define some constants for apodisation mask test case"""
