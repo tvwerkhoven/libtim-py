@@ -14,9 +14,9 @@ This module provides some miscellaneous utility functions for parsing strings,
 filenames, making headers etc.
 """
 
-#=============================================================================
+#============================================================================
 # Import libraries here
-#=============================================================================
+#============================================================================
 
 import sys
 import os
@@ -27,13 +27,13 @@ import unittest
 import cPickle
 import json
 
-#=============================================================================
+#============================================================================
 # Defines
-#=============================================================================
+#============================================================================
 
-#=============================================================================
+#============================================================================
 # Routines
-#=============================================================================
+#============================================================================
 
 def find_uniq(strlist, tokenize=True, tokens=['.', '-', '_', '/']):
 	"""
@@ -351,8 +351,9 @@ def mkfitshdr(cards, usedefaults=True):
 	Make a FITS file header of all arguments supplied in the dict **cards**.
 
 	If **usedefaults** is set, also add default header items:
-	- Program name (sys.argv[0])
-	- epoch (time()
+	- Program filename and pasth (from sys.argv[0])
+	- Program filesize, mtime and ctime
+	- epoch (time())
 	- utctime / localtime
 	- hostname
 
@@ -365,10 +366,25 @@ def mkfitshdr(cards, usedefaults=True):
 
 	# Add default fields
 	if (usedefaults):
-		clist.append(pyfits.Card('prog', sys.argv[0]) )
-		clist.append(pyfits.Card('epoch', time()) )
-		clist.append(pyfits.Card('utctime', asctime(gmtime(time()))) )
-		clist.append(pyfits.Card('loctime', asctime(localtime(time()))) )
+		clist.append(pyfits.Card(key='prog', 
+								value=os.path.basename(sys.argv[0])),
+								comment='Program filename' )
+		clist.append(pyfits.Card(key='path', 
+								value=os.path.dirname(sys.argv[0]),
+								comment='Program path' )
+		clist.append(pyfits.Card(key='fsize', 
+								value=os.path.getsize(sys.argv[0]),
+								comment='Program filesize (bytes)'  )
+		clist.append(pyfits.Card(key='mtime', 
+								value=os.path.getmtime(sys.argv[0]),
+								comment='File last last modification time'  )
+		clist.append(pyfits.Card(key='ctime', 
+								value=os.path.getctime(sys.argv[0]),
+								comment='File metadata change time'  )
+		clist.append(pyfits.Card(key='epoch', value=time()),
+								comment='Current seconds since epoch' )
+		clist.append(pyfits.Card(key='utctime', value=asctime(gmtime(time()))) )
+		clist.append(pyfits.Card(key='loctime', value=asctime(localtime(time()))) )
 
 	# Add custom fields
 	for key, val in cards.iteritems():
