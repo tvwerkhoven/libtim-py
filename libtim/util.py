@@ -367,22 +367,22 @@ def mkfitshdr(cards, usedefaults=True):
 	# Add default fields
 	if (usedefaults):
 		clist.append(pyfits.Card(key='prog', 
-								value=os.path.basename(sys.argv[0])),
-								comment='Program filename' )
+								value=os.path.basename(sys.argv[0]),
+								comment='Program filename') )
 		clist.append(pyfits.Card(key='path', 
 								value=os.path.dirname(sys.argv[0]),
-								comment='Program path' )
+								comment='Program path') )
 		clist.append(pyfits.Card(key='fsize', 
 								value=os.path.getsize(sys.argv[0]),
-								comment='Program filesize (bytes)'  )
+								comment='Program filesize (bytes)') )
 		clist.append(pyfits.Card(key='mtime', 
 								value=os.path.getmtime(sys.argv[0]),
-								comment='File last last modification time'  )
+								comment='File last last modification time') )
 		clist.append(pyfits.Card(key='ctime', 
 								value=os.path.getctime(sys.argv[0]),
-								comment='File metadata change time'  )
-		clist.append(pyfits.Card(key='epoch', value=time()),
-								comment='Current seconds since epoch' )
+								comment='File metadata change time' ) )
+		clist.append(pyfits.Card(key='epoch', value=time(),
+								comment='Current seconds since epoch') )
 		clist.append(pyfits.Card(key='utctime', value=asctime(gmtime(time()))) )
 		clist.append(pyfits.Card(key='loctime', value=asctime(localtime(time()))) )
 
