@@ -15,10 +15,17 @@ from im import *
 import unittest
 import pylab as plt
 
+SHOWPLOTS=False
+
+if (SHOWPLOTS):
+	import pylab as plt
 
 class TestUtilFuncs(unittest.TestCase):
 	def setUp(self):
-		self.data = np.random.random((128,256))
+		# Make reproducible asymmetric array
+		self.sz = (128,256)
+		thisdata = np.arange(np.prod(self.sz)).reshape(self.sz)
+		self.data = np.sin(0.1*thisdata**1.05)
 
 	def test0a_mkradmask(self):
 		"""Test mk_rad_mask"""
@@ -38,13 +45,31 @@ class TestUtilFuncs(unittest.TestCase):
 
 	def test0c_mkradmask_offset(self):
 		"""Test mk_rad_mask with center offset"""
-		test_mask = mk_rad_mask(128.0, center=(0,0))
-		self.assertEqual(test_mask[0,0], 0)
-		self.assertEqual(test_mask[64,0], 1.0)
-		self.assertEqual(test_mask[0,64], 1.0)
+		test_mask = mk_rad_mask(129, norm=True, center=(-1, -1))
+		if (SHOWPLOTS):
+			plt.figure(49); plt.clf()
+			plt.title("test0c_mkradmask_offset 1")
+			plt.imshow(test_mask)
+			plt.colorbar()
+			raw_input("test0c_mkradmask_offset 1...")
 
-		test_mask = mk_rad_mask(256.0, center=(255,255))
-		self.assertEqual(test_mask[255,255], 0)
+		self.assertEqual(test_mask[0,  0 ],  0.0)
+		self.assertEqual(test_mask[64, 0 ],  1.0)
+		self.assertEqual(test_mask[128,0 ],  2.0)
+		self.assertEqual(test_mask[0,  64],  1.0)
+		self.assertEqual(test_mask[64, 64],  2.0**0.5)
+
+		test_mask = mk_rad_mask(257, norm=True, center=(1, 1))
+		if (SHOWPLOTS):
+			plt.figure(50); plt.clf()
+			plt.title("test0c_mkradmask_offset 2")
+			plt.imshow(test_mask)
+			plt.colorbar()
+			raw_input("test0c_mkradmask_offset 2...")
+		self.assertEqual(test_mask[256, 256], 0.0)
+		self.assertEqual(test_mask[128, 256], 1.0)
+		self.assertEqual(test_mask[128, 128], 2.0**0.5)
+		self.assertEqual(test_mask[256, 0  ], 2.0)
 
 	def test0d_mkradmask_norm(self):
 		"""Test mk_rad_mask normalisation"""
@@ -56,6 +81,21 @@ class TestUtilFuncs(unittest.TestCase):
 		self.assertAlmostEqual(test_mask[0,0], 2**0.5)
 		test_mask = mk_rad_mask(341, 234, norm=True)
 		self.assertAlmostEqual(test_mask[0,0], 2**0.5)
+
+	def test1a_mkradmask_offset(self):
+		"""Test mk_rad_mask with different center offsets"""
+
+		for c in [(65, 127), (10, 10)]:
+			test_mask = mk_rad_mask(256, norm=False, center=c)
+			if (SHOWPLOTS):
+				plt.figure(90); plt.clf()
+				plt.title("test1a_mkradmask_offset @ %s" %str(c))
+				plt.imshow(test_mask)
+				plt.colorbar()
+				raw_input("test1a_mkradmask_offset @ %s..." %str(c))
+
+			self.assertEqual(test_mask[c], test_mask.min())
+
 
 class TestInterImshow(unittest.TestCase):
 	def setUp(self):
