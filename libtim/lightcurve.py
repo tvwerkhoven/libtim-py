@@ -347,7 +347,7 @@ def transit_model_dp7(phase, sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmod
 	@param [in] g Asymmetry parameter (-1.0 .. +1.0)
 	@param [in] om Single-scattering albedo (0 .. 1)
 	@param [in] nmodel Array size for calculating model
-	@param [in] asintpf Return interpolation function instead of data, such that result can be evaluated at any phase.
+	@param [in] asintpf Return interpolation function instead of data, such that result can be evaluated anywhere. N.B. Input for function should be in **radians**.
 	@param [in] method Return subset of the data.
 	@return Light curve with len(phase) points
 	"""
