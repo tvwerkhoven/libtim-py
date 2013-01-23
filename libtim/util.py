@@ -26,6 +26,7 @@ from time import asctime, gmtime, time, localtime
 import unittest
 import cPickle
 import json
+from libtim import shell
 
 #============================================================================
 # Defines
@@ -416,6 +417,183 @@ def git_rev(fpath):
 	rev = out[0].rstrip()
 
 	return rev
+
+def parse_uptime(upstr, version='OSX'):
+	"""
+	Calculate single uptime scalar from uptime(1) output.
+
+	Input examples:
+	(from http://caterva.org/projects/parse_uptime_with_sed/)
+	# NetBSD 1.6.2
+	9:55AM up 1 min, 1 user, load averages: 0.11, 0.12, 0.14
+	10:55AM up 1 hr, 1 user, load averages: 0.11, 0.12, 0.14
+	12:00PM up 6 days, 14:42, 1 user, load averages: 0.25, 0.17, 0.10
+	10:26AM up 32 mins, 1 user, load averages: 0.11, 0.12, 0.14
+	10:56AM up 1:03, 1 user, load averages: 0.25, 0.24, 0.18
+	10:56AM up 6 days, 32 mins, 1 user, load averages: 0.25, 0.24, 0.18
+	8:53AM up 23 hrs, 1 user, load averages: 0.13, 0.13, 0.09
+	9:54AM up 1 day, 1 user, load averages: 0.34, 0.29, 0.16
+	9:55AM up 1 day, 1 min, 1 user, load averages: 0.44, 0.31, 0.17
+	10:55AM up 1 day, 1 hr, 1 user, load averages: 0.44, 0.31, 0.17
+
+	# Debian 5.0
+	20:45:11 up 0 min,  1 user,  load average: 0.55, 0.17, 0.06
+	20:45:17 up 1 min,  1 user,  load average: 0.51, 0.17, 0.06
+	20:51:39 up 7 min,  1 user,  load average: 0.50, 0.16, 0.06
+	20:55:56 up 11 min,  1 user,  load average: 0.02, 0.08, 0.05
+	22:23:27 up  1:39,  1 user,  load average: 0.00, 0.00, 0.00
+
+	# MacOSX 10.6.2
+	21:52  up 6 days,  4:49, 4 users, load averages: 0.26 0.32 0.38
+	
+	# Mac OSX 10.7
+	18:30 up 1 min, 2 users, load averages: 0.71 0.20 0.07
+	14:00 up 36 mins, 2 users, load averages: 0.82 0.51 0.33
+	12:45 up 23:21, 4 users, load averages: 4.51 5.34 5.12
+	13:30 up 1 day, 6 mins, 4 users, load averages: 0.71 0.60 1.02
+	1:57 up 2 days, 12:19, 5 users, load averages: 0.56 0.51 0.61
+	14:30 up 1 day, 1:05, 2 users, load averages: 0.55 0.48 0.55
+
+	Input syntax:
+	[N day[s], ][HH:MM|MM min[s]]
+
+	@param [in] upstr uptime(1) output
+	@param [in] version uptime version (OSX, Linux, ...)
+	@returns Tuple of (localtime as string, uptime in days, nuser, tuple of load averages)
+	"""
+
+	# String cannot be shorter than this
+	if (len(upstr) < len("0:0 up 1:00, 1 user, load averages: 0 0 0")):
+		raise ValueError("Input too short!")
+
+	# First extract easy stuff, time is the first space-separated string, 
+	# load averages are the last 3 space-separated strings.
+	upwords = upstr.split()
+	loadavgs = tuple(float(l.strip(',')) for l in upwords[-3:])
+	localtime = upwords[0]
+	nuser = int(upwords[-7])
+
+	# Find user
+
+	# Select substring from ' up ' to the comma before ' user'
+	upsub = upstr.split(' up ')[1].split(' user')[0]
+	upsub = upsub[:upsub.rfind(",")]
+
+	# Check if there are days
+	days = 0
+	if ('day' in upsub):
+		days, upsub = upsub.split('day')
+		# Skip comma and possible s
+		upsub = upsub[2:]
+
+	# Check for hours
+	if ('hr' in upsub):
+		hours, minutes = upsub.split("hr")[0], 0
+	# Check if there are minutes
+	elif ('min' in upsub):
+		hours, minutes = 0, upsub.split("min")[0]
+	elif (':' in upsub):
+		hours, minutes = upsub.split(":")
+	else:
+		hours, minutes = 0, 0
+	
+	# Calculate time
+	uptime =  float(days) + float(hours)/24. + float(minutes)/1440
+
+	return (localtime, uptime, nuser, loadavgs)
+
+class TestUptime(unittest.TestCase):
+	def setUp(self):
+		self.samples = {}
+		self.samples['OSX'] = [
+			"21:52  up 6 days,  4:49, 4 users, load averages: 0.26 0.32 0.38",
+			"18:30 up 1 min, 2 users, load averages: 0.71 0.20 0.07",
+			"14:00 up 36 mins, 2 users, load averages: 0.82 0.51 0.33",
+			"12:45 up 23:21, 4 users, load averages: 4.51 5.34 5.12",
+			"13:30 up 1 day, 6 mins, 4 users, load averages: 0.71 0.60 1.02",
+			"1:57 up 2 days, 12:19, 5 users, load averages: 0.56 0.51 0.61",
+			"14:30 up 1 day, 1:05, 2 users, load averages: 0.55 0.48 0.55"]
+		
+		self.samples['Debian'] = [
+			"20:45:11 up 0 min,  1 user,  load average: 0.55, 0.17, 0.06",
+			"20:45:17 up 1 min,  1 user,  load average: 0.51, 0.17, 0.06",
+			"20:51:39 up 7 min,  1 user,  load average: 0.50, 0.16, 0.06",
+			"20:55:56 up 11 min,  1 user,  load average: 0.02, 0.08, 0.05",
+			"22:23:27 up  1:39,  1 user,  load average: 0.00, 0.00, 0.00"]
+
+		self.samples['NetBSD'] = [
+			"9:55AM up 1 min, 1 user, load averages: 0.11, 0.12, 0.14",
+			"10:55AM up 1 hr, 1 user, load averages: 0.11, 0.12, 0.14",
+			"12:00PM up 6 days, 14:42, 1 user, load averages: 0.25, 0.17, 0.10",
+			"10:26AM up 32 mins, 1 user, load averages: 0.11, 0.12, 0.14",
+			"10:56AM up 1:03, 1 user, load averages: 0.25, 0.24, 0.18",
+			"10:56AM up 6 days, 32 mins, 1 user, load averages: 0.25, 0.24, 0.18",
+			"8:53AM up 23 hrs, 1 user, load averages: 0.13, 0.13, 0.09",
+			"9:54AM up 1 day, 1 user, load averages: 0.34, 0.29, 0.16",
+			"9:55AM up 1 day, 1 min, 1 user, load averages: 0.44, 0.31, 0.17",
+			"10:55AM up 1 day, 1 hr, 1 user, load averages: 0.44, 0.31, 0.17"]
+
+		self.resp = {}
+		self.resp['OSX'] = [
+			('21:52', 6.200694444444445, 4, (0.26, 0.32, 0.38)),
+			('18:30', 0.0006944444444444445, 2, (0.71, 0.2, 0.07)),
+			('14:00', 0.025, 2, (0.82, 0.51, 0.33)),
+			('12:45', 0.9729166666666667, 4, (4.51, 5.34, 5.12)),
+			('13:30', 1.0041666666666667, 4, (0.71, 0.6, 1.02)),
+			('1:57', 2.5131944444444443, 5, (0.56, 0.51, 0.61)),
+			('14:30', 1.045138888888889, 2, (0.55, 0.48, 0.55))]
+		self.resp['Debian'] = [
+			('20:45:11', 0.0, 1, (0.55, 0.17, 0.06)),
+			('20:45:17', 0.0006944444444444445, 1, (0.51, 0.17, 0.06)),
+			('20:51:39', 0.004861111111111111, 1, (0.5, 0.16, 0.06)),
+			('20:55:56', 0.007638888888888889, 1, (0.02, 0.08, 0.05)),
+			('22:23:27', 0.06875, 1, (0.0, 0.0, 0.0))]
+		self.resp['NetBSD'] = [
+			('9:55AM', 0.0006944444444444445, 1, (0.11, 0.12, 0.14)),
+			('10:55AM', 0.041666666666666664, 1, (0.11, 0.12, 0.14)),
+			('12:00PM', 6.6125, 1, (0.25, 0.17, 0.1)),
+			('10:26AM', 0.022222222222222223, 1, (0.11, 0.12, 0.14)),
+			('10:56AM', 0.04375, 1, (0.25, 0.24, 0.18)),
+			('10:56AM', 6.022222222222222, 1, (0.25, 0.24, 0.18)),
+			('8:53AM', 0.9583333333333334, 1, (0.13, 0.13, 0.09)),
+			('9:54AM', 1.0, 1, (0.34, 0.29, 0.16)),
+			('9:55AM', 1.0006944444444446, 1, (0.44, 0.31, 0.17)),
+			('10:55AM', 1.0416666666666667, 1, (0.44, 0.31, 0.17))]
+
+	def test0_call_ok(self):
+		"""Call function, check for failure"""
+		parse_uptime(self.samples['OSX'][0])
+
+	def test0_call_bad(self):
+		"""Call function with empty string, confirm failure"""
+		with self.assertRaises(ValueError):
+			parse_uptime("")
+
+	def test0_call_ret_var(self):
+		"""Call function, check number of args ok"""
+		t, u, n, l = parse_uptime(self.samples['OSX'][0])
+
+	def test1_osx_syntax(self):
+		"""Test function with OSX input data"""
+		for instr in self.samples['OSX']:
+			parsed = parse_uptime(instr)
+			t, u, n, l = parsed
+
+	def test2_parse_all(self):
+		"""Test function with all input data"""
+		for key, data in self.samples.iteritems():
+			for instr in data:
+				parsed = parse_uptime(instr)
+				t, u, n, l = parsed
+
+	def test3_confirm_all(self):
+		"""Test function with all input data"""
+		for key in self.samples.keys():
+			for instr, resp in zip(self.samples[key], self.resp[key]):
+				parsed = parse_uptime(instr)
+				t, u, n, l = parsed
+				self.assertEqual(parsed, resp, msg="Failed for %s data '%s'" % (key, instr))
+				
 
 class TestGitRev(unittest.TestCase):
 	def setUp(self):
