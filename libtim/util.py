@@ -464,7 +464,7 @@ def parse_uptime(upstr, version='OSX'):
 
 	# String cannot be shorter than this
 	if (len(upstr) < len("0:0 up 1:00, 1 user, load averages: 0 0 0")):
-		raise ValueError("Input too short!")
+		raise ValueError("Input '%s' too short!" % (upstr))
 
 	# First extract easy stuff, time is the first space-separated string, 
 	# load averages are the last 3 space-separated strings.
