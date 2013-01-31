@@ -35,11 +35,13 @@ import time
 # Routines
 #=============================================================================
 
-def read_file(fpath, dtype=None, roi=None, **kwargs):
+def read_file(fpath, dtype=None, roi=None, bin=None, **kwargs):
 	"""
 	Try to read datafile at **fpath**.
 
-	Try to read **fpath** and return contents. If **dtype** is set, force reading routines with this datatype, otherwise guess from extension or simply try.
+	Try to read **fpath** and return contents. If **dtype** is set, force 
+	reading routines with this data type, otherwise guess from extension or 
+	simply try.
 
 	Supported datatypes:
 	- FITS through pyfits.getdata
@@ -49,16 +51,33 @@ def read_file(fpath, dtype=None, roi=None, **kwargs):
 	- pickle through cPickle.load
 	- JSON through json.load
 
-	All other formats are read with matplotlib.image.imread(), which links to 
-	PIL for anything except PNG.
+	All other formats are read with matplotlib.image.imread(), which links 
+	to PIL for anything except PNG.
 
-	@todo Make region of dimension independent
+	Additionally, a region of interest can be select. This is currently 
+	supported for 1, 2 and 3-dimensional data. The format should be (low, 
+	high) for each dimension in sequence. If `high' == -1, use all data. 
+	For each dimension, the RoI will be translated to a slice as:
+
+		roisl0 = slice(roi[0], None if (roi[1] == -1) else roi[1])
+
+	After selecting a region of interest, pixel binning is also available, 
+	through the **bin** parameter. This single integer scalar indicates how 
+	many neighbouring pixels will be summed together. N.B. When binning, 
+	data will always be returned as np.float due to potential overflow 
+	situations when using the native file datatype.
+
+	Raises RuntimeError if RoI, bin and/or data dimensions don't match up.
+
+	@todo Make region of interest dimension independent
 
 	@param [in] fpath Path to a file
 	@param [in] dtype Datatype to read. If absent, guess.
 	@param [in] roi Region of interest to read from file, (0low, 0high, 1low, 1high, ..nlow, nhigh) or None
+	@param [in] bin Bin scalar for all dimensions, should be integer and multiple of shape.
 	@param [in] **kwargs Extra parameters passed on directly to read function
-	@return Data from file, usually as numpy.ndarray
+
+	@return RoI selected data from file, usually as numpy.ndarray
 	"""
 
 	# Check datatype, if not set: detect from file extension
@@ -99,28 +118,37 @@ def read_file(fpath, dtype=None, roi=None, **kwargs):
 		# Anything else should work with PIL's imread(). If not, it will throw anyway so we don't need to check
 		data = mpimg.imread(fpath, **kwargs)
 
-	if (roi == None):
-		return data
-	else:
+	if (roi != None):
 		if (len(roi) != data.ndim*2):
-			print >> sys.stderr, "Warning! Region of interst does not match with data dimension!"
-			return data
+			raise RuntimeError("Region of Interest does not match with data dimension!")
 		elif (len(roi) == 2):
 			roisl0 = slice(roi[0], None if (roi[1] == -1) else roi[1])
-			return data[roisl0]
+			data = data[roisl0]
 		elif (len(roi) == 4):
 			roisl0 = slice(roi[0], None if (roi[1] == -1) else roi[1])
 			roisl1 = slice(roi[2], None if (roi[3] == -1) else roi[3])
-			return data[roisl0, roisl1]
+			data = data[roisl0, roisl1]
 		elif (len(roi) == 6):
 			roisl0 = slice(roi[0], None if (roi[1] == -1) else roi[1])
 			roisl1 = slice(roi[2], None if (roi[3] == -1) else roi[3])
 			roisl2 = slice(roi[4], None if (roi[5] == -1) else roi[5])
-			return data[roisl0, roisl1, roisl2]
+			data = data[roisl0, roisl1, roisl2]
 		else:
-			print >> sys.stderr, "Warning! This many dimensions is not supported by ROI"
-			return data
+			raise RuntimeError("This many dimensions is not supported by ROI!")
+	
+	if (bin != None and int(bin) == bin):
+		ibin = int(bin)
+		data = data.astype(np.float)
+		if data.ndim == 1:
+			data = np.sum(data[i::bin] for i in range(bin))
+		elif data.ndim == 2:
+			data = sum(data[i::bin, j::bin] for i in range(bin) for j in range(bin))
+		elif data.ndim == 3:
+			data = sum(data[i::bin, j::bin, k::bin] for i in range(bin) for j in range(bin) for k in range(bin))
+		else:
+			raise RuntimeError("This many dimensions is not supported by binning")
 
+	return data
 
 def read_ppm(fpath, endian='big'):
 	"""
