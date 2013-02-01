@@ -15,6 +15,8 @@ from fft import *
 import unittest
 import pylab as plt
 
+SHOWPLOTS=False
+
 class TestEmbed(unittest.TestCase):
 	def setUp(self):
 		self.szlist = [(32, 32), (33, 33), (64, 65), (100, 201), (512, 512)]
@@ -167,6 +169,8 @@ class PlotApodMask(unittest.TestCase):
 
 	def test4a_plotmasks(self):
 		"""Plot some default masks"""
+		if (not SHOWPLOTS):
+			continue
 		print "Plotting default masks"
 		for sz in self.szlist:
 			thismask = mk_apod_mask(sz)

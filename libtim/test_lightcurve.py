@@ -123,6 +123,7 @@ def plotcomp(lclist, fignum, title, pause=True):
 	"""
 	Plot list of light curves to compare
 	"""
+	if (not SHOWPLOTS): return
 
 	plt.figure(fignum)
 	plt.clf()

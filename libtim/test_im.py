@@ -135,6 +135,8 @@ class TestStoreData(unittest.TestCase):
 
 	def test0a_show(self):
 		"""Dummy test, show image"""
+		if (not SHOWPLOTS):
+			return
 		plt.figure(0)
 		plt.title('Image one, random rectangle')
 		plt.imshow(self.im1)
