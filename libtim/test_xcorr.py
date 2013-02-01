@@ -12,6 +12,7 @@
 import unittest
 import fft as _fft
 from xcorr import *
+from timeit import Timer
 
 SHOWPLOTS=False
 
