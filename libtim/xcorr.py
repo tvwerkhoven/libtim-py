@@ -221,9 +221,13 @@ def calc_subpixmax(data, offset=(0,0), dimension=2, error=False):
 	"""
 	Find extrema of **data** with subpixel accuracy.
 
-	The subpixel maximum will be searched around the pixel with the maximum intensity, i.e. numpy.argwhere(data == data.max())[0]. The coordinate found will be in data-space.
+	The subpixel maximum will be searched around the pixel with the maximum 
+	intensity, i.e. numpy.argwhere(data == data.max())[0]. The coordinate 
+	found will be in data-space.
 
-	For **dimension** == 2: use 9-point quadratic interpolation (QI formulae by Yi & Molowny Horas (1992, Eq. (10)), also available in M.G. Löfdahl (2010), table 2.).
+	For **dimension** == 2: use 9-point quadratic interpolation (QI formulae 
+	by Yi & Molowny Horas (1992, Eq. (10)), also available in M.G. Löfdahl 
+	(2010), table 2.).
 
 	For **dimension** == 1: use 5-point 1D quadratic interpolation
 
