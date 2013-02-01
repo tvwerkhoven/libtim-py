@@ -14,6 +14,7 @@ Testcases for zern.py library.
 from zern import *
 import unittest
 import libtim.im
+from libtim import shell
 import pylab as plt
 import pyfits
 from timeit import Timer
@@ -60,7 +61,7 @@ class StoreZernikes(unittest.TestCase):
 		self.basis = self.basis_data['modes']*self.basis_data['mask']
 
 	def test1_file_write(self):
-		"""Test disk writing & plotting."""
+		"""Test disk writing & plotting (might take a while...)"""
 		# Store as one big FITS file
 		outf = os.path.join(self.outdir, 'zernike-basis.fits')
 		pyfits.writeto(outf, np.r_[self.basis], clobber=True)
@@ -163,10 +164,7 @@ class TestZernikes(unittest.TestCase):
 
 	def test2c_variance(self):
 		"""Test whether all Zernike modes have variance unity"""
-		rad = self.rad
-		grid = (np.indices((2*rad, 2*rad), dtype=np.float) - rad) / rad
-		grid_rad = (grid[0]**2. + grid[1]**2.)**0.5
-		self.mask = grid_rad <= 1
+		self.mask = tim.im.mk_rad_mask(2*self.rad) <= 1
 
 		for idx, m in enumerate(self.basis):
 			if (idx == 0):
@@ -262,7 +260,7 @@ class TestZernikeSpeed(unittest.TestCase):
 		t1 = Timer("""
 a=calc_zernike(vec, rad, z_cache)
 		""", """
-from __main__ import calc_zern_basis, fit_zernike, calc_zernike
+from zern import calc_zern_basis, fit_zernike, calc_zernike
 import numpy as np
 rad = %d
 nmodes = %d
@@ -272,7 +270,7 @@ z_cache = {}
 		t2 = Timer("""
 a=calc_zernike(vec, rad, {})
 		""", """
-from __main__ import calc_zern_basis, fit_zernike, calc_zernike
+from zern import calc_zern_basis, fit_zernike, calc_zernike
 import numpy as np
 rad = %d
 nmodes = %d
@@ -287,12 +285,12 @@ vec = np.random.random(nmodes)
 		self.assertGreater(t_nocache/2.0, t_cache)
 
 	def test3b_timing_calc(self):
-		"""Test Zernike calculation performance with and without cache"""
+		"""Test Zernike calculation performance with and without cache, print results"""
 
 		t1 = Timer("""
 a=calc_zernike(vec, rad, z_cache)
 		""", """
-from __main__ import calc_zern_basis, fit_zernike, calc_zernike
+from zern import calc_zern_basis, fit_zernike, calc_zernike
 import numpy as np
 rad = %d
 nmodes = %d
@@ -303,7 +301,7 @@ z_cache = calc_zern_basis(len(vec), rad)
 		t2 = Timer("""
 a=calc_zernike(vec, rad, {})
 		""", """
-from __main__ import calc_zern_basis, fit_zernike, calc_zernike
+from zern import calc_zern_basis, fit_zernike, calc_zernike
 import numpy as np
 rad = %d
 nmodes = %d
@@ -320,7 +318,7 @@ vec = np.random.random(nmodes)
 		t1 = Timer("""
 a=fit_zernike(wf, z_cache, nmodes=nmodes)
 		""", """
-from __main__ import calc_zern_basis, fit_zernike, calc_zernike
+from zern import calc_zern_basis, fit_zernike, calc_zernike
 import numpy as np
 rad = %d
 nmodes = %d
