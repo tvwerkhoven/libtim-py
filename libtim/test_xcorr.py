@@ -130,7 +130,7 @@ class TestGaussFuncs(unittest.TestCase):
 				for pos in self.pos_l:
 					setup_str = """
 from __main__ import gauss, _gauss_slow
-import numpy as N
+import numpy as np
 sz = (%d,%d)
 spsz = %g
 pos = (%d,%d)
