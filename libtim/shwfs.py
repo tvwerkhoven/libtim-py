@@ -30,24 +30,38 @@ import unittest
 # Routines
 #==========================================================================
 
-def calc_cog(img):
+def calc_cog(img, clip=0):
 	"""
-	Calculate center of gravity for a given 2D image for dimensions 0 and 1. 
+	Calculate center of gravity for a given 1, 2 or 3-dimensional array 
+	**img**, optionally thresholding the data at **clip** first.
 
 	N.B. Because of data ordering, dimension 0 (1) is **not** the x-axis 
 	(y-axis) when plotting!
 	
-	@param [in] img input image
+	@param [in] img input data
+	@param [in] clip Subtract this value from the data first, clipping at 0
 	@return Sub-pixel coordinate of center of gravity ordered by data dimension (c0, c1)
 	"""
 
-	ims = img.sum()
-	
-	# For dimension 0, sum all but dimension 0 (which in 2D is only dim 1)
-	c0 = (img.sum(1) * np.arange(img.shape[0])).sum()/ims
-	c1 = (img.sum(0) * np.arange(img.shape[1])).sum()/ims
+	if (clip > 0):
+		img = np.clip(img.copy() - clip, 0, img.max())
 
-	return (c0, c1)
+	ims = img.sum()
+
+	if (img.ndim == 1):
+		# For dimension 0, sum all but dimension 0 (which in 2D is only dim 1)
+		return (img * np.arange(img.shape[0])).sum()/ims
+	elif (img.ndim == 2):
+		c0 = (img.sum(1) * np.arange(img.shape[0])).sum()/ims
+		c1 = (img.sum(0) * np.arange(img.shape[1])).sum()/ims
+		return (c0, c1)
+	elif (img.ndim == 3):
+		c0 = (img.sum(2).sum(1) * np.arange(img.shape[0])).sum()/ims
+		c1 = (img.sum(2).sum(0) * np.arange(img.shape[1])).sum()/ims
+		c2 = (img.sum(1).sum(0) * np.arange(img.shape[2])).sum()/ims
+		return (c0, c1,c2)
+	else:
+		raise RuntimeError("More than 3 dimensional data not supported!")
 
 def find_mla_grid(wfsimg, size, minif=0.6, nmax=-1, copy=True, method='bounds'):
 	"""
