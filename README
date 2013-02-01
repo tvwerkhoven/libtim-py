@@ -32,6 +32,11 @@ modules. Also, running doxygen in ./doc will extract the docstrings and present 
 Version history
 ===============
 
+20130123, 0.4.1
+   * Added uptime parsing script
+20130115, 0.4.0
+   * Added dmmodel.py, models membrane mirrors
+   * Various fixes/improvements
 20121029, 0.3.0
    * Revamped unit tests
    * Added lightcurve.py 
