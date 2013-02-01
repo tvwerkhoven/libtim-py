@@ -13,22 +13,21 @@
 Construct and analyze Zernike basis functions
 """
 
-#=============================================================================
+#==========================================================================
 # Import libraries here
-#=============================================================================
+#==========================================================================
 
-import numpy as N
-import unittest
+import numpy as np
 import libtim as tim
 import libtim.im
 
-#=============================================================================
+#==========================================================================
 # Defines
-#=============================================================================
+#==========================================================================
 
-#=============================================================================
+#==========================================================================
 # Routines
-#=============================================================================
+#==========================================================================
 
 from scipy.misc import factorial as fac
 def zernike_rad(m, n, rho):
@@ -40,7 +39,7 @@ def zernike_rad(m, n, rho):
 	@param [in] rho Radial coordinate grid
 	@return Radial polynomial with identical shape as **rho**
 	"""
-	if (N.mod(n-m, 2) == 1):
+	if (np.mod(n-m, 2) == 1):
 		return rho*0.0
 
 	wf = rho*0.0
@@ -66,8 +65,8 @@ def zernike(m, n, rho, phi, norm=True):
 	nc = 1.0
 	if (norm):
 		nc = (2*(n+1)/(1+(m==0)))**0.5
-	if (m > 0): return nc*zernike_rad(m, n, rho) * N.cos(m * phi)
-	if (m < 0): return nc*zernike_rad(-m, n, rho) * N.sin(-m * phi)
+	if (m > 0): return nc*zernike_rad(m, n, rho) * np.cos(m * phi)
+	if (m < 0): return nc*zernike_rad(-m, n, rho) * np.sin(-m * phi)
 	return nc*zernike_rad(0, n, rho)
 
 def noll_to_zern(j):
@@ -103,9 +102,9 @@ def zernikel(j, rho, phi, norm=True):
 # 	"""
 # 	n, m = noll_to_zern(j)
 #
-# 	grid = (N.indices((size, size), dtype=N.float) - 0.5*size) / (0.5*size)
+# 	grid = (np.indices((size, size), dtype=np.float) - 0.5*size) / (0.5*size)
 # 	grid_rad = (grid[0]**2. + grid[1]**2.)**0.5
-# 	grid_ang = N.arctan2(grid[0], grid[1])
+# 	grid_ang = np.arctan2(grid[0], grid[1])
 # 	return zernike(m, n, grid_rad, grid_ang, norm)
 
 def noll_to_zern_broken(j):
@@ -147,7 +146,7 @@ def zern_normalisation(nmodes=30):
 
 	nolls = (noll_to_zern(j+1) for j in xrange(nmodes))
 	norms = [(2*(n+1)/(1+(m==0)))**0.5 for n, m  in nolls]
-	return N.asanyarray(norms)
+	return np.asanyarray(norms)
 
 ### Higher level Zernike generating / fitting functions
 
@@ -172,11 +171,11 @@ def calc_zern_basis(nmodes, rad, calc_covmat=False):
 		return {'modes':[], 'modesmat':[], 'covmat':0, 'covmat_in':0, 'mask':[[0]]}
 
 	# Use vectors instead of a grid matrix
-	rvec = ((N.arange(2.0*rad) - rad)/rad)
+	rvec = ((np.arange(2.0*rad) - rad)/rad)
 	r0 = rvec.reshape(-1,1)
 	r1 = rvec.reshape(1,-1)
 	grid_rad = (r1**2. + r0**2.)**0.5
-	grid_ang = N.arctan2(r0, r1)
+	grid_ang = np.arctan2(r0, r1)
 
 	grid_mask = grid_rad <= 1
 
@@ -184,14 +183,14 @@ def calc_zern_basis(nmodes, rad, calc_covmat=False):
 	zern_modes = [zernikel(zmode+1, grid_rad, grid_ang) for zmode in xrange(nmodes)]
 
 	# Convert modes to (nmodes, npixels) matrix
-	zern_modes_mat = N.r_[zern_modes].reshape(nmodes, -1)
+	zern_modes_mat = np.r_[zern_modes].reshape(nmodes, -1)
 
 	covmat = covmat_in = None
 	if (calc_covmat):
 		# Calculate covariance matrix
-		covmat = N.array([[N.sum(zerni * zernj * grid_mask) for zerni in zern_modes] for zernj in zern_modes])
+		covmat = np.array([[np.sum(zerni * zernj * grid_mask) for zerni in zern_modes] for zernj in zern_modes])
 		# Invert covariance matrix using SVD
-		covmat_in = N.linalg.pinv(covmat)
+		covmat_in = np.linalg.pinv(covmat)
 
 	# Create and return dict
 	return {'modes': zern_modes, 'modesmat': zern_modes_mat, 'covmat':covmat, 'covmat_in':covmat_in, 'mask': grid_mask}
@@ -238,7 +237,7 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None,
 	if (rad < 0):
 		rad = -rad * min(wavefront.shape)
 	if (min(center) < 0):
-		center = -N.r_[center] * min(wavefront.shape)
+		center = -np.r_[center] * min(wavefront.shape)
 
 	# Make cropping slices to select only central part of the wavefront
 	xslice = slice(center[0]-rad, center[0]+rad)
@@ -264,18 +263,8 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None,
 		zern_data['mask'] = tmp_zern['mask']
 
 	zern_basis = zern_data['modes'][:nmodes]
-	zern_covmat_in = zern_data['covmat_in'][:nmodes, :nmodes]
 	zern_basismat = zern_data['modesmat'][:nmodes]
 	grid_mask = zern_data['mask']
-	# Calculate Zernike covariance matrix
-# 	cov_mat = N.zeros((nmodes, nmodes))
-# 	for modei in xrange(nmodes):
-# 		zerni = zern_basis[modei]
-# 		for modej in xrange(nmodes):
-# 			zernj = zern_basis[modej]
-# 			cov_mat[modei, modej] = N.sum(zerni * zernj)
-	# This is the same as above
-#	global GLOB_ZERN_COVMAT_IN # will be updated by calc_zern_basis()
 
 	# Calculate inner products
 	wf_zern_vec = 0
@@ -288,23 +277,13 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None,
 
 		# LSQ fit with weighed data
 		wf_w = ((wavefront[yslice, xslice])[grid_mask]).reshape(1,-1) * weight
-		wf_zern_vec = N.dot(wf_w, N.linalg.pinv(zern_basismat[:, grid_vec] * weight))
-# 		print "Weighed LSQ Zern: ", wf_zern_vec.shape, wf_zern_vec
+		wf_zern_vec = np.dot(wf_w, np.linalg.pinv(zern_basismat[:, grid_vec] * weight))
 	else:
 		# LSQ fit with data. Only fit inside grid_mask
 
 		# Crop out central region of wavefront, then only select the orthogonal part of the Zernike modes (grid_mask)
  		wf_w = ((wavefront[yslice, xslice])[grid_mask]).reshape(1,-1)
-		wf_zern_vec = N.dot(wf_w, N.linalg.pinv(zern_basismat[:, grid_vec]))
-# 		print "LSQ Zern: ", wf_zern_vec.shape, wf_zern_vec
-
-	if (False):
-		# Old method based on covariance matrix fitting
-		wf_zern_inprod = N.array([N.sum((wavefront[yslice, xslice])[grid_mask] * zmode[grid_mask]) for zmode in zern_basis])
-
-		# Calculate Zernike amplitudes
-		wf_zern_vec = N.dot(zern_covmat_in, wf_zern_inprod)
-# 		print "Cov. Zern - LSQ: ", wf_zern_vec.shape, wf_zern_vec
+		wf_zern_vec = np.dot(wf_w, np.linalg.pinv(zern_basismat[:, grid_vec]))
 
 	wf_zern_vec.shape = (-1)
 	wf_zern_vec[:startmode-1] = 0
@@ -321,8 +300,8 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None,
 		# For calculating scalar fitting qualities, only use the area inside the mask
 		fitresid = fitdiff[grid_mask == True]
 		err.append((fitresid**2.0).mean())
-		err.append(N.abs(fitresid).mean())
-		err.append(N.abs(fitresid).mean()**2.0)
+		err.append(np.abs(fitresid).mean())
+		err.append(np.abs(fitresid).mean()**2.0)
 
 	return (wf_zern_vec, wf_zern_rec, fitdiff)
 
