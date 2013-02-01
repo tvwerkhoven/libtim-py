@@ -109,13 +109,13 @@ class TestApodMask(unittest.TestCase):
 				"Apod size 0 gives values != 0 (got %d nonzeros)" % nnonzero)
 
 	def test3d_wsize(self):
-		"""For wsize=a, the number of elements == 1 should be N.round(((N.r_[apodsz]) * (1+a) - 1)/2, 0)*2.+1 """
+		"""For wsize=a, the number of elements == 1 should be np.round(((np.r_[apodsz]) * (1+a) - 1)/2, 0)*2.+1 """
 		sz = self.szlist[1]
 		for wsz in self.wsz_l:
 			for func in ['hann', 'hamming', 'cosine', 'lanczos']:
 				thismask = mk_apod_mask(sz, apod_f=func, wsize=wsz)
-				expvec = N.round(((N.r_[sz]) * (1+wsz) - 1)/2., 0)*2.+1
-				expected = N.product(expvec)
+				expvec = np.round(((np.r_[sz]) * (1+wsz) - 1)/2., 0)*2.+1
+				expected = np.product(expvec)
 				measured = (thismask >= 1.0).sum()
 				self.assertAlmostEqual(expected, measured, 0,\
 					msg="Unexpected number of number of elements equal to one. Expected %g, got %g for wsz=%g, wf=%s" % (expected, measured, wsz, func))
@@ -130,7 +130,7 @@ class TestApodMask(unittest.TestCase):
 				if (func in ignfunc):
 					continue
 				thismask = mk_apod_mask(sz, apod_f=func, wsize=wsz)
-				self.assertTrue(N.allclose(thismask, refmask), \
+				self.assertTrue(np.allclose(thismask, refmask), \
 					"Windows size 0 mask for %s != %s" % (self.wshp_l[0], func))
 
 	# Test illegal function calls
@@ -169,8 +169,7 @@ class PlotApodMask(unittest.TestCase):
 
 	def test4a_plotmasks(self):
 		"""Plot some default masks"""
-		if (not SHOWPLOTS):
-			return
+		if (not SHOWPLOTS): return
 		print "Plotting default masks"
 		for sz in self.szlist:
 			thismask = mk_apod_mask(sz)
@@ -189,6 +188,7 @@ class PlotApodMask(unittest.TestCase):
 	def test4b_plot_wsizes(self):
 		"""Plot different 1-d window sizes and shapes"""
 		print "Plot different 1-d window functions sizes and shapes"
+		if (not SHOWPLOTS): return
 		sz = self.szlist[0]
 		for wsz in self.wsz_l:
 			plt.clf()
@@ -201,6 +201,7 @@ class PlotApodMask(unittest.TestCase):
 
 	def test4c_plot_apodsizes(self):
 		"""Plot different 1-d window functions"""
+		if (not SHOWPLOTS): return
 		sz = self.szlist[0]
 		for apodsz in [0, -1]:
 			plt.clf()
@@ -214,6 +215,7 @@ class PlotApodMask(unittest.TestCase):
 	def test4d_plot_2dcirc(self):
 		"""Plot different 2-d circular windows with varying pos and size"""
 		print "Plot different 2-d circular windows with varying pos and size"
+		if (not SHOWPLOTS): return
 		sz = self.szlist[1]
 		plt.figure(1)
 		plt.clf()
