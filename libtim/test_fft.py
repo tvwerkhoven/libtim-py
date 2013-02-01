@@ -170,7 +170,7 @@ class PlotApodMask(unittest.TestCase):
 	def test4a_plotmasks(self):
 		"""Plot some default masks"""
 		if (not SHOWPLOTS):
-			continue
+			return
 		print "Plotting default masks"
 		for sz in self.szlist:
 			thismask = mk_apod_mask(sz)
