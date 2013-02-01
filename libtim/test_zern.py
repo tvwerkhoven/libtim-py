@@ -12,16 +12,20 @@ Testcases for zern.py library.
 """
 
 from zern import *
-import libtim.im
 import unittest
+import libtim.im
 import pylab as plt
 import pyfits
 from timeit import Timer
 import os
 
+SHOWPLOTS=False
+
 class PlotZernikes(unittest.TestCase):
 	def test0a_masking(self):
 		"""Plot masking"""
+		if (not SHOWPLOTS):
+			return
 		rad = 128
 		zn_m = calc_zernike([1,2,3,4,5,6], rad, mask=True)
 		zn_unm = calc_zernike([1,2,3,4,5,6], rad, mask=False)
@@ -30,6 +34,8 @@ class PlotZernikes(unittest.TestCase):
 		tim.im.inter_imshow(zn_unm, desc="Unmasked Zernike")
 	def test1_plot_basis(self):
 		"""Plot the first few Zernike basis functions, until the user quits"""
+		if (not SHOWPLOTS):
+			return
 		rad = 257
 		for idx in xrange(100):
 			vec = [0]*(idx+1)
@@ -37,7 +43,6 @@ class PlotZernikes(unittest.TestCase):
 			mode = calc_zernike(vec, rad, mask=True)
 			nn, mm = noll_to_zern(idx+1)
 			tim.im.inter_imshow(mode, desc="Zernike mode j=%d (n=%d, m=%d) " % (n+1, nn, mm))
-
 		
 class StoreZernikes(unittest.TestCase):
 	def setUp(self):
@@ -58,13 +63,13 @@ class StoreZernikes(unittest.TestCase):
 		"""Test disk writing & plotting."""
 		# Store as one big FITS file
 		outf = os.path.join(self.outdir, 'zernike-basis.fits')
-		pyfits.writeto(outf, N.r_[self.basis], clobber=True)
+		pyfits.writeto(outf, np.r_[self.basis], clobber=True)
 		
 		# Plot each mode
 		for n, basis in enumerate(self.basis):
 			nn, mm = noll_to_zern(n+1)
 			libtim.im.store_2ddata(basis, 'zernike-basis_%02d' % (n+1), 
-				dir=self.outdir, pltitle='Zernike mode j=%d, (n=%d, m=%d) ' % (n+1, nn, mm), xlab='X', ylab='Y', ident=False, grid=False, ticks=True)
+				dir=self.outdir, pltitle='Zernike mode j=%d, (n=%d, m=%d) ' % (n+1, nn, mm), xlab='X', ylab='Y', ident=False)
 
 class TestZernikes(unittest.TestCase):
 	def setUp(self):
@@ -73,7 +78,7 @@ class TestZernikes(unittest.TestCase):
 		rad = 127
 		self.rad = rad
 		self.nmodes = 25
-		self.vec = N.random.random(self.nmodes)
+		self.vec = np.random.random(self.nmodes)
 		self.basis = []
 		self.basis_data = calc_zern_basis(self.nmodes, self.rad)
 		self.basis = self.basis_data['modes']
@@ -100,9 +105,9 @@ class TestZernikes(unittest.TestCase):
 	# Shallow function test
 	def test1a_zero_wf(self):
 		"""Zero-wavefront should return zero amplitude vector"""
-		fitdata = fit_zernike(N.zeros((64, 64)), nmodes=self.nmodes)
+		fitdata = fit_zernike(np.zeros((64, 64)), nmodes=self.nmodes)
 		fitvec = fitdata[0]
-		self.assertTrue(N.allclose(fitvec, 0.0))
+		self.assertTrue(np.allclose(fitvec, 0.0))
 
 	def test1b_shape_detection(self):
 		"""Test calc_zern_basis basis shape detection"""
@@ -132,15 +137,15 @@ class TestZernikes(unittest.TestCase):
 		mask = tim.im.mk_rad_mask(2*rad) <= 1
 
 		# Should be equal inside mask
-		self.assertAlmostEqual(N.sum(zn_unm[mask] - zn_m[mask]), 0.0)
-		self.assertTrue(N.allclose(zn_unm[mask], zn_m[mask]))
+		self.assertAlmostEqual(np.sum(zn_unm[mask] - zn_m[mask]), 0.0)
+		self.assertTrue(np.allclose(zn_unm[mask], zn_m[mask]))
 
 		# Should be unequal outside mask
-		self.assertFalse(N.allclose(zn_unm[mask==False], zn_m[mask==False]))
+		self.assertFalse(np.allclose(zn_unm[mask==False], zn_m[mask==False]))
 
 		# Mean outside the mask should be larger than the mean inside the mask, in general
-		self.assertGreater(N.mean(N.abs(zn_unm[mask==False])),
-			0.5*N.mean(N.abs(zn_unm[mask])))
+		self.assertGreater(np.mean(np.abs(zn_unm[mask==False])),
+			0.5*np.mean(np.abs(zn_unm[mask])))
 
 	# Deep function tests
 	# calc_zern_basis(nmodes, rad, mask=True):
@@ -153,13 +158,13 @@ class TestZernikes(unittest.TestCase):
 		for i in xrange(self.nmodes):
 			vec[i] = 1
 			testzern = calc_zernike(vec, self.rad, mask=False)
-			self.assertTrue(N.allclose(self.basis[i], testzern))
+			self.assertTrue(np.allclose(self.basis[i], testzern))
 			vec[i] = 0
 
 	def test2c_variance(self):
 		"""Test whether all Zernike modes have variance unity"""
 		rad = self.rad
-		grid = (N.indices((2*rad, 2*rad), dtype=N.float) - rad) / rad
+		grid = (np.indices((2*rad, 2*rad), dtype=np.float) - rad) / rad
 		grid_rad = (grid[0]**2. + grid[1]**2.)**0.5
 		self.mask = grid_rad <= 1
 
@@ -172,33 +177,33 @@ class TestZernikes(unittest.TestCase):
 			# 1.1 is added for numerical roundoff and other computer errors.
 			# We use the mask to test only the relevant part of the Zernike
 			# modes
-			self.assertAlmostEqual(N.var(m[self.mask]), 1.0, delta=1.1/(self.rad**2.)**0.5)
+			self.assertAlmostEqual(np.var(m[self.mask]), 1.0, delta=1.1/(self.rad**2.)**0.5)
 
 	def test2d_equal_mode(self):
 		"""Test equal-mode Zernike reconstruction with non-masked input"""
 		fitvec, fitrec, fitdiff = fit_zernike(self.wf, nmodes=self.nmodes)
 
-		self.assertAlmostEqual(N.sum(self.vec - fitvec), 0.0)
-		self.assertTrue(N.allclose(self.vec, fitvec))
+		self.assertAlmostEqual(np.sum(self.vec - fitvec), 0.0)
+		self.assertTrue(np.allclose(self.vec, fitvec))
 
 	def test2d2_equal_mode_masked(self):
 		"""Test equal-mode Zernike reconstruction with masked input"""
 		fitvec, fitrec, fitdiff = fit_zernike(self.wf_msk, nmodes=self.nmodes)
 
-		self.assertAlmostEqual(N.sum(self.vec - fitvec), 0.0)
-		self.assertTrue(N.allclose(self.vec, fitvec))
+		self.assertAlmostEqual(np.sum(self.vec - fitvec), 0.0)
+		self.assertTrue(np.allclose(self.vec, fitvec))
 
 	def test2e_unequal_mode(self):
 		"""Test unequal-mode Zernike reconstruction with non-masked input. This will probably not be exactly equal because we try to fit a surface generated with 20 modes with only 10 modes."""
 		fitvec, fitrec, fitdiff = fit_zernike(self.wf, nmodes=10)
 
-		self.assertAlmostEqual(N.mean(self.vec[:10] / fitvec), 1.0, delta=0.1)
+		self.assertAlmostEqual(np.mean(self.vec[:10] / fitvec), 1.0, delta=0.1)
 
 	def test2e2_unequal_mode(self):
 		"""Test unequal-mode Zernike reconstruction with masked input. This will probably not be exactly equal because we try to fit a surface generated with 20 modes with only 10 modes."""
 		fitvec, fitrec, fitdiff = fit_zernike(self.wf_msk, nmodes=10)
 
-		self.assertAlmostEqual(N.mean(self.vec[:10] / fitvec), 1.0, delta=0.1)
+		self.assertAlmostEqual(np.mean(self.vec[:10] / fitvec), 1.0, delta=0.1)
 
 	def test2f_fit_startmode(self):
 		"""Test startmode parameter in fit_zernike"""
@@ -228,20 +233,21 @@ class TestZernikes(unittest.TestCase):
 		
 		# When fitting the corrupted wavefront, the residual with the original 
 		# wavefront should be much bigger than with the corrupted wavefront
-		fitw_orig = N.abs(fitrecw - self.wf_msk).mean()
-		fit_orig = N.abs(fitrec - self.wf_msk).mean()
-		fitw_corr = N.abs(fitrecw - this_wf).mean()
-		fit_corr = N.abs(fitrec - this_wf).mean()
+		fitw_orig = np.abs(fitrecw - self.wf_msk).mean()
+		fit_orig = np.abs(fitrec - self.wf_msk).mean()
+		fitw_corr = np.abs(fitrecw - this_wf).mean()
+		fit_corr = np.abs(fitrec - this_wf).mean()
 		
 		self.assertGreater(fit_orig/1.2, fit_corr)
 		self.assertGreater(fitw_corr/10., fitw_orig)
 		self.assertGreater(fitrec.max()/1.5, fitrecw.max())
 		
-# 		tim.im.inter_imshow(self.wf_msk, desc="Input data")
-# 		tim.im.inter_imshow(this_wf, desc="Corrupted input data")
-# 		tim.im.inter_imshow(this_weight, desc="Input weight")
-# 		tim.im.inter_imshow(fitrecw, desc="Weighed Reconstruction")
-# 		tim.im.inter_imshow(fitrec, desc="Normal Reconstruction")
+		if (SHOWPLOTS):
+			tim.im.inter_imshow(self.wf_msk, desc="Input data")
+			tim.im.inter_imshow(this_wf, desc="Corrupted input data")
+			tim.im.inter_imshow(this_weight, desc="Input weight")
+			tim.im.inter_imshow(fitrecw, desc="Weighed Reconstruction")
+			tim.im.inter_imshow(fitrec, desc="Normal Reconstruction")
 
 class TestZernikeSpeed(unittest.TestCase):
 	def setUp(self):
@@ -257,20 +263,20 @@ class TestZernikeSpeed(unittest.TestCase):
 a=calc_zernike(vec, rad, z_cache)
 		""", """
 from __main__ import calc_zern_basis, fit_zernike, calc_zernike
-import numpy as N
+import numpy as np
 rad = %d
 nmodes = %d
-vec = N.random.random(nmodes)
+vec = np.random.random(nmodes)
 z_cache = {}
 		""" % (self.rad, self.nmodes) )
 		t2 = Timer("""
 a=calc_zernike(vec, rad, {})
 		""", """
 from __main__ import calc_zern_basis, fit_zernike, calc_zernike
-import numpy as N
+import numpy as np
 rad = %d
 nmodes = %d
-vec = N.random.random(nmodes)
+vec = np.random.random(nmodes)
 		""" % (self.rad, self.nmodes) )
 		t_cache = t1.timeit(self.calc_iter)/self.calc_iter
 		t_nocache = t2.timeit(self.calc_iter)/self.calc_iter
@@ -287,10 +293,10 @@ vec = N.random.random(nmodes)
 a=calc_zernike(vec, rad, z_cache)
 		""", """
 from __main__ import calc_zern_basis, fit_zernike, calc_zernike
-import numpy as N
+import numpy as np
 rad = %d
 nmodes = %d
-vec = N.random.random(nmodes)
+vec = np.random.random(nmodes)
 z_cache = calc_zern_basis(len(vec), rad)
 		""" % (self.rad, self.nmodes) )
 
@@ -298,10 +304,10 @@ z_cache = calc_zern_basis(len(vec), rad)
 a=calc_zernike(vec, rad, {})
 		""", """
 from __main__ import calc_zern_basis, fit_zernike, calc_zernike
-import numpy as N
+import numpy as np
 rad = %d
 nmodes = %d
-vec = N.random.random(nmodes)
+vec = np.random.random(nmodes)
 		""" % (self.rad, self.nmodes) )
 
 		t_cached = min(t1.repeat(2, self.calc_iter))/self.calc_iter
@@ -315,12 +321,12 @@ vec = N.random.random(nmodes)
 a=fit_zernike(wf, z_cache, nmodes=nmodes)
 		""", """
 from __main__ import calc_zern_basis, fit_zernike, calc_zernike
-import numpy as N
+import numpy as np
 rad = %d
 nmodes = %d
-vec = N.random.random(nmodes)
+vec = np.random.random(nmodes)
 z_cache = calc_zern_basis(len(vec), rad)
-wf = N.random.random((rad, rad))
+wf = np.random.random((rad, rad))
 		""" % (self.rad, self.nmodes) )
 
 		t_cached = min(t1.repeat(2, self.fit_iter))/self.fit_iter
