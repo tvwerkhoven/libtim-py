@@ -343,7 +343,8 @@ class TestTokenize(unittest.TestCase):
 		"""Test random list of strings for robustness"""
 
 		# Random strings
-		self.strl4 = [''.join((chr(int(i)) for i in N.random.random((128))*255)) for i in range(50)]
+		import numpy as np
+		self.strl4 = [''.join((chr(int(i)) for i in np.random.random((128))*255)) for i in range(50)]
 
 		# Test two modes. Output is probably garbage
 		tp = find_uniq(self.strl4, tokenize=True, tokens=['.', '-', '_'])
@@ -351,6 +352,5 @@ class TestTokenize(unittest.TestCase):
 
 
 if __name__ == "__main__":
-	import numpy as N
 	import sys
 	sys.exit(unittest.main())
