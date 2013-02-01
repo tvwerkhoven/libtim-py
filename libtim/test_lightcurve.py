@@ -20,8 +20,10 @@ import pylab as plt
 import pyfits
 from timeit import Timer
 import os
+from os.path import join as pjoin
 
 SHOWPLOTS=False
+TESTDATAPATH=pjoin(os.path.dirname(__file__), "test_lightcurve_in/")
 
 def plotfunc(testdat, refdat, fignum, pause=True):
 	if (not SHOWPLOTS): return
@@ -42,7 +44,7 @@ class ModelCrossCheck(unittest.TestCase):
 	def test1_comp_cloud(self):
 		"""Check step 1: cloud curve"""
 		dp7_tim = transit_model_dp7([0], sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmodel=400, method=1, verb=0, plot=0)
-		dp7_matteo = pyfits.getdata('test_lightcurve_in/01_cloud.fits')
+		dp7_matteo = pyfits.getdata(TESTDATAPATH + '/01_cloud.fits')
 
 		plotfunc(dp7_tim, dp7_matteo, 1)
 		self.assertAlmostEqual(np.abs(dp7_tim - dp7_matteo).max(), 0.0)
@@ -51,7 +53,7 @@ class ModelCrossCheck(unittest.TestCase):
 	def test2_comp_star(self):
 		"""Check step 2: star curve"""
 		dp7_tim = transit_model_dp7([0], sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmodel=400, method=2, verb=0, plot=0)
-		dp7_matteo = pyfits.getdata('test_lightcurve_in/02_star.fits')
+		dp7_matteo = pyfits.getdata(TESTDATAPATH + '02_star.fits')
 
 		plotfunc(dp7_tim, dp7_matteo, 2)
 		self.assertAlmostEqual(np.abs(dp7_tim - dp7_matteo).max(), 0.0)
@@ -60,7 +62,7 @@ class ModelCrossCheck(unittest.TestCase):
 	def test3_comp_lc0(self):
 		"""Check step 3: check cloud convolved with star"""
 		dp7_tim = transit_model_dp7([0], sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmodel=400, method=3, verb=0, plot=0)
-		dp7_matteo = pyfits.getdata('test_lightcurve_in/03_lc_abs.fits')
+		dp7_matteo = pyfits.getdata(TESTDATAPATH + '03_lc_abs.fits')
 
 		plotfunc(dp7_tim, dp7_matteo, 3)
 		self.assertAlmostEqual(np.abs(dp7_tim - dp7_matteo).max(), 0.0)
@@ -69,7 +71,7 @@ class ModelCrossCheck(unittest.TestCase):
 	def test4_comp_star(self):
 		"""Check step 4: scattering curve"""
 		dp7_tim = transit_model_dp7([0], sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmodel=400, method=4, verb=0, plot=0)
-		dp7_matteo = pyfits.getdata('test_lightcurve_in/04_scatt.fits')
+		dp7_matteo = pyfits.getdata(TESTDATAPATH + '04_scatt.fits')
 
 		plotfunc(dp7_tim, dp7_matteo, 4)
 		self.assertAlmostEqual(np.abs(dp7_tim - dp7_matteo).max(), 0.0, places=3)
@@ -79,7 +81,7 @@ class ModelCrossCheck(unittest.TestCase):
 	def test5_comp_lc1(self):
 		"""Check step 5: light curve + scattering"""
 		dp7_tim = transit_model_dp7([0], sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmodel=400, method=5, verb=0, plot=0)
-		dp7_matteo = pyfits.getdata('test_lightcurve_in/05_lc_abs+scatt.fits')
+		dp7_matteo = pyfits.getdata(TESTDATAPATH + '05_lc_abs+scatt.fits')
 
 		plotfunc(dp7_tim, dp7_matteo, 5)
 		self.assertAlmostEqual(np.abs(dp7_tim - dp7_matteo).max(), 0.0, places=4)
@@ -88,8 +90,8 @@ class ModelCrossCheck(unittest.TestCase):
 	def test51_comp_lc1(self):
 		"""Check step 51: light curve - scattering"""
 		dp7_tim = transit_model_dp7([0], sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmodel=400, method=51, verb=0, plot=0)
-		dp7_matteo_lc1 = pyfits.getdata('test_lightcurve_in/05_lc_abs+scatt.fits')
-		dp7_matteo_lc0 = pyfits.getdata('test_lightcurve_in/03_lc_abs.fits')
+		dp7_matteo_lc1 = pyfits.getdata(TESTDATAPATH + '05_lc_abs+scatt.fits')
+		dp7_matteo_lc0 = pyfits.getdata(TESTDATAPATH + '03_lc_abs.fits')
 		dp7_matteo_lc_scatt = dp7_matteo_lc1-dp7_matteo_lc0
 
 		plotfunc(dp7_tim, dp7_matteo_lc_scatt, 51)
@@ -99,7 +101,7 @@ class ModelCrossCheck(unittest.TestCase):
 	def test6_comp_lc2(self):
 		"""Check step 6: final convolved light curve"""
 		dp7_tim = transit_model_dp7([0], sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmodel=400, method=6, verb=0, plot=0)
-		dp7_matteo = pyfits.getdata('test_lightcurve_in/06_lc_kep_conv.fits')
+		dp7_matteo = pyfits.getdata(TESTDATAPATH + '06_lc_kep_conv.fits')
 
 		plotfunc(dp7_tim, dp7_matteo, 6)
 		self.assertAlmostEqual(np.abs(dp7_tim - dp7_matteo).max(), 0.0, places=4)
