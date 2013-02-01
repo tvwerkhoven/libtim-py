@@ -1,16 +1,8 @@
 #!/usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 """
-@file xcorr.py
-@brief Measure image shift using cross-correlation
-
-@package libtim.xcorr
-@brief Measure image shift using cross-correlation
-@author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
-@copyright Creative Commons Attribution-Share Alike license versions 3.0 or higher, see http://creativecommons.org/licenses/by-sa/3.0/
-@date 20120402
-
-Measure image shifts using cross-correlation and other utilities.
+@file test_xcorr.py
+@brief Test suite for xcorr.py
 """
 
 #==========================================================================
