@@ -63,7 +63,7 @@ def calc_cog(img, clip=0):
 	else:
 		raise RuntimeError("More than 3 dimensional data not supported!")
 
-def find_mla_grid(wfsimg, size, minif=0.6, nmax=-1, copy=True, method='bounds'):
+def find_mla_grid(wfsimg, size, clipsize=None, minif=0.6, nmax=-1, copy=True, method='bounds'):
 	"""
 	Given a Shack-hartmann wave front sensor image, find a grid of 
 	subapertures (sa) of approximately **size** big.
@@ -73,6 +73,7 @@ def find_mla_grid(wfsimg, size, minif=0.6, nmax=-1, copy=True, method='bounds'):
 	
 	@param [in] wfsimg Image to analyze
 	@param [in] size Subaperture size [pixels]
+	@param [in] size Size to clip out when searching for spots [pixels]
 	@param [in] minif Minimimum pixel value to have to consider it as a new subaperture, as fraction of the global maximum.
 	@param [in] nmax Maximum number of subapertures to search for (-1 for no max)
 	@param [in] copy Copy image before modifying
@@ -85,6 +86,9 @@ def find_mla_grid(wfsimg, size, minif=0.6, nmax=-1, copy=True, method='bounds'):
 	if (size[0] > wfsimg.shape[0] or size[1] > wfsimg.shape[1]):
 		raise ValueError("Subapertures sizes larger than the source image resolution don't make sense.")
 	
+	cs = clipsize
+	if (cs == None): cs = size
+
 	# Copy image because we destroy it
 	if (copy): wfsimg = wfsimg.copy()
 
@@ -96,23 +100,24 @@ def find_mla_grid(wfsimg, size, minif=0.6, nmax=-1, copy=True, method='bounds'):
 	while (True):
 		# The current maximum intesnity is at:
 		currmax = wfsimg.max()
-		maxidx = np.argwhere(wfsimg == currmax)[0]
+		p = np.argwhere(wfsimg == currmax)[0]
 		
 		if (currmax < min_int):
 			break
 		
 		# Add this subaperture, either by bounds or central coordinate
 		if (method == 'bounds'):
-			newsa = (maxidx[0] - size[0]/2, 
-					maxidx[0] + size[0]/2,
-					maxidx[1] - size[1]/2,
-					maxidx[1] + size[1]/2)
+			newsa = (p[0] - size[0]/2, 
+					p[0] + size[0]/2,
+					p[1] - size[1]/2,
+					p[1] + size[1]/2)
 		else:
-			newsa = tuple(maxidx)
+			newsa = tuple(p)
 		subap_grid.append(newsa)
 		
 		# Clear out this subaperture so we don't add it again
-		wfsimg[newsa[0]:newsa[1], newsa[2]:newsa[3]] = wfsimg.min()
+
+		wfsimg[p[0]-cs[0]/2:p[0]+cs[0]/2, p[1]-cs[1]/2:p[1]+cs[1]/2] = wfsimg.min()
 		
 		if (nmax > 0 and len(subap_grid) >= nmax):
 			break
