@@ -19,7 +19,6 @@ Logging functions to log data using prefixes, loglevels and permanent logfiles. 
 
 import sys
 import time
-import unittest
 
 #==========================================================================
 # Defines
