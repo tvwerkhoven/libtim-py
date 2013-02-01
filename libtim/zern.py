@@ -174,7 +174,7 @@ def calc_zern_basis(nmodes, rad, calc_covmat=False):
 	rvec = ((np.arange(2.0*rad) - rad)/rad)
 	r0 = rvec.reshape(-1,1)
 	r1 = rvec.reshape(1,-1)
-	grid_rad = (r1**2. + r0**2.)**0.5
+	grid_rad = tim.im.mk_rad_mask(2*rad)
 	grid_ang = np.arctan2(r0, r1)
 
 	grid_mask = grid_rad <= 1
