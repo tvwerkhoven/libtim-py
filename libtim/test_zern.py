@@ -62,6 +62,7 @@ class StoreZernikes(unittest.TestCase):
 
 	def test1_file_write(self):
 		"""Test disk writing & plotting (might take a while...)"""
+		if (not SHOWPLOTS): return
 		# Store as one big FITS file
 		outf = os.path.join(self.outdir, 'zernike-basis.fits')
 		pyfits.writeto(outf, np.r_[self.basis], clobber=True)
