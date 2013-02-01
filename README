@@ -29,6 +29,22 @@ Usage
 Documentation of routines can be found in the docstrings of the respective 
 modules. Also, running doxygen in ./doc will extract the docstrings and present nicely formatted HTML documentation.
 
+Testing
+=======
+
+To test this module, simply run
+
+    nosetests
+
+from the root directory, if you have it installed. Otherwise, run the test_* 
+files in libtim/
+
+To get more information, run
+
+    nosetests-2.7  --pdb --with-coverage --with-profile
+
+Add the flag --processes -1 to add multiprocessing (not working on my machine)
+
 Version history
 ===============
 
