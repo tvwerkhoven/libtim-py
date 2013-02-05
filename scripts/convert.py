@@ -16,8 +16,9 @@ http://creativecommons.org/licenses/by-sa/3.0/
 
 # Import my own utilities
 import libtim as tim
-import libtim.file
-import sys
+from libtim.file import read_file, store_file
+import numpy as np
+import sys, os
 import argparse
 
 # Define some contants
@@ -32,18 +33,33 @@ def main():
 	if (args.verb > 1):
 		print args
 	
-	indata = tim.file.read_file(args.infile)
-	tim.file.store_file(args.outfile, indata, cmap=args.cmap)
+	# Load all data. If only one file, flatten
+	roit = tuple(args.roi)
+	if (len(args.infiles) > 1):
+		indata = np.r_[ [ read_file(f, roi=roit) for f in args.infiles] ]
+	else: 
+		indata = read_file(args.infiles[0], roi=roit)
+
+	# Store to disk, add options depending on file type
+	if (os.path.splitext(args.outfile)[1] == 'png'):
+		store_file(args.outfile, indata, cmap=args.cmap)
+	else:
+		store_file(args.outfile, indata)
 
 def parsopts():
 	"""Parse program options, check sanity and return results"""
 	import argparse
 	parser = argparse.ArgumentParser(description='Convert datafiles between formats. Uses libtim.file.read_file() and store_file().', epilog='Comments & bugreports to %s' % (AUTHOR))
 
-	parser.add_argument('infile', metavar='IN', type=str,
-						help='input file')
-	parser.add_argument('outfile', metavar='OUT', type=str,
+	parser.add_argument('infiles', metavar='IN', nargs="+",
+						help='input file(s)')
+	parser.add_argument('--outfile', metavar='OUT', required=True,
 						help='output file')
+	
+	g0 = parser.add_argument_group("""Input options when loading data. ROI can be 2, 4 or 6 arguments for 1, 2 or 3-dimensional data. ROI should be specified as [low, high] for each dimension.""")
+
+	g0.add_argument('--roi', nargs='*', type=int,
+						help='region of interest for input files.')
 
 	g1 = parser.add_argument_group("""PNG output options. Often used colormaps: RdYlBu, YlOrBr, gray""")
 	g1.add_argument('--cmap', type=str, default="YlOrBr", 
@@ -68,6 +84,10 @@ def checkopts(parser, args):
 	args.verb = 0
 	if (args.debug):
 		args.verb = sum(args.debug)
+	if (len(args.roi) not in [2,4,6]):
+		print "Error: roi should be 2, 4 or 6 arguments."
+		parser.print_usage()
+		exit(-1)
 
 # This must be the final part of the file, code after this won't be executed
 if __name__ == "__main__":
