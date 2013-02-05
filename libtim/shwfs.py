@@ -30,36 +30,66 @@ import unittest
 # Routines
 #==========================================================================
 
-def calc_cog(img, clip=0):
+def calc_cog(img, clip=0, clipf=None, index=False):
 	"""
 	Calculate center of gravity for a given 1, 2 or 3-dimensional array 
 	**img**, optionally thresholding the data at **clip** first.
 
+	If **index** is True, return the CoG in element **index** coordinates, 
+	i.,e. if the CoG is at element (5,1), return (5,1). Otherwise, return 
+	the element **center** as coordinate, i.e. (5.5, 1.5) in the previous 
+	example.
+
+	For example, if we have this image:
+
+      | 0| 0| 0| 0
+	2-+--+--+--+--
+      | 0| 0| 5| 0
+	1-+--+--+--+--
+      | 0| 0| 0| 0
+	0-+--+--+--+--
+      0  1  2  3  
+
+    if index is True, CoG will be (2, 1), otherwise it will be (2.5, 1.5)
+
+    Data can be thresholded if either clip or clipf is given. If clip is 
+    given, use img-clip for CoG calculations. Else if clipf is given, use 
+    img-clipf(img) for CoG. After data subtraction, data is clipped between 
+    the original 0 and img.max(). When using thresholding, **img** 
+    will be copied.
+
 	N.B. Because of data ordering, dimension 0 (1) is **not** the x-axis 
 	(y-axis) when plotting!
 	
-	@param [in] img input data
-	@param [in] clip Subtract this value from the data first, clipping at 0
+	@param [in] img input data, as ndarray
+	@param [in] index If True, return CoG in pixel **index** coordinate, otherwise return pixel **center** coordinate.
+	@param [in] clip Subtract this value from the data 
+	@param [in] clipf Subtract clipf(img) from the data (if no clip)
 	@return Sub-pixel coordinate of center of gravity ordered by data dimension (c0, c1)
 	"""
 
 	if (clip > 0):
 		img = np.clip(img.copy() - clip, 0, img.max())
+	elif (clipf != None):
+		img = np.clip(img.copy() - clipf(img), 0, img.max())
 
 	ims = img.sum()
 
+	off = 0.0
+	if (index): off = 0
+
 	if (img.ndim == 1):
 		# For dimension 0, sum all but dimension 0 (which in 2D is only dim 1)
-		return (img * np.arange(img.shape[0])).sum()/ims
+		return ((img * np.arange(img.shape[0])).sum()/ims) + off
 	elif (img.ndim == 2):
 		c0 = (img.sum(1) * np.arange(img.shape[0])).sum()/ims
 		c1 = (img.sum(0) * np.arange(img.shape[1])).sum()/ims
-		return (c0, c1)
+		return np.r_[c0, c1] + off
 	elif (img.ndim == 3):
 		c0 = (img.sum(2).sum(1) * np.arange(img.shape[0])).sum()/ims
 		c1 = (img.sum(2).sum(0) * np.arange(img.shape[1])).sum()/ims
 		c2 = (img.sum(1).sum(0) * np.arange(img.shape[2])).sum()/ims
-		return (c0, c1,c2)
+		return np.r_[c0, c1, c2] + off
 	else:
 		raise RuntimeError("More than 3 dimensional data not supported!")
 
@@ -98,7 +128,7 @@ def find_mla_grid(wfsimg, size, clipsize=None, minif=0.6, nmax=-1, copy=True, me
 	subap_grid = []
 	
 	while (True):
-		# The current maximum intesnity is at:
+		# The current maximum intensity is at:
 		currmax = wfsimg.max()
 		p = np.argwhere(wfsimg == currmax)[0]
 		
