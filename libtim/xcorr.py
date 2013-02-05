@@ -255,13 +255,30 @@ def shift_img(im, shvec, method="pixel", zoomfac=8):
 	else:
 		raise ValueError("<method> %s not valid" % (method))
 
-def calc_subpixmax(data, offset=(0,0), dimension=2, error=False):
+def calc_subpixmax(data, offset=(0,0), dimension=2, index=False, error=False):
 	"""
 	Find extrema of **data** with subpixel accuracy.
 
 	The subpixel maximum will be searched around the pixel with the maximum 
 	intensity, i.e. numpy.argwhere(data == data.max())[0]. The coordinate 
 	found will be in data-space.
+
+	If **index** is True, return the CoG in element **index** coordinates, 
+	i.,e. if the CoG is at element (5,1), return (5,1). Otherwise, return 
+	the element **center** as coordinate, i.e. (5.5, 1.5) in the previous 
+	example.
+
+	For example, if we have this image:
+
+      | 0| 0| 0| 0
+	2-+--+--+--+--
+      | 0| 0| 5| 0
+	1-+--+--+--+--
+      | 0| 0| 0| 0
+	0-+--+--+--+--
+      0  1  2  3  
+
+    if index is True, CoG will be (2, 1), otherwise it will be (2.5, 1.5)
 
 	For **dimension** == 2: use 9-point quadratic interpolation (QI formulae 
 	by Yi & Molowny Horas (1992, Eq. (10)), also available in M.G. Löfdahl 
@@ -280,23 +297,27 @@ def calc_subpixmax(data, offset=(0,0), dimension=2, error=False):
 	@param [in] data Data to search for subpixel maximum
 	@param [in] offset Add offset to output
 	@param [in] dimension Interpolation dimensionality to use
+	@param [in] index If True, return CoG in pixel **index** coordinate, otherwise return pixel **center** coordinate.
 	@param [in] error Toggle error display
 	"""
 	if (not 0 <= dimension <= 2):
 		raise ValueError("Interpolation <dimension> should be 0 <= d <= 2")
+
+	off = 0.5
+	if (index): off = 0
 
 	# Initial guess for the interpolation
 	s = np.argwhere(data == data.max())[0]
 
 	# 0D: Maximum value pixel
 	if (dimension == 0):
-		return s - np.r_[offset]
+		return s - np.r_[offset] + off
 
 	# If maximum position is at the edge, abort: we cannot calculate subpixel
 	# maxima
 	# np.B.: Maybe we should return the max pix position anyway?
 	if ((s == 0).any() or (s+1 == data.shape).any()):
-		return s - np.r_[offset]
+		return s - np.r_[offset] + off
 #		raise ValueError("maximum value at edge of data, cannot calculate subpixel max")
 
 	a2 = 0.5 * (data[ s[0]+1, s[1] ] - data[ s[0]-1, s[1] ])
@@ -327,7 +348,7 @@ def calc_subpixmax(data, offset=(0,0), dimension=2, error=False):
 	# 0D: Maximum value pixel (keep here as fallback if 1D, 2D fail)
 	# no elif here because we might need this from 1D fallback
 	if (dimension == 0):
-		return s - np.r_[offset]
+		return s - np.r_[offset] + off
 
-	return v + s - np.r_[offset]
+	return v + s - np.r_[offset] + off
 
