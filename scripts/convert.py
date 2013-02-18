@@ -36,14 +36,16 @@ def main():
 	# Load all data. If only one file, flatten
 	roit = tuple(args.roi)
 	if (len(args.infiles) > 1):
-		indata = np.r_[ [ read_file(f, roi=roit) for f in args.infiles] ]
+		indata = np.r_[ [ read_file(f, roi=roit, squeeze=args.squeeze) for f in args.infiles] ]
 	else: 
-		indata = read_file(args.infiles[0], roi=roit)
+		indata = read_file(args.infiles[0], roi=roit, squeeze=args.squeeze)
 
 	# Store to disk, add options depending on file type
-	if (os.path.splitext(args.outfile)[1] == 'png'):
+	if ('png' in os.path.splitext(args.outfile)[1].lower()):
+		if (args.verb > 1): print "Output as PNG, using cmap==%s" % (args.cmap)
 		store_file(args.outfile, indata, cmap=args.cmap)
 	else:
+		if (args.verb > 1): print "Other output"
 		store_file(args.outfile, indata)
 
 def parsopts():
@@ -60,6 +62,8 @@ def parsopts():
 
 	g0.add_argument('--roi', nargs='*', type=int,
 						help='region of interest for input files.')
+	g0.add_argument('--squeeze', action='store_true', default=True, 
+						help='trim 1-element axes from input files (np.squeeze).')
 
 	g1 = parser.add_argument_group("""PNG output options. Often used colormaps: RdYlBu, YlOrBr, gray""")
 	g1.add_argument('--cmap', type=str, default="YlOrBr", 
