@@ -35,7 +35,7 @@ import time
 # Routines
 #=============================================================================
 
-def read_file(fpath, dtype=None, roi=None, bin=None, **kwargs):
+def read_file(fpath, dtype=None, roi=None, squeeze=False, bin=None, **kwargs):
 	"""
 	Try to read datafile at **fpath**.
 
@@ -61,11 +61,15 @@ def read_file(fpath, dtype=None, roi=None, bin=None, **kwargs):
 
 		roisl0 = slice(roi[0], None if (roi[1] == -1) else roi[1])
 
-	After selecting a region of interest, pixel binning is also available, 
-	through the **bin** parameter. This single integer scalar indicates how 
-	many neighbouring pixels will be summed together. N.B. When binning, 
-	data will always be returned as np.float due to potential overflow 
-	situations when using the native file datatype.
+	After selecting a region of interest, the matrix can be squeeze()'d to 
+	get rid of unit-element axes. This can be useful when loading PNG files 
+	with useless color information.
+
+	Pixel binning is available through the **bin** parameter. This single
+	integer scalar indicates how  many neighbouring pixels will be summed
+	together. N.B. When binning,  data will always be returned as np.float 
+	due to potential overflow  situations when using the native file 
+	datatype.
 
 	Raises RuntimeError if RoI, bin and/or data dimensions don't match up.
 
@@ -74,6 +78,7 @@ def read_file(fpath, dtype=None, roi=None, bin=None, **kwargs):
 	@param [in] fpath Path to a file
 	@param [in] dtype Datatype to read. If absent, guess.
 	@param [in] roi Region of interest to read from file, (0low, 0high, 1low, 1high, ..nlow, nhigh) or None
+	@param [in] squeeze squeeze() array after selecting roi
 	@param [in] bin Bin scalar for all dimensions, should be integer and multiple of shape.
 	@param [in] **kwargs Extra parameters passed on directly to read function
 
@@ -120,7 +125,7 @@ def read_file(fpath, dtype=None, roi=None, bin=None, **kwargs):
 
 	if (roi != None):
 		if (len(roi) != data.ndim*2):
-			raise RuntimeError("Region of Interest does not match with data dimension!")
+			raise RuntimeError("ROI (n=%d) does not match with data dimension (%d)!" % (len(roi), data.ndim))
 		elif (len(roi) == 2):
 			roisl0 = slice(roi[0], None if (roi[1] == -1) else roi[1])
 			data = data[roisl0]
@@ -135,6 +140,8 @@ def read_file(fpath, dtype=None, roi=None, bin=None, **kwargs):
 			data = data[roisl0, roisl1, roisl2]
 		else:
 			raise RuntimeError("This many dimensions is not supported by ROI!")
+		if (squeeze):
+			data = data.squeeze()
 	
 	if (bin != None and int(bin) == bin):
 		ibin = int(bin)
