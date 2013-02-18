@@ -75,7 +75,7 @@ def calc_cog(img, clip=0, clipf=None, index=False):
 
 	ims = img.sum()
 
-	off = 0.0
+	off = 0.5
 	if (index): off = 0
 
 	if (img.ndim == 1):
