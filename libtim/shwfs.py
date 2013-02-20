@@ -21,6 +21,8 @@ import sys
 import os
 import numpy as np
 import unittest
+import libtim as tim
+import libtim.zern
 
 #==========================================================================
 # Defines
@@ -93,7 +95,79 @@ def calc_cog(img, clip=0, clipf=None, index=False):
 	else:
 		raise RuntimeError("More than 3 dimensional data not supported!")
 
-def find_mla_grid(wfsimg, size, clipsize=None, minif=0.6, nmax=-1, copy=True, method='bounds'):
+def calc_slope(im, slopes=None):
+	"""
+	Calculate 2D slope of **im**, to be used to calculate unit Zernike 
+	influence on SHWFS. If **slopes** is given, use that (2, N) matrix for 
+	fitting, otherwise generate and pseudo-invert slopes ourselves.
+
+	@param [in] im Image to fit slopes to
+	@param [in] slopes Pre-computed inverted slope matrix to fit with
+
+	@return vector dimension 0 and 1 slope
+	"""
+
+	if (slopes == None):
+		slopes = (np.indices(im.shape, dtype=float)/(np.r_[im.shape].reshape(-1,1,1))).reshape(2,-1)
+		slopes = np.linalg.pinv(slopes)
+
+	return np.dot(im.reshape(1,-1)-np.mean(im), slopes).ravel()
+
+	# This doens't work, why? Some normalisation error?
+	slope0, slope1 = (np.indices(im.shape, dtype=float)/(np.r_[im.shape].reshape(-1,1,1)))
+	coeff0 = np.sum(im.ravel() * slope0.ravel())/np.sum(slope0)
+	coeff1 = np.sum(im.ravel() * slope1.ravel())/np.sum(slope1)
+	print coeff0, coeff1
+	return coeff0, coeff1
+
+def calc_zern_infmat(subaps, nzern=10, zernrad=-1.0, check=True, focus=1.0, wavelen=1.0, subapsize=1.0, pixsize=1.0):
+	"""
+	Given a subaperture array pattern, calculate a matrix that converts 
+	image shift vectors in pixel to Zernike amplitudes.
+
+	@param [in] zernrad Radius of the aperture to use. If less negative, used as fraction **-zernrad**, otherwise used as radius in pixels.
+
+	"""
+
+	# Conversion factor from Zernike radians to pixels: F*λ/2π/d/pix_pitch
+	sfac = focus * wavelen / (2*np.pi * subapsize * pixsize)
+
+	# Geometry: offset between subap pattern and Zernike modes
+	sasize = np.median(subaps[:,1::2] - subaps[:,::2], axis=0)
+	
+	pattcent = np.mean(subaps[:,::2], axis=0).astype(int)
+	pattrad = np.max(np.max(subaps[:, 1::2], 0) - np.min(subaps[:, ::2], 0))
+
+	if (zernrad < 0):
+		rad = int(pattrad*-zernrad+0.5)
+	else:
+		rad = int(zernrad+0.5)
+
+	saoffs = -pattcent + np.r_[ [rad, rad] ]
+
+	zbasis = tim.zern.calc_zern_basis(nzern, rad)
+
+	# Check coordinates are sane
+	if (check):
+		crop_coords = np.r_[ [[(subap[0]+saoffs[0], subap[2]+saoffs[1]) for subap in subaps] for zbase in zbasis['modes']] ]
+		assert np.max(crop_coords) < 2*rad
+		assert np.min(crop_coords) > 0
+
+	# Initialize fit matrix
+	slopes = (np.indices(sasize, dtype=float)/(np.r_[sasize].reshape(-1,1,1))).reshape(2,-1)
+	slopesi = np.linalg.pinv(slopes)
+
+	zernslopes = np.r_[ [[calc_slope(zbase[subap[0]+saoffs[0]:subap[1]+saoffs[0], subap[2]+saoffs[1]:subap[3]+saoffs[1]], slopes=slopesi) for subap in subaps] for zbase in zbasis['modes']] ].reshape(nzern, -1)
+
+	# Construct inverted matrix using 95% singular value
+	U, s, Vh = np.linalg.svd(zernslopes*sfac, full_matrices=False)
+
+	nvec = np.argwhere(s.cumsum()/s.sum() > 0.95)[0][0]
+	s[nvec:] = np.inf
+	return np.dot(Vh.T, np.dot(np.diag(1.0/s), U.T))
+
+
+def find_mla_grid(wfsimg, size, clipsize=None, minif=0.6, nmax=-1, copy=True, method='bounds', sort=False):
 	"""
 	Given a Shack-hartmann wave front sensor image, find a grid of 
 	subapertures (sa) of approximately **size** big.
