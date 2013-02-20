@@ -125,8 +125,14 @@ def calc_zern_infmat(subaps, nzern=10, zernrad=-1.0, check=True, focus=1.0, wave
 	Given a subaperture array pattern, calculate a matrix that converts 
 	image shift vectors in pixel to Zernike amplitudes.
 
+	@param [in] subaps List of subapertures formatted as (low0, high0, low1, high1)
+	@param [in] nzern Number of Zernike modes to model
 	@param [in] zernrad Radius of the aperture to use. If less negative, used as fraction **-zernrad**, otherwise used as radius in pixels.
-
+	@param [in] check Perform basic sanity checks
+	@param [in] focus Focal length of MLA (in meter)
+	@param [in] wavelen Wavelength used for SHWFS (in meter)
+	@param [in] subapsize Size of single microlens (in meter)
+	@param [in] pixsize Pixel size (in meter)
 	"""
 
 	# Conversion factor from Zernike radians to pixels: F*λ/2π/d/pix_pitch
