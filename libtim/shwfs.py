@@ -102,8 +102,7 @@ def calc_slope(im, slopes=None):
 	fitting, otherwise generate and pseudo-invert slopes ourselves.
 
 	@param [in] im Image to fit slopes to
-	@param [in] slopes Pre-computed inverted slope matrix to fit with
-
+	@param [in] slopes Pre-computed **inverted** slope matrix to fit with, leave empty to auto-calculate.
 	@return Tuple of (influence matrix, slope matrix, Zernike basis used)
 	"""
 
@@ -113,13 +112,6 @@ def calc_slope(im, slopes=None):
 		slopes = np.linalg.pinv(slopes)
 
 	return np.dot(im.reshape(1,-1)-np.mean(im), slopes).ravel()[:2]
-
-	# This doens't work, why? Some normalisation error?
-	slope0, slope1 = (np.indices(im.shape, dtype=float)/(np.r_[im.shape].reshape(-1,1,1)))
-	coeff0 = np.sum(im.ravel() * slope0.ravel())/np.sum(slope0)
-	coeff1 = np.sum(im.ravel() * slope1.ravel())/np.sum(slope1)
-	print coeff0, coeff1
-	return coeff0, coeff1
 
 def calc_zern_infmat(subaps, nzern=10, zernrad=-1.0, check=True, focus=1.0, wavelen=1.0, subapsize=1.0, pixsize=1.0, verb=0):
 	"""
