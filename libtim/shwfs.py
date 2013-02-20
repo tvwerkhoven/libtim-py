@@ -109,9 +109,10 @@ def calc_slope(im, slopes=None):
 
 	if (slopes == None):
 		slopes = (np.indices(im.shape, dtype=float)/(np.r_[im.shape].reshape(-1,1,1))).reshape(2,-1)
+		slopes2 = np.vstack([slopes, slopes[0]*0+1])
 		slopes = np.linalg.pinv(slopes)
 
-	return np.dot(im.reshape(1,-1)-np.mean(im), slopes).ravel()
+	return np.dot(im.reshape(1,-1)-np.mean(im), slopes).ravel()[:2]
 
 	# This doens't work, why? Some normalisation error?
 	slope0, slope1 = (np.indices(im.shape, dtype=float)/(np.r_[im.shape].reshape(-1,1,1)))
