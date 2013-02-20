@@ -182,6 +182,7 @@ def find_mla_grid(wfsimg, size, clipsize=None, minif=0.6, nmax=-1, copy=True, me
 	@param [in] nmax Maximum number of subapertures to search for (-1 for no max)
 	@param [in] copy Copy image before modifying
 	@param [in] method Coordinate format to return, either 'bounds' or 'center'
+	@param [in] sort Sort subaperture coordinates
 	@return list of subaperture coordinates
 
 	Raises ValueError if subapertures size is larger than source image.
@@ -225,8 +226,16 @@ def find_mla_grid(wfsimg, size, clipsize=None, minif=0.6, nmax=-1, copy=True, me
 		
 		if (nmax > 0 and len(subap_grid) >= nmax):
 			break
+
+	subap_grid = np.r_[subap_grid]
+
+	if (sort):
+		# Sort by increasing pixel
+		sortidx = np.argsort( (subap_grid[:,0]/size[0]).astype(int)*wfsimg.shape[0] + subap_grid[:,2])
+	else:
+		sortidx = slice(None)
 	
-	return subap_grid
+	return subap_grid[sortidx]
 
 def calc_subap_grid(rad, size, pitch, shape='circular', xoff=(0, 0.5), disp=(0,0), overlap=1.0, scl=1.0):
 	"""
