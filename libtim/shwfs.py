@@ -121,7 +121,7 @@ def calc_slope(im, slopes=None):
 	print coeff0, coeff1
 	return coeff0, coeff1
 
-def calc_zern_infmat(subaps, nzern=10, zernrad=-1.0, check=True, focus=1.0, wavelen=1.0, subapsize=1.0, pixsize=1.0):
+def calc_zern_infmat(subaps, nzern=10, zernrad=-1.0, check=True, focus=1.0, wavelen=1.0, subapsize=1.0, pixsize=1.0, verb=0):
 	"""
 	Given a subaperture array pattern, calculate a matrix that converts 
 	image shift vectors in pixel to Zernike amplitudes.
@@ -134,6 +134,7 @@ def calc_zern_infmat(subaps, nzern=10, zernrad=-1.0, check=True, focus=1.0, wave
 	@param [in] wavelen Wavelength used for SHWFS (in meter)
 	@param [in] subapsize Size of single microlens (in meter)
 	@param [in] pixsize Pixel size (in meter)
+	@param [in] verb Show plots indicating fit geometry
 	"""
 
 	# Conversion factor from Zernike radians to pixels: F*λ/2π/d/pix_pitch
@@ -143,7 +144,7 @@ def calc_zern_infmat(subaps, nzern=10, zernrad=-1.0, check=True, focus=1.0, wave
 	sasize = np.median(subaps[:,1::2] - subaps[:,::2], axis=0)
 	
 	pattcent = np.mean(subaps[:,::2], axis=0).astype(int)
-	pattrad = np.max(np.max(subaps[:, 1::2], 0) - np.min(subaps[:, ::2], 0))
+	pattrad = np.max(np.max(subaps[:, 1::2], 0) - np.min(subaps[:, ::2], 0))/2.0
 
 	if (zernrad < 0):
 		rad = int(pattrad*-zernrad+0.5)
@@ -162,9 +163,35 @@ def calc_zern_infmat(subaps, nzern=10, zernrad=-1.0, check=True, focus=1.0, wave
 
 	# Initialize fit matrix
 	slopes = (np.indices(sasize, dtype=float)/(np.r_[sasize].reshape(-1,1,1))).reshape(2,-1)
-	slopesi = np.linalg.pinv(slopes)
+	slopes2 = np.vstack([slopes, slopes[0]*0+1])
+	slopesi = np.linalg.pinv(slopes2)
 
 	zernslopes = np.r_[ [[calc_slope(zbase[subap[0]+saoffs[0]:subap[1]+saoffs[0], subap[2]+saoffs[1]:subap[3]+saoffs[1]], slopes=slopesi) for subap in subaps] for zbase in zbasis['modes']] ].reshape(nzern, -1)
+
+	if (verb>2):
+		# Inspect Zernike influence matrix
+		import pylab as plt
+		from matplotlib.collections import PatchCollection
+		for zidx, (zslope, zbase) in enumerate(zip(zernslopes, zbasis['modes'])):
+			plt.figure(); plt.clf()
+			plt.title("MLA grid and Z_%d influence" % (zidx))
+			plt.imshow(zbase)
+
+			sasize = np.mean(subaps[:,1::2] - subaps[:,::2],0)
+			mlapatches_im = [ plt.Rectangle((subap[1]+saoffs[1], subap[0]+saoffs[0]), sasize[0], sasize[1], fc='none', ec='k') for subap in subaps[:,::2] ]
+			thisgca = plt.gca()
+			thisgca.add_collection(PatchCollection(mlapatches_im, match_original=True))
+
+			refpos = (subaps[:,1::2] + subaps[:,::2])/2 + saoffs
+			plzrn = zslope/np.abs(zslope).mean()
+			plt.quiver(refpos[:,1], refpos[:,0], plzrn[::2], plzrn[1::2], angles='xy', scale=2*rad/10., color='r')
+			
+			tim.shell()
+
+			raw_input("Continue...")
+			plt.close()
+
+
 
 	# Construct inverted matrix using 95% singular value
 	U, s, Vh = np.linalg.svd(zernslopes*sfac, full_matrices=False)
