@@ -104,7 +104,7 @@ def calc_slope(im, slopes=None):
 	@param [in] im Image to fit slopes to
 	@param [in] slopes Pre-computed inverted slope matrix to fit with
 
-	@return vector dimension 0 and 1 slope
+	@return Tuple of (influence matrix, slope matrix, Zernike basis used)
 	"""
 
 	if (slopes == None):
@@ -164,7 +164,7 @@ def calc_zern_infmat(subaps, nzern=10, zernrad=-1.0, check=True, focus=1.0, wave
 
 	nvec = np.argwhere(s.cumsum()/s.sum() > 0.95)[0][0]
 	s[nvec:] = np.inf
-	return np.dot(Vh.T, np.dot(np.diag(1.0/s), U.T))
+	return np.dot(Vh.T, np.dot(np.diag(1.0/s), U.T)), zernslopes*sfac, zbasis
 
 
 def find_mla_grid(wfsimg, size, clipsize=None, minif=0.6, nmax=-1, copy=True, method='bounds', sort=False):
