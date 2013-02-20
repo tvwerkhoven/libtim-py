@@ -306,5 +306,100 @@ def calc_subap_grid(rad, size, pitch, shape='circular', xoff=(0, 0.5), disp=(0,0
 
 	return (nsa, llpos, cpos, size)
 
+def locate_acts(infmat, subappos, nsubap=20, weigh=True, verb=0):
+	"""
+	Given the influence matrix and the sub aperture positions, find the 
+	actuator positions using the intersection of the influence direction of 
+	an actuator for each sub aperture.
+
+	**infmat** should be shaped (nact, nsubap, 2)
+	**subappos** should be shaped (nsubap, 2)
+	**nsubap** determines how many subaps will be used per actuator
+
+	@param [in] infmat Influence matrix shaped (nact, nsubap, 2)
+	@param [in] subappos Subap position vector shaped (nsubap, 2)
+	@param [in] nsubap Number of sub apertures to use for fitting the actuator positions
+	@param [in] weigh Use shift vector norm as weight when fitting or not
+	@return (nact, 2) vector with the actuator positions
+	"""
+
+	# For each actuator, find the **nsubap** most influential subapertures 
+	# and the influence
+	actposl = []
+	for actid, actinf in enumerate(infmat):
+		# For this actuator, get **nsubap** most influential subapertures
+		actinf_v = (actinf**2.0).sum(1)**0.5
+		subaps_idx = np.argsort(actinf_v)[-nsubap:]
+	
+		if (verb > 2):
+			# Plot subaperture influences
+			meaninf = actinf_v[subaps_idx].mean()
+			import pylab as plt
+			plt.figure(); plt.clf()
+			plt.title("actid=%d, subaps=%s, meaninf=%g" % (actid, str(subaps_idx), meaninf))
+			q = plt.quiver(subappos[subaps_idx, 1], subappos[subaps_idx, 0], actinf[subaps_idx, 1], actinf[subaps_idx, 0], angles='xy')
+
+		actpos = calc_intersect(posvecs=subappos[subaps_idx], dvecs=actinf[subaps_idx], weigh=weigh)
+		
+		if (verb > 2):
+			plt.plot([actpos[1]],
+					[actpos[0]],  'x')
+			raw_input("Press any key to continue...")
+			plt.close()
+		
+		actposl.append(actpos)
+	
+	return np.r_[actposl]
+
+def calc_intersect(posvecs, dvecs, weigh=True):
+	"""
+	Given a matrix of (N, 2) position vectors **posvecs** and a similarly 
+	shaped matrix of distance vectors **dvecs**, calculate the intersection 
+	of these. If **weigh** is True, use the length of **dvecs** as weight.
+
+	Cost function for 1 spot:
+
+		d(x, (p,n)) = (x-p)^T (nn)^T (x-p)
+	
+	Cost for n spots, weight w_i
+
+		d_i(x, (p,n)) = sqrt(w_i) (x-p_i)^T (n_i n_i)^T (x-p_i)
+
+	Minimize cost function with x
+	
+	References
+	- https://en.wikipedia.org/wiki/Line-line_intersection
+	- https://en.wikipedia.org/wiki/Least_squares
+	- https://en.wikipedia.org/wiki/Linear_least_squares_%28mathematics%29
+
+	@param [in] posvecs List of x,y position vectors, (N, 2)
+	@param [in] dvecs List of x,y displacement vectors, (N, 2)
+	@param [in] weigh Use norm of **dvecs** as weight during fitting
+	@return Tuple of (best fit intersection coordinate, standard deviation)
+	"""
+
+	if len(posvecs) != len(dvecs): 
+		raise ValueError("Unequal length **posvecs** and **dvecs** encountered")
+	if (len(posvecs) < 2):
+		raise ValueError("Need at least two data points to fit")
+
+	normals = np.dot(dvecs, np.r_[ [[0,-1],[1,0]] ])
+	normals /= ((normals**2.0).sum())**0.5
+
+	if (weigh):
+		weights = (dvecs**2.0).sum(1)**0.5 / (dvecs**2.0).sum()**0.5
+	else:
+		weights = np.ones(dvecs.shape[0])
+
+	# Calculate minimum of cost function (see Wikipedia)
+	s1 = s2 = 0
+	for norm, loc, w in zip(normals, posvecs, weights):
+		norm.shape = (1,-1)
+		s1 += w * np.dot(loc, np.dot(norm.T, norm))
+		s2 += w * np.dot(norm.T, norm)
+
+	return np.dot(s1, np.linalg.pinv(s2))
+
+
 if __name__ == "__main__":
 	sys.exit(unittest.main())
