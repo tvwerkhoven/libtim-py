@@ -454,6 +454,55 @@ def calc_intersect(posvecs, dvecs, weigh=True):
 
 	return np.dot(s1, np.linalg.pinv(s2))
 
+def show_shwfs_vecs(shiftvec, subaps, refpos=None, img=None, extent=None, title=None, scale=10, pause=False, fignum=None, keep=True):
+	"""
+	Show a SHWFS measurements with subapertures and potentially a background 
+	image. If **refpos** is given, SHWFS shift vectors will be plotted at 
+	those locations, otherwise at the center of the sub apertures.
+
+	Additionally, a background image (wavefront, sensor image) can be 
+	plotted along with the measurements in the background. If the coordinate 
+	system is different than that of the sub apertures, this can be fixed by 
+	using the **extent** keyword.
+
+	**Scale** tweaks the arrow length, unity being the approximate real size.
+	The default is 10 to enhance the visibility.
+
+	@param [in] shiftvec (N,2) vector with shifts
+	@param [in] subaps (N,4) vector with sub aperture positions as (low0, high0, low1, high1)
+	@param [in] refpos Positions to plot shift vectors at (if None use subaps center)
+	@param [in] img Background image, e.g. a wavefront
+	@param [in] extent Extent for the image for imshow()
+	@param [in] title Plot title
+	@param [in] scale Scale used for arrow width, unity is approximately
+	@param [in] pause Pause before continuing
+	@param [in] fignum Figure number to use for figure()
+	@param [in] keep Keep plot window open after returning
+	"""
+
+	import pylab as plt
+	from matplotlib.collections import PatchCollection
+
+	sasize = np.r_[subaps[:,:2].ptp(1).mean(), subaps[:,2:].ptp(1).mean()]
+	subaps_im = [ plt.Rectangle((subap[1], subap[0]), sasize[0], sasize[1], fc='none', ec='k') for subap in subaps[:,::2] ]
+
+
+	plt.figure(fignum); plt.clf()
+	plt.title(title or "SHWFS vectors on MLA grid")
+
+	if (img != None): plt.imshow(img, extent=extent)
+
+	if (refpos == None): refpos = subaps[:,::2]+sasize/2
+
+	q = plt.quiver(refpos[:,1], refpos[:,0], shiftvec[:,1], shiftvec[:,0], angles='xy', scale=refpos.ptp()/10., color='r')
+	p = plt.quiverkey(q, refpos.min(0)[1], refpos.min(0)[0], 5, "5 pix.", coordinates='data', color='r')
+	
+	thisgca = plt.gca()
+	thisgca.add_collection(PatchCollection(subaps_im, match_original=True))
+
+	if (pause): raw_input("Press any key to continue...")
+	if (not keep): plt.close()
+
 
 if __name__ == "__main__":
 	sys.exit(unittest.main())
