@@ -115,8 +115,20 @@ def calc_slope(im, slopes=None):
 
 def calc_zern_infmat(subaps, nzern=10, zernrad=-1.0, check=True, focus=1.0, wavelen=1.0, subapsize=1.0, pixsize=1.0, verb=0):
 	"""
-	Given a subaperture array pattern, calculate a matrix that converts 
+	Given a sub aperture array pattern, calculate a matrix that converts 
 	image shift vectors in pixel to Zernike amplitudes.
+
+	The parameters focus, wavelen, subapsize and pixsize are used for 
+	absolute calibration. If these are provided, the shifts in pixel are 
+	translated to Zernike amplitudes where amplitude has unit variance, i.e.
+	the normalisation used by Noll (1976).
+
+	The data returned is a tuple of the following:
+
+	1. Matrix to compute Zernike from image shifts
+	2. Matrix to image shifts from Zernike polynomials
+	3. The set of Zernike polynomials used, from tim.zern.calc_zern_basis()
+	4. The extent of the Zernike basis in units of **subaps** which can be used as extent keyword to imshow() when plotting **subaps**.
 
 	@param [in] subaps List of subapertures formatted as (low0, high0, low1, high1)
 	@param [in] nzern Number of Zernike modes to model
@@ -127,6 +139,7 @@ def calc_zern_infmat(subaps, nzern=10, zernrad=-1.0, check=True, focus=1.0, wave
 	@param [in] subapsize Size of single microlens (in meter)
 	@param [in] pixsize Pixel size (in meter)
 	@param [in] verb Show plots indicating fit geometry
+	@return Tuple of (shift to Zernike matrix, Zernike to shift matrix, Zernike polynomials used, Zernike base shape in units of **subaps**)
 	"""
 
 	# Conversion factor from Zernike radians to pixels: F*λ/2π/d/pix_pitch
@@ -160,6 +173,8 @@ def calc_zern_infmat(subaps, nzern=10, zernrad=-1.0, check=True, focus=1.0, wave
 
 	zernslopes = np.r_[ [[calc_slope(zbase[subap[0]+saoffs[0]:subap[1]+saoffs[0], subap[2]+saoffs[1]:subap[3]+saoffs[1]], slopes=slopesi) for subap in subaps] for zbase in zbasis['modes']] ].reshape(nzern, -1)
 
+	extent = -saoffs[0], -saoffs[0]+2*rad, -saoffs[1], -saoffs[1]+2*rad
+
 	if (verb>2):
 		# Inspect Zernike influence matrix
 		import pylab as plt
@@ -167,30 +182,26 @@ def calc_zern_infmat(subaps, nzern=10, zernrad=-1.0, check=True, focus=1.0, wave
 		for zidx, (zslope, zbase) in enumerate(zip(zernslopes, zbasis['modes'])):
 			plt.figure(); plt.clf()
 			plt.title("MLA grid and Z_%d influence" % (zidx))
-			plt.imshow(zbase)
+			plt.imshow(zbase, extent=extent)
 
 			sasize = np.mean(subaps[:,1::2] - subaps[:,::2],0)
-			mlapatches_im = [ plt.Rectangle((subap[1]+saoffs[1], subap[0]+saoffs[0]), sasize[0], sasize[1], fc='none', ec='k') for subap in subaps[:,::2] ]
+			mlapatches_im = [ plt.Rectangle((subap[1], subap[0]), sasize[0], sasize[1], fc='none', ec='k') for subap in subaps[:,::2] ]
 			thisgca = plt.gca()
 			thisgca.add_collection(PatchCollection(mlapatches_im, match_original=True))
 
-			refpos = (subaps[:,1::2] + subaps[:,::2])/2 + saoffs
+			refpos = (subaps[:,1::2] + subaps[:,::2])/2
 			plzrn = zslope/np.abs(zslope).mean()
 			plt.quiver(refpos[:,1], refpos[:,0], plzrn[1::2], plzrn[::2], angles='xy', scale=2*rad/10., color='r')
 			
 			tim.shell()
-
-			raw_input("Continue...")
 			plt.close()
-
-
 
 	# Construct inverted matrix using 95% singular value
 	U, s, Vh = np.linalg.svd(zernslopes*sfac, full_matrices=False)
 
 	nvec = np.argwhere(s.cumsum()/s.sum() > 0.95)[0][0]
 	s[nvec:] = np.inf
-	return np.dot(Vh.T, np.dot(np.diag(1.0/s), U.T)), zernslopes*sfac, zbasis
+	return np.dot(Vh.T, np.dot(np.diag(1.0/s), U.T)), zernslopes*sfac, zbasis, extent
 
 
 def find_mla_grid(wfsimg, size, clipsize=None, minif=0.6, nmax=-1, copy=True, method='bounds', sort=False):
