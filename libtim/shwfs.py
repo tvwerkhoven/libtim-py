@@ -204,7 +204,7 @@ def calc_zern_infmat(subaps, nzern=10, zernrad=-1.0, check=True, focus=1.0, wave
 	return np.dot(Vh.T, np.dot(np.diag(1.0/s), U.T)), zernslopes*sfac, zbasis, extent
 
 
-def find_mla_grid(wfsimg, size, clipsize=None, minif=0.6, nmax=-1, copy=True, method='bounds', sort=False):
+def find_mla_grid(wfsimg, size, clipsize=None, minif=0.6, nmax=-1, copy=True, method='bounds', sort=False, verb=0):
 	"""
 	Given a Shack-hartmann wave front sensor image, find a grid of 
 	subapertures (sa) of approximately **size** big.
@@ -220,6 +220,7 @@ def find_mla_grid(wfsimg, size, clipsize=None, minif=0.6, nmax=-1, copy=True, me
 	@param [in] copy Copy image before modifying
 	@param [in] method Coordinate format to return, either 'bounds' or 'center'
 	@param [in] sort Sort subaperture coordinates
+	@param [in] verb Plot intermediate results
 	@return list of subaperture coordinates
 
 	Raises ValueError if subapertures size is larger than source image.
@@ -271,6 +272,22 @@ def find_mla_grid(wfsimg, size, clipsize=None, minif=0.6, nmax=-1, copy=True, me
 		sortidx = np.argsort( (subap_grid[:,0]/size[0]).astype(int)*wfsimg.shape[0] + subap_grid[:,2])
 	else:
 		sortidx = slice(None)
+
+	if (verb > 2):
+		import pylab as plt
+		from matplotlib.collections import PatchCollection
+		# MLA grid as rectangles for plotting
+		mlapatches_im = [ plt.Rectangle((subap[1], subap[0]), size[0], size[1], fc='none', ec='k') for subap in subap_grid[:,::2] ]
+
+		# Inspect MLA grid parsing
+		plt.figure();
+		plt.imshow(wfsimg)
+		plt.title("MLA grid")
+		thisgca = plt.gca()
+		thisgca.add_collection(PatchCollection(mlapatches_im, match_original=True))
+		raw_input("...")
+		plt.close()
+
 	
 	return subap_grid[sortidx]
 
