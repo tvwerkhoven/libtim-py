@@ -54,47 +54,39 @@ from IPython import embed as shell
 def read_actmap(actmapf, verb=0):
 	"""
 	Read actuator map from path **actmapf**. Ensure that the returned map 
-	contains integre values in the range [0,255]
+	contains integer values in the range [0,255]
 	
 	@param [in] actmapf Path to actuator map file
 	@return Actuator map
 	"""
 	
-	# Read & convert to float
-	map = libtim.file.read_file(actmapf)
+	amap = libtim.file.read_file(actmapf)
 	
-	# Check if dimensionality is proper
-	if (map.ndim < 2):
+	if (amap.ndim < 2):
 		raise ValueError("Error: actuator map should be 2D!")
-	elif (map.ndim == 3):
-		print "Warning: shape ", map.ndim ,"-dimensional:", map.shape
+	elif (amap.ndim == 3):
+		print "Warning: shape ", amap.ndim ,"-dimensional:", amap.shape
 		# Select two dimensions that are equal and larger than 10
-		if (map.shape[0] > 10 and map.shape[0] == map.shape[1]):
-			map = map[:,:,0]
-		elif (map.shape[1] > 10 and map.shape[1] == map.shape[2]):
-			map = map[0,:,:]
-		print "Now taking: shape ", map.ndim ,"-dimensional:", map.shape
-	elif (map.ndim > 3):
+		if (amap.shape[0] > 10 and amap.shape[0] == amap.shape[1]):
+			amap = amap[:,:,0]
+		elif (amap.shape[1] > 10 and amap.shape[1] == amap.shape[2]):
+			amap = amap[0,:,:]
+		print "Now taking: shape ", amap.ndim ,"-dimensional:", amap.shape
+	elif (amap.ndim > 3):
 		raise ValueError("Error: actuator map should be 2D!")
 
 	# If the smallest non-zero value is smaller than 1, we probably need to 
 	# convert from [0,1] to [0,255]
-	min_nonzero = map[map > 0].min()
+	min_nonzero = amap[amap > 0].min()
 	if (min_nonzero < 1):
-		# The smallest value should be 1 for actuator 1, so divide by this 
-		# value to get integers
-		map = np.round(map/min_nonzero)
-		if (verb > 1):
-			print "dmmodel.read_actmap(): smallest value < 1, scaling"
+		amap = np.round(amap/min_nonzero)
+		if (verb > 1): print "dmmodel.read_actmap(): minimum < 1, scaling"
 	
-	# If there are values 255, set to 0
-	if (map.max() >= 255.0):
-		map[map == 255] = 0
-		if (verb > 1):
-			print "dmmodel.read_actmap(): found 255, zeroing"
+	if (amap.max() >= 255.0):
+		amap[amap == 255] = 0
+		if (verb > 1): print "dmmodel.read_actmap(): found 255, zeroing"
 	
-	# Return map
-	return map
+	return amap
 
 def parse_volts(mirror_actmap, mirror_volts, voltfunc=lambda involt: ((involt/255.0)**2.0) / 75.7856, verb=0):
 	"""
