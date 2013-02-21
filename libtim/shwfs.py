@@ -95,23 +95,23 @@ def calc_cog(img, clip=0, clipf=None, index=False):
 	else:
 		raise RuntimeError("More than 3 dimensional data not supported!")
 
-def calc_slope(im, slopes=None):
+def calc_slope(im, slopesi=None):
 	"""
 	Calculate 2D slope of **im**, to be used to calculate unit Zernike 
-	influence on SHWFS. If **slopes** is given, use that (2, N) matrix for 
+	influence on SHWFS. If **slopesi** is given, use that (2, N) matrix for 
 	fitting, otherwise generate and pseudo-invert slopes ourselves.
 
 	@param [in] im Image to fit slopes to
-	@param [in] slopes Pre-computed **inverted** slope matrix to fit with, leave empty to auto-calculate.
-	@return Tuple of (influence matrix, slope matrix, Zernike basis used)
+	@param [in] slopesi Pre-computed **inverted** slope matrix to fit with, leave empty to auto-calculate.
+	@return Tuple of (slope axis 0, slope axis 1)
 	"""
 
-	if (slopes == None):
+	if (slopesi == None):
 		slopes = (np.indices(im.shape, dtype=float)/(np.r_[im.shape].reshape(-1,1,1))).reshape(2,-1)
 		slopes2 = np.vstack([slopes, slopes[0]*0+1])
-		slopes = np.linalg.pinv(slopes)
+		slopesi = np.linalg.pinv(slopes2)
 
-	return np.dot(im.reshape(1,-1)-np.mean(im), slopes).ravel()[:2]
+	return np.dot(im.reshape(1,-1), slopesi).ravel()[:2]
 
 def calc_zern_infmat(subaps, nzern=10, zernrad=-1.0, check=True, focus=1.0, wavelen=1.0, subapsize=1.0, pixsize=1.0, verb=0):
 	"""
