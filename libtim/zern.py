@@ -150,7 +150,7 @@ def zern_normalisation(nmodes=30):
 
 ### Higher level Zernike generating / fitting functions
 
-def calc_zern_basis(nmodes, rad, calc_covmat=False):
+def calc_zern_basis(nmodes, rad, modestart=1, calc_covmat=False):
 	"""
 	Calculate a basis of **nmodes** Zernike modes with radius **rad**.
 
@@ -160,15 +160,17 @@ def calc_zern_basis(nmodes, rad, calc_covmat=False):
 
 	@param [in] nmodes Number of modes to generate
 	@param [in] rad Radius of Zernike modes
+	@param [in] modestart First mode to calculate (Noll index, i.e. 1=piston)
 	@param [in] calc_covmat Return covariance matrix for Zernike modes, and its inverse
 	@return Dict with entries 'modes' a list of Zernike modes, 'modesmat' a matrix of (nmodes, npixels), 'covmat' a covariance matrix for all these modes with 'covmat_in' its inverse, 'mask' is a binary mask to crop only the orthogonal part of the modes.
 	"""
 
-	if (rad <= 0):
-		raise ValueError("radius should be > 0")
-
 	if (nmodes <= 0):
 		return {'modes':[], 'modesmat':[], 'covmat':0, 'covmat_in':0, 'mask':[[0]]}
+	if (rad <= 0):
+		raise ValueError("radius should be > 0")
+	if (modestart <= 0):
+		raise ValueError("**modestart** Noll index should be > 0")
 
 	# Use vectors instead of a grid matrix
 	rvec = ((np.arange(2.0*rad) - rad)/rad)
@@ -180,7 +182,7 @@ def calc_zern_basis(nmodes, rad, calc_covmat=False):
 	grid_mask = grid_rad <= 1
 
 	# Build list of Zernike modes, these are *not* masked/cropped
-	zern_modes = [zernikel(zmode+1, grid_rad, grid_ang) for zmode in xrange(nmodes)]
+	zern_modes = [zernikel(zmode, grid_rad, grid_ang) for zmode in xrange(modestart, nmodes+modestart)]
 
 	# Convert modes to (nmodes, npixels) matrix
 	zern_modes_mat = np.r_[zern_modes].reshape(nmodes, -1)
