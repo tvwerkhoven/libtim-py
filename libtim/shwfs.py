@@ -108,7 +108,7 @@ def calc_slope(im, slopes=None):
 
 	if (slopes == None):
 		slopes = (np.indices(im.shape, dtype=float)/(np.r_[im.shape].reshape(-1,1,1))).reshape(2,-1)
-		slopes2 = np.vstack([slopes[::-1], slopes[0]*0+1])
+		slopes2 = np.vstack([slopes, slopes[0]*0+1])
 		slopes = np.linalg.pinv(slopes)
 
 	return np.dot(im.reshape(1,-1)-np.mean(im), slopes).ravel()[:2]
@@ -176,7 +176,7 @@ def calc_zern_infmat(subaps, nzern=10, zernrad=-1.0, check=True, focus=1.0, wave
 
 			refpos = (subaps[:,1::2] + subaps[:,::2])/2 + saoffs
 			plzrn = zslope/np.abs(zslope).mean()
-			plt.quiver(refpos[:,1], refpos[:,0], plzrn[::2], plzrn[1::2], angles='xy', scale=2*rad/10., color='r')
+			plt.quiver(refpos[:,1], refpos[:,0], plzrn[1::2], plzrn[::2], angles='xy', scale=2*rad/10., color='r')
 			
 			tim.shell()
 
