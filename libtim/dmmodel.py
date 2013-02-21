@@ -116,9 +116,22 @@ def parse_volts(mirror_actmap, mirror_volts, voltfunc=lambda involt: ((involt/25
 def sim_dm(mirror_actmap, mirror_apt, docrop=True, verb=0):
 	"""
 	Simulate DM response given an actuator map and an aperture.
+
+	The actuator map **mirror_actmap** should have value N in all elements 
+	in actuator N, i.e. actuator N is at locations 
+	np.argwhere(mirror_actmap == N). The first actuator should have value 1. 
+	
+	**mirror_apt** must have the same dimensions as mirror_actmap and the DM 
+	response will be calculated at positions where mirror_apt > 0.
+
+	If **docrop** is True, the output will be cropped to a rectangular 
+	subset where **mirror_apt** is non-zero.
+
+	@param [in] mirror_actmap Deformable mirror actuator map
+	@param [in] mirror_apt Aperture map for the deformable mirror
+	@param [in] docrop Crop output where **mirror_apt** > 0
 	"""
 	
-	# Init response matrix
 	mirror_resp = np.zeros(mirror_actmap.shape)
 
 	# Calculate simulation parameters
@@ -132,7 +145,7 @@ def sim_dm(mirror_actmap, mirror_apt, docrop=True, verb=0):
 	__COMPILE_OPTS = "-Wall -O2 -ffast-math -msse -msse2"
 	
 	poisson_solver = """
-	#line 72 "response2.py"
+	#line 149 "response2.py"
 	int ii=0, i=0, j=0;
 	double update=0;
 	double sum=0;
@@ -179,23 +192,19 @@ def sim_dm(mirror_actmap, mirror_apt, docrop=True, verb=0):
 		extra_compile_args= [__COMPILE_OPTS], \
 		type_converters=sp.weave.converters.blitz)
 
-	# Apply aperture mask
 	mirror_resp *= mirror_apt
 	
-	if (verb > 2):
-		print "dmmodel.sim_dm(): niter=%d, final sdif=%g" % (return_val, sdif)
+	if (verb > 2): print "dmmodel.sim_dm(): niter=%d, final sdif=%g" % (return_val, sdif)
 	
 	cropmask = (slice(None), slice(None))
 	if (docrop):
-		# Crop response in regions where aperture mask is nonzero
 		# Find regions where mirror_apt is 0 on all rows or columns:
 		apt_max0 = mirror_apt.max(axis=0)
 		crop0 = slice(np.argwhere(apt_max0 > 0)[0], np.argwhere(apt_max0 > 0)[-1]+1, 1)
 		apt_max1 = mirror_apt.max(axis=1)
 		crop1 = slice(np.argwhere(apt_max1 > 0)[0], np.argwhere(apt_max1 > 0)[-1]+1, 1)
 		cropmask = (crop0, crop1)
-		if (verb > 2):
-			print "dmmodel.sim_dm(): cropmask:", cropmask
+		if (verb > 2): print "dmmodel.sim_dm(): cropmask:", cropmask
 	
 	return mirror_resp[cropmask]
 
