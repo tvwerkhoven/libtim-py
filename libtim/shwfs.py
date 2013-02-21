@@ -113,7 +113,7 @@ def calc_slope(im, slopesi=None):
 
 	return np.dot(im.reshape(1,-1), slopesi).ravel()[:2]
 
-def calc_zern_infmat(subaps, nzern=10, zernrad=-1.0, check=True, focus=1.0, wavelen=1.0, subapsize=1.0, pixsize=1.0, verb=0):
+def calc_zern_infmat(subaps, nzern=10, zerncntr=None, zernrad=-1.0, singval=1.0, check=True, focus=1.0, wavelen=1.0, subapsize=1.0, pixsize=1.0, verb=0):
 	"""
 	Given a sub aperture array pattern, calculate a matrix that converts 
 	image shift vectors in pixel to Zernike amplitudes.
@@ -132,7 +132,9 @@ def calc_zern_infmat(subaps, nzern=10, zernrad=-1.0, check=True, focus=1.0, wave
 
 	@param [in] subaps List of subapertures formatted as (low0, high0, low1, high1)
 	@param [in] nzern Number of Zernike modes to model
+	@param [in] zerncntr Coordinate to center Zernike around. If None, use center of subaps
 	@param [in] zernrad Radius of the aperture to use. If less negative, used as fraction **-zernrad**, otherwise used as radius in pixels.
+	@param [in] singval Percentage of singular values to take into account when inverting the matrix
 	@param [in] check Perform basic sanity checks
 	@param [in] focus Focal length of MLA (in meter)
 	@param [in] wavelen Wavelength used for SHWFS (in meter)
@@ -147,60 +149,58 @@ def calc_zern_infmat(subaps, nzern=10, zernrad=-1.0, check=True, focus=1.0, wave
 
 	# Geometry: offset between subap pattern and Zernike modes
 	sasize = np.median(subaps[:,1::2] - subaps[:,::2], axis=0)
-	
-	pattcent = np.mean(subaps[:,::2], axis=0).astype(int)
-	pattrad = np.max(np.max(subaps[:, 1::2], 0) - np.min(subaps[:, ::2], 0))/2.0
+	if (zerncntr == None):
+		zerncntr = np.mean(subaps[:,::2], axis=0).astype(int)
 
 	if (zernrad < 0):
-		rad = int(pattrad*-zernrad+0.5)
+		pattrad = np.max(np.max(subaps[:, 1::2], 0) - np.min(subaps[:, ::2], 0))/2.0
+		rad = int((pattrad*-zernrad)+0.5)
 	else:
 		rad = int(zernrad+0.5)
+	saoffs = -zerncntr + np.r_[ [rad, rad] ]
 
-	saoffs = -pattcent + np.r_[ [rad, rad] ]
-
-	zbasis = tim.zern.calc_zern_basis(nzern, rad)
+	extent = zerncntr[1]-rad, zerncntr[1]+rad, zerncntr[0]-rad, zerncntr[0]+rad
+	zbasis = tim.zern.calc_zern_basis(nzern, rad, modestart=2)
 
 	# Check coordinates are sane
 	if (check):
 		crop_coords = np.r_[ [[(subap[0]+saoffs[0], subap[2]+saoffs[1]) for subap in subaps] for zbase in zbasis['modes']] ]
-		assert np.max(crop_coords) < 2*rad
-		assert np.min(crop_coords) > 0
+		if (np.max(crop_coords) > 2*rad or np.min(crop_coords) < 0):
+			if (verb > 2):
+				import pylab as plt
+				from matplotlib.collections import PatchCollection
+				show_shwfs_vecs(subaps[:,::2]*0, subaps, img=None, extent=extent, title=None, scale=10, pause=False, fignum=None, keep=True)
+				aprad = plt.Circle(tuple(zerncntr[::-1]), radius=rad, alpha=0.5)
+				thisgca = plt.gca(); thisgca.add_artist(aprad)
+				raw_input("...")
+			raise ValueError("Not all sub apertures in Zernike radius!")
 
-	# Initialize fit matrix
 	slopes = (np.indices(sasize, dtype=float)/(np.r_[sasize].reshape(-1,1,1))).reshape(2,-1)
-	slopes2 = np.vstack([slopes[::-1], slopes[0]*0+1])
+	slopes2 = np.vstack([slopes, slopes[0]*0+1])
 	slopesi = np.linalg.pinv(slopes2)
 
-	zernslopes = np.r_[ [[calc_slope(zbase[subap[0]+saoffs[0]:subap[1]+saoffs[0], subap[2]+saoffs[1]:subap[3]+saoffs[1]], slopes=slopesi) for subap in subaps] for zbase in zbasis['modes']] ].reshape(nzern, -1)
+	zernslopes = np.r_[ [[calc_slope(zbase[subap[0]+saoffs[0]:subap[1]+saoffs[0], subap[2]+saoffs[1]:subap[3]+saoffs[1]], slopesi=slopesi) for subap in subaps] for zbase in zbasis['modes']] ].reshape(nzern, -1)
 
-	extent = -saoffs[0], -saoffs[0]+2*rad, -saoffs[1], -saoffs[1]+2*rad
 
 	if (verb>2):
 		# Inspect Zernike influence matrix
 		import pylab as plt
 		from matplotlib.collections import PatchCollection
 		for zidx, (zslope, zbase) in enumerate(zip(zernslopes, zbasis['modes'])):
-			plt.figure(); plt.clf()
-			plt.title("MLA grid and Z_%d influence" % (zidx))
-			plt.imshow(zbase, extent=extent)
-
-			sasize = np.mean(subaps[:,1::2] - subaps[:,::2],0)
-			mlapatches_im = [ plt.Rectangle((subap[1], subap[0]), sasize[0], sasize[1], fc='none', ec='k') for subap in subaps[:,::2] ]
-			thisgca = plt.gca()
-			thisgca.add_collection(PatchCollection(mlapatches_im, match_original=True))
-
+			plslope = (zslope/np.abs(zslope).mean()).reshape(-1,2)
 			refpos = (subaps[:,1::2] + subaps[:,::2])/2
-			plzrn = zslope/np.abs(zslope).mean()
-			plt.quiver(refpos[:,1], refpos[:,0], plzrn[1::2], plzrn[::2], angles='xy', scale=2*rad/10., color='r')
-			
+
+			show_shwfs_vecs(plslope, subaps, img=zbase, extent=extent, title=None, scale=10, pause=False, fignum=None, keep=True)
+			plt.plot(zerncntr[1], zerncntr[0], 'p', markersize=20)
+
 			tim.shell()
 			plt.close()
 
 	# Construct inverted matrix using 95% singular value
 	U, s, Vh = np.linalg.svd(zernslopes*sfac, full_matrices=False)
 
-	nvec = np.argwhere(s.cumsum()/s.sum() > 0.95)[0][0]
-	s[nvec:] = np.inf
+	nvec = np.argwhere(s.cumsum()/s.sum() >= singval)[0][0]
+	s[nvec+1:] = np.inf
 	return np.dot(Vh.T, np.dot(np.diag(1.0/s), U.T)), zernslopes*sfac, zbasis, extent
 
 
