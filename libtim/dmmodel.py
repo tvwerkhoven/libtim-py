@@ -34,9 +34,9 @@ Commons, 171 Second Street, Suite 300, San Francisco, California, 94105,
 USA.
 """
 
-#=============================================================================
+#===========================================================================
 # Import libraries here
-#=============================================================================
+#===========================================================================
 
 import numpy as np
 import scipy as sp
@@ -47,9 +47,9 @@ import libtim.im
 # Drop to ipython during execution (call 'shell()')
 from IPython import embed as shell
 
-#=============================================================================
+#===========================================================================
 # Routines
-#=============================================================================
+#===========================================================================
 
 def read_actmap(actmapf, verb=0):
 	"""
@@ -90,7 +90,8 @@ def read_actmap(actmapf, verb=0):
 
 def parse_volts(mirror_actmap, mirror_volts, voltfunc=lambda involt: ((involt/255.0)**2.0) / 75.7856, verb=0):
 	"""
-	Parse actuator map and set actuators to correct actuation
+	Parse actuator map and set actuators to correct actuation. The first 
+	actuator in **mirror_actmap** should have value 1.
 	
 	Regarding voltfunc from the original response2.c:
 	// 75.7856*2 gets 3 um deflection when all voltages 
@@ -103,7 +104,6 @@ def parse_volts(mirror_actmap, mirror_volts, voltfunc=lambda involt: ((involt/25
 	@param [in] voltfunc Function that maps input signal to actuation amplitude.
 	"""
 
-	# Set actmap to proper voltages
 	for actid, actvolt in enumerate(mirror_volts):
 		thismask = mirror_actmap == actid+1
 		thisvolt = voltfunc(actvolt)
