@@ -390,7 +390,7 @@ def locate_acts(infmat, subappos, nsubap=20, weigh=True, verb=0):
 			meaninf = actinf_v[subaps_idx].mean()
 			import pylab as plt
 			plt.figure(); plt.clf()
-			plt.title("actid=%d, subaps=%s, meaninf=%g" % (actid, str(subaps_idx), meaninf))
+			plt.title("actid=%d, meaninf=%g" % (actid, meaninf))
 			q = plt.quiver(subappos[subaps_idx, 1], subappos[subaps_idx, 0], actinf[subaps_idx, 1], actinf[subaps_idx, 0], angles='xy')
 
 		actpos = calc_intersect(posvecs=subappos[subaps_idx], dvecs=actinf[subaps_idx], weigh=weigh)
