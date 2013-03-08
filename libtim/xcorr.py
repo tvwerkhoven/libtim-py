@@ -68,11 +68,13 @@ def crosscorr(imlst, shrange, dsh=(1,1), refim=None):
 	imsz0, imsz1 = imlst[0].shape
 
 	# Shift ranges need to be larger than 0
-	if (sh0 < 1 or sh1 < 1):
-		raise ValueError("<shrange> should be larger than 0")
+	if (sh0 < 0 or sh1 < 0):
+		raise ValueError("<shrange> should be larger or equal to 0")
 
-	# We need a crop window to allow for image shifting
-	sm_crop = [slice(sh0, -sh0), slice(sh1, -sh1)]
+	# We need a crop window to allow for image shifting. If sh0 or sh1 is 0, 
+	# use all data.
+	sm_crop = [slice(sh0, -sh0) if sh0 else slice(None), 
+		slice(sh1, -sh1) if sh1 else slice(None)]
 
 	# Calculate correlation for all files with <refim> (output Nx1)
 	if (refim != None):
