@@ -82,7 +82,7 @@ def read_file(fpath, dtype=None, roi=None, squeeze=False, bin=None, **kwargs):
 	@param [in] bin Bin scalar for all dimensions, should be integer and multiple of shape.
 	@param [in] **kwargs Extra parameters passed on directly to read function
 
-	@return RoI selected data from file, usually as numpy.ndarray
+	@return RoI'd and binned data from file, usually as numpy.ndarray
 	"""
 
 	# Check datatype, if not set: detect from file extension
@@ -123,6 +123,22 @@ def read_file(fpath, dtype=None, roi=None, squeeze=False, bin=None, **kwargs):
 		# Anything else should work with PIL's imread(). If not, it will throw anyway so we don't need to check
 		data = mpimg.imread(fpath, **kwargs)
 
+	data = roi_data(data, roi, squeeze)
+	data = bin_data(data, bin)
+
+	return data
+
+def roi_data(data, roi=None, squeeze=False):
+	"""
+	Select a region of interest **roi** from **data**. If **squeeze** is 
+	set, get rid of unit-element axes.
+
+	@param [in] data Data to roi, can be 1, 2 or 3-dimensional.
+	@param [in] roi Region of interest to read from file, (0low, 0high, 1low, 1high, ..nlow, nhigh) or None
+	@param [in] squeeze squeeze() array after selecting roi
+	@return Slice of data
+	"""
+
 	if (roi != None):
 		if (len(roi) != data.ndim*2):
 			raise RuntimeError("ROI (n=%d) does not match with data dimension (%d)!" % (len(roi), data.ndim))
@@ -143,19 +159,30 @@ def read_file(fpath, dtype=None, roi=None, squeeze=False, bin=None, **kwargs):
 		if (squeeze):
 			data = data.squeeze()
 	
-	if (bin != None and int(bin) == bin):
-		ibin = int(bin)
+	return data
+
+def bin_data(data, binfac=None):
+	"""
+	Bin **data** by a integer factor **binfac** in all dimensions.
+
+	@param [in] data Data to bin, should be 1, 2 or 3-dimensional
+	@param [in] binfac Factor to bin by, should be integer and >0
+	@return Binned data
+	"""
+
+	if (binfac != None and int(binfac) == binfac and binfac > 0):
+		ibin = int(binfac)
 		data = data.astype(np.float)
 		if data.ndim == 1:
-			data = np.sum(data[i::bin] for i in range(bin))
+			data = np.sum(data[i::binfac] for i in range(binfac))
 		elif data.ndim == 2:
-			data = sum(data[i::bin, j::bin] for i in range(bin) for j in range(bin))
+			data = sum(data[i::binfac, j::binfac] for i in range(binfac) for j in range(binfac))
 		elif data.ndim == 3:
-			data = sum(data[i::bin, j::bin, k::bin] for i in range(bin) for j in range(bin) for k in range(bin))
+			data = sum(data[i::binfac, j::binfac, k::binfac] for i in range(binfac) for j in range(binfac) for k in range(binfac))
 		else:
 			raise RuntimeError("This many dimensions is not supported by binning")
-
 	return data
+
 
 def read_ppm(fpath, endian='big'):
 	"""
