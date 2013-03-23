@@ -116,24 +116,44 @@ def calc_slope(im, slopesi=None):
 def calc_zern_infmat(subaps, nzern=10, zerncntr=None, zernrad=-1.0, singval=1.0, check=True, focus=1.0, wavelen=1.0, subapsize=1.0, pixsize=1.0, verb=0):
 	"""
 	Given a sub aperture array pattern, calculate a matrix that converts 
-	image shift vectors in pixel to Zernike amplitudes.
+	image shift vectors in pixel to Zernike amplitudes, and its inverse.
 
-	The parameters focus, wavelen, subapsize and pixsize are used for 
-	absolute calibration. If these are provided, the shifts in pixel are 
-	translated to Zernike amplitudes where amplitude has unit variance, i.e.
-	the normalisation used by Noll (1976).
+	The parameters **focus**, **wavelen**, **subapsize** and **pixsize** are 
+	used for absolute calibration. If these are provided, the shifts in 
+	pixel are translated to Zernike amplitudes where amplitude has unit 
+	variance, i.e. the normalisation used by Noll (1976). These parameters
+	should all be in meters.
 
 	The data returned is a tuple of the following:
 
-	1. Matrix to compute Zernike from image shifts
-	2. Matrix to image shifts from Zernike polynomials
+	1. Matrix to compute Zernike modes from image shifts
+	2. Matrix to image shifts from Zernike amplitudes
 	3. The set of Zernike polynomials used, from tim.zern.calc_zern_basis()
 	4. The extent of the Zernike basis in units of **subaps** which can be used as extent keyword to imshow() when plotting **subaps**.
 
+	To calculate the above mentioned matrices, we measure the x,y-slope of 
+	all Zernike modes over all sub apertures, giving a matrix 
+	`zernslopes_mat` that converts slopes for each Zernike matrix:
+
+		subap_slopes_vec = zernslopes_mat . zern_amp_vec
+
+	We multiply these slopes in radians/subaperture by 
+
+		sfac = F * λ/2π/d/pix_pitch
+
+	to obtain pixel shifts inside the sub images. We then have
+
+		subap_shift_vec = sfac * zernslopes_mat . zern_amp_vec
+
+	to get the inverse relation, we invert `zernslopes_mat`, giving:
+
+		zern_amp_vec = (sfac * zernslopes_mat)^-1 . subap_shift_vec
+		zern_amp_vec = zern_inv_mat . subap_shift_vec
+
 	@param [in] subaps List of subapertures formatted as (low0, high0, low1, high1)
 	@param [in] nzern Number of Zernike modes to model
-	@param [in] zerncntr Coordinate to center Zernike around. If None, use center of subaps
-	@param [in] zernrad Radius of the aperture to use. If less negative, used as fraction **-zernrad**, otherwise used as radius in pixels.
+	@param [in] zerncntr Coordinate to center Zernike around. If None, use center of **subaps**
+	@param [in] zernrad Radius of the aperture to use. If negative, used as fraction **-zernrad**, otherwise used as radius in pixels.
 	@param [in] singval Percentage of singular values to take into account when inverting the matrix
 	@param [in] check Perform basic sanity checks
 	@param [in] focus Focal length of MLA (in meter)
@@ -196,12 +216,24 @@ def calc_zern_infmat(subaps, nzern=10, zerncntr=None, zernrad=-1.0, singval=1.0,
 			tim.shell()
 			plt.close()
 
-	# Construct inverted matrix using 95% singular value
+	# np.linalg.pinv() takes the cutoff wrt the *maximum*, we want a cut-off
+	# based on the cumulative sum, i.e. the total included power, which is 
+	# why we use svd() and not pinv().
 	U, s, Vh = np.linalg.svd(zernslopes*sfac, full_matrices=False)
-
-	nvec = np.argwhere(s.cumsum()/s.sum() >= singval)[0][0]
+	cums = s.cumsum()/s.sum()
+	nvec = np.argwhere(cums >= singval)[0][0]
+	singval = cums[nvec]
 	s[nvec+1:] = np.inf
-	return np.dot(Vh.T, np.dot(np.diag(1.0/s), U.T)), zernslopes*sfac, zbasis, extent
+	zern_inv_mat = np.dot(Vh.T, np.dot(np.diag(1.0/s), U.T))
+
+	if (check):
+		pseudo_i = np.dot(zern_inv_mat, zernslopes)
+		quality = np.trace(pseudo_i)/np.sum(pseudo_i)
+		if (verb>2):
+			print "calc_zern_infmat(): quality: %.g, singval: %.g"
+		if (quality < singval*0.8):
+
+	return zern_inv_mat, zernslopes*sfac, zbasis, extent
 
 
 def find_mla_grid(wfsimg, size, clipsize=None, minif=0.6, nmax=-1, copy=True, method='bounds', sort=False, verb=0):
