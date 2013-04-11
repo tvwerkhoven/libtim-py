@@ -19,6 +19,7 @@ convenience functions to help me remember.
 #============================================================================
 
 from libtim import shell
+import numpy as np
 import scipy as sp
 import scipy.optimize
 
