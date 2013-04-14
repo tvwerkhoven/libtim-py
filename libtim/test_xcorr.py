@@ -10,11 +10,12 @@
 #==========================================================================
 
 import unittest
+import numpy as np
 import fft as _fft
 from xcorr import *
 from timeit import Timer
 
-SHOWPLOTS=False
+SHOWPLOTS=1
 
 #==========================================================================
 # Unittesting
@@ -42,38 +43,42 @@ class TestShift(unittest.TestCase):
 	def setUp(self):
 		# Make init gauss
 		self.sz = (257, 509)
-		self.sz = (31, 29)
-		self.spotsz = 2.
-		self.pos_l = [(1,1), (2**0.5*self.spotsz, 2**0.5), (2*self.spotsz, -2*self.spotsz), (5,8)]
+		self.sz = (93, 58)
+		self.spotsz = 2.3
+		self.pos_l = [(0.001, 0.002), (1,1), (2**0.5*self.spotsz, 2**0.5), (2*self.spotsz, -2*self.spotsz), (5, 8), (1.42341*self.spotsz, 1.5*self.spotsz)]
 		self.amp = 255
 
-		self.refim = gauss(self.sz, self.spotsz, (0,0), self.amp, 0)
+		self.refim_l = [gauss(self.sz, self.spotsz, (0,0), self.amp, 0), gauss(self.sz, 5.0, (5.0, 3.9), self.amp, 0), gauss(self.sz, 50.0, (50, 12.5), self.amp, 0)]
+		self.refim = self.refim_l[1]
 
 	# shift_img(im, shvec, method="pixel", zoomfac=8)
 	def test1a_identity(self):
 		"""Test if move function does not change a (0,0) shift"""
-		shift = (0,0)
-		im_sh1 = shift_img(self.refim, shift, method="pixel", zoomfac=8)
-		im_sh2 = shift_img(self.refim, shift, method="fourier")
+		for im in self.refim_l:
+			shift = (0,0)
+			im_sh1 = shift_img(im, shift, method="pixel", zoomfac=8)
+			im_sh2 = shift_img(im, shift, method="fourier")
 
-		self.assertLess(np.mean(im_sh1-self.refim), 1e-6)
-		self.assertLess(np.mean(im_sh2-self.refim), 1e-6)
-
+			self.assertLess(np.mean(im_sh1-im), 1e-6)
+			self.assertLess(np.mean(im_sh2-im), 1e-6)
 
 	def test1b_diff(self):
 		"""Test if a non-zero shift changes the image"""
-		shift = (2*self.spotsz, 2*self.spotsz)
-		im_sh1 = shift_img(self.refim, shift, method="pixel", zoomfac=8)
-		im_sh2 = shift_img(self.refim, shift, method="fourier")
+		for shift in self.pos_l:
+			for im in self.refim_l:
+				im_sh1 = shift_img(im, shift, method="pixel", zoomfac=8)
+				im_sh2 = shift_img(im, shift, method="fourier")
 
-		# Total summed diff should be zero because the shape doesn't change
-		# Pixel shifting is not very accurate, so the residual is bigger
-		self.assertLess(np.mean(im_sh1-self.refim), self.amp/100.)
-		self.assertLess(np.mean(im_sh2-self.refim), 1e-6)
+				# Total summed diff should be zero because the shape doesn't 
+				# change. Pixel shifting is not very accurate, so the 
+				# residual is bigger
+				self.assertLess(np.mean(im_sh1-im), self.amp/50.)
+				self.assertLess(np.mean(im_sh2-im), 1e-6)
 
-		# The absolute difference should be very nonzero
-		self.assertGreater(np.sum(np.abs(im_sh1-self.refim)), self.amp)
-		self.assertGreater(np.sum(np.abs(im_sh2-self.refim)), self.amp)
+				# The absolute difference should be very nonzero
+				if np.sum(shift) > 1:
+					self.assertGreater(np.sum(np.abs(im_sh1-im)), self.amp)
+					self.assertGreater(np.sum(np.abs(im_sh2-im)), self.amp)
 
 	def test2a_plot(self):
 		"""Plot shifted images"""
