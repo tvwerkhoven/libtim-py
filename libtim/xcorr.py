@@ -19,6 +19,8 @@ Measure image shifts using cross-correlation and other utilities.
 
 import numpy as np
 import fft as _fft
+import scipy.ndimage
+import scipy.ndimage.fourier
 
 #==========================================================================
 # Defines
@@ -49,7 +51,7 @@ def crosscorr(imlst, shrange, dsh=(1,1), refim=None):
 	@param [in] shrange shift range to calculate, format (sh0, sh1)
 	@param [in] dsh shift range cadence
 	@param [in] refim Reference image to cross correlate others against. If None, will use cross correlate all pairs from imlst
-	@return NxN (refim==None) or Nx1 (refim!=None) list of cross-correlation maps. Each map is (2*shrange+1)/dsh big)
+	@return NxN (refim==None) or Nx1 (refim!=None) list of cross-correlation maps. Each map is (2*shrange+1)/dsh big
 	"""
 
 	# Check if imlst is malformed
@@ -100,7 +102,8 @@ def crosscorr(imlst, shrange, dsh=(1,1), refim=None):
 
 def crosscorr1(img, refim, shrange, dsh=(1,1)):
 	"""
-	Calculate cross-correlation for only 1 image.
+	Calculate cross-correlation for only 1 image. See crosscorr() for 
+	details.
 	"""
 
 	if (img.shape != refim.shape):
@@ -188,7 +191,7 @@ def gauss(sz, spotsz, spotpos, amp, noiamp=0):
 	else:
 		return im
 
-def shift_img(im, shvec, method="pixel", zoomfac=8):
+def shift_img(im, shvec, method="pixel", zoomfac=8, apod=False):
 	"""
 	Shift 2D array **im** by **shvec** using either pixel or Fourier method.
 
@@ -203,7 +206,8 @@ def shift_img(im, shvec, method="pixel", zoomfac=8):
 
 	The Fourier shift code is taken from fftshiftcube written by Marshall 
 	Perrin at 2001-07-27. Original api: FUNCTION 
-	fftshiftcube,cube,dx,dy,null=null
+	fftshiftcube,cube,dx,dy,null=null, but uses scipy.ndimage.fourier.
+	fourier_shift for generating the complex shift vector.
 
 	@param [in] im 2D image to shift
 	@param [in] shvec Vector to shift by
@@ -214,10 +218,8 @@ def shift_img(im, shvec, method="pixel", zoomfac=8):
 	sz = im.shape
 
 	if (method == "pixel"):
-		import scipy as S
-		import scipy.ndimage
 		# Blow up image and shift by zoomfac
-		im_zm = S.ndimage.zoom(im, zoomfac)
+		im_zm = scipy.ndimage.zoom(im, zoomfac)
 		shvec_zm = np.round(np.r_[shvec]*zoomfac)
 
 		# Calculate real shift vector
@@ -228,32 +230,32 @@ def shift_img(im, shvec, method="pixel", zoomfac=8):
 		im_zm = np.roll(im_zm, int(shvec_zm[1]), axis=1)
 
 		# Scale back to original size and return
-		return S.ndimage.zoom(im_zm, 1./zoomfac)
+		return scipy.ndimage.zoom(im_zm, 1./zoomfac)
 	elif (method == "fourier"):
-		# Linear increasing array, subtract 50%, roll 50% -> sawtooth
-		u0 = np.roll(np.arange(sz[0])*1. - sz[0]/2, sz[0]/2).reshape(-1,1)
-		u1 = np.roll(np.arange(sz[1])*1. - sz[0]/2, sz[1]/2).reshape(1,-1)
+		# # Linear increasing array, subtract 50%, roll 50% -> sawtooth
+		# u0 = np.roll(np.arange(sz[0])*1. - sz[0]/2, sz[0]/2).reshape(-1,1)
+		# u1 = np.roll(np.arange(sz[1])*1. - sz[0]/2, sz[1]/2).reshape(1,-1)
 
-		# Convert to frequency, mult by shift
-		u0 = shvec[0] * u0/sz[0]
-		u1 = shvec[1] * u1/sz[1]
-
-		# Make apodisation
-		apod_mask = _fft.mk_apod_mask(im.shape, wsize=-0.1, apod_f='cos')
-
-		# Mask images. Use the median not the mean because it's better at
-		# grabbing the sky rather than the star
-		offs = np.median(im)
-		im2 = (im-offs) * apod_mask
-
-		# FT image
-		im_ft = np.fft.fft2(im2)
+		# # Convert to frequency, mult by shift
+		# u0 = shvec[0] * u0/sz[0]
+		# u1 = shvec[1] * u1/sz[1]
 
 		# Make shift mask
-		sh_mask = np.exp(-2*np.pi*1j*(u0+u1))
+		#sh_mask = np.exp(-2*np.pi*1j*(u0+u1))
+		#imsh = np.fft.ifft2(sh_mask*im_ft).real + offs
 
-		# Shift and return
-		return np.fft.ifft2(sh_mask*im_ft).real + offs
+		apod_mask = 1
+		if (apod):
+			# Optional: apodise images.
+			apod_mask = _fft.mk_apod_mask(im.shape, wsize=-0.1, apod_f='cos')
+	
+		# zero-pad data, FFT & multiply with Fourier shift vector
+		im_fft = np.fft.fft2(_fft.embed_data(im*apod_mask))
+	
+		im_fft_sh = scipy.ndimage.fourier.fourier_shift(im_fft, shift=shvec)
+
+		# IFFT, de-pad
+		return _fft.embed_data(np.fft.ifft2(im_fft_sh).real, direction=-1)
 	else:
 		raise ValueError("<method> %s not valid" % (method))
 
