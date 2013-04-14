@@ -191,7 +191,7 @@ def gauss(sz, spotsz, spotpos, amp, noiamp=0):
 	else:
 		return im
 
-def shift_img(im, shvec, method="pixel", zoomfac=8, apod=False):
+def shift_img(im, shvec, method="pixel", zoomfac=8, apod=False, pad=True):
 	"""
 	Shift 2D array **im** by **shvec** using either pixel or Fourier method.
 
@@ -220,7 +220,9 @@ def shift_img(im, shvec, method="pixel", zoomfac=8, apod=False):
 	@param [in] im 2D image to shift
 	@param [in] shvec Vector to shift by in pixels
 	@param [in] method Shifting method to use (Fourier or pixel)
-	@param [in] zoomfac Zoom factor for pixel shifting method
+	@param [in] zoomfac Zoom factor (for Pixel method)
+	@param [in] apod Apodise image (for Fourier method)
+	@param [in] pad Zero-pad data before FFT (for Fourier method)
 	@return 2D image of identical shape as **im** shifted with **shvec**
 	"""
 	sz = im.shape
@@ -251,6 +253,10 @@ def shift_img(im, shvec, method="pixel", zoomfac=8, apod=False):
 		# Make shift mask
 		#sh_mask = np.exp(-2*np.pi*1j*(u0+u1))
 		#imsh = np.fft.ifft2(sh_mask*im_ft).real + offs
+		if (pad):
+			padfunc = _fft.embed_data
+		else:
+			padfunc = lambda x, direction=1: x
 
 		apod_mask = 1
 		if (apod):
@@ -258,12 +264,12 @@ def shift_img(im, shvec, method="pixel", zoomfac=8, apod=False):
 			apod_mask = _fft.mk_apod_mask(im.shape, wsize=-0.1, apod_f='cos')
 	
 		# zero-pad data, FFT & multiply with Fourier shift vector
-		im_fft = np.fft.fft2(_fft.embed_data(im*apod_mask))
-	
+		im_fft = np.fft.fft2(padfunc(im*apod_mask))
+
 		im_fft_sh = scipy.ndimage.fourier.fourier_shift(im_fft, shift=shvec)
 
 		# IFFT, de-pad
-		return _fft.embed_data(np.fft.ifft2(im_fft_sh).real, direction=-1)
+		return padfunc(np.fft.ifft2(im_fft_sh).real, direction=-1)
 	else:
 		raise ValueError("<method> %s not valid" % (method))
 
