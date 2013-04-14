@@ -191,7 +191,7 @@ def gauss(sz, spotsz, spotpos, amp, noiamp=0):
 	else:
 		return im
 
-def shift_img(im, shvec, method="pixel", zoomfac=8, apod=False, pad=True):
+def shift_img(im, shvec, method="pixel", zoomfac=8, apod=False, pad=False):
 	"""
 	Shift 2D array **im** by **shvec** using either pixel or Fourier method.
 
@@ -242,17 +242,6 @@ def shift_img(im, shvec, method="pixel", zoomfac=8, apod=False, pad=True):
 		# Scale back to original size and return
 		return scipy.ndimage.zoom(im_zm, 1./zoomfac)
 	elif (method == "fourier"):
-		# # Linear increasing array, subtract 50%, roll 50% -> sawtooth
-		# u0 = np.roll(np.arange(sz[0])*1. - sz[0]/2, sz[0]/2).reshape(-1,1)
-		# u1 = np.roll(np.arange(sz[1])*1. - sz[0]/2, sz[1]/2).reshape(1,-1)
-
-		# # Convert to frequency, mult by shift
-		# u0 = shvec[0] * u0/sz[0]
-		# u1 = shvec[1] * u1/sz[1]
-
-		# Make shift mask
-		#sh_mask = np.exp(-2*np.pi*1j*(u0+u1))
-		#imsh = np.fft.ifft2(sh_mask*im_ft).real + offs
 		if (pad):
 			padfunc = _fft.embed_data
 		else:
@@ -263,9 +252,11 @@ def shift_img(im, shvec, method="pixel", zoomfac=8, apod=False, pad=True):
 			# Optional: apodise images.
 			apod_mask = _fft.mk_apod_mask(im.shape, wsize=-0.1, apod_f='cos')
 	
-		# zero-pad data, FFT & multiply with Fourier shift vector
+		# zero-pad data & FFT
 		im_fft = np.fft.fft2(padfunc(im*apod_mask))
 
+		# scipy.ndimage.fourier.fourier_shift multiplies an input array with 
+		# a complex Fourier shifting vector and returns the multiplied data
 		im_fft_sh = scipy.ndimage.fourier.fourier_shift(im_fft, shift=shvec)
 
 		# IFFT, de-pad
