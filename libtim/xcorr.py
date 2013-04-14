@@ -195,12 +195,15 @@ def shift_img(im, shvec, method="pixel", zoomfac=8, apod=False):
 	"""
 	Shift 2D array **im** by **shvec** using either pixel or Fourier method.
 
-	Pixel method: scale up image with scipy.ndimage.zoom() with a factor of 
+	# Pixel method
+
+	Scale up image with scipy.ndimage.zoom() with a factor of 
 	**zoomfac**, then shift by integer number of pixels, then zoom down 
 	again to original size. The resolution of this shift is 1.0/**zoomfac**.
 
-	Fourier method: shift in Fourier space based on the Fourier transform
-	shift theorem:
+	# Fourier method
+	
+	Shift in Fourier space based on the Fourier transform shift theorem:
 
 		f(x-dx,y-dy) <==> exp(-2pi i(u*dx+v*dy)) F(u,v)
 
@@ -209,9 +212,14 @@ def shift_img(im, shvec, method="pixel", zoomfac=8, apod=False):
 	fftshiftcube,cube,dx,dy,null=null, but uses scipy.ndimage.fourier.
 	fourier_shift for generating the complex shift vector.
 
+	Documentation on the Fourier shift method might be available in [1], but 
+	this algorithm was written independently.
+	
+	[1] Manuel Guizar-Sicairos, Samuel T. Thurman, and James R. Fienup, "Efficient subpixel image registration algorithms," Opt. Lett. 33, 156-158 (2008).
+
 	@param [in] im 2D image to shift
-	@param [in] shvec Vector to shift by
-	@param [in] method Shifting method to use
+	@param [in] shvec Vector to shift by in pixels
+	@param [in] method Shifting method to use (Fourier or pixel)
 	@param [in] zoomfac Zoom factor for pixel shifting method
 	@return 2D image of identical shape as **im** shifted with **shvec**
 	"""
