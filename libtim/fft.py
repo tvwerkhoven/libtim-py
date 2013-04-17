@@ -65,22 +65,25 @@ def mk_apod_mask(masksz, apodpos=None, apodsz=None, shape='rect', wsize=-0.3, ap
 		apodsz = masksz
 
 	apod_func = lambda x: x
-	if (isinstance(apod_f, str)):
-		apod_f = apod_f.lower()
-		if (apod_f[:4] == 'hann'):
-			apod_func = lambda x: 0.5 * (1.0 - np.cos(np.pi*x))
-		elif (apod_f[:4] == 'hamm'):
-			apod_func = lambda x: 0.54 - 0.46 *np.cos(np.pi*x)
-		elif (apod_f[:3] == 'cos' or apod_f[:3] == 'sin'):
-			apod_func = lambda x: np.sin(np.pi*x*0.5)
-		elif (apod_f[:4] == 'lanc'):
-			apod_func = lambda x: np.sinc(x-1.0)
-		else:
-			raise ValueError("<apod_f> not supported!")
-	elif (hasattr(apod_f, "__call__")):
+	if (hasattr(apod_f, "__call__")):
 		apod_func = apod_f
 	else:
-		raise ValueError("<apod_f> should be a string or callable!")
+		try:
+			apod_f = apod_f.lower()
+			if (apod_f[:4] == 'hann'):
+				apod_func = lambda x: 0.5 * (1.0 - np.cos(np.pi*x))
+			elif (apod_f[:4] == 'hamm'):
+				apod_func = lambda x: 0.54 - 0.46 *np.cos(np.pi*x)
+			elif (apod_f[:3] == 'cos' or apod_f[:3] == 'sin'):
+				apod_func = lambda x: np.sin(np.pi*x*0.5)
+			elif (apod_f[:4] == 'lanc'):
+				apod_func = lambda x: np.sinc(x-1.0)
+			else:
+				raise ValueError("<apod_f> not supported!")
+		except ValueError:
+			raise
+		except:
+			raise ValueError("<apod_f> should be a string or callable!")
 
 	# Mask size <masksz> should be iterable (like a list or tuple)
 	if (not isinstance(masksz, Iterable)):
