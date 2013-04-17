@@ -197,7 +197,7 @@ def calc_zern_basis(nmodes, rad, modestart=1, calc_covmat=False):
 	# Create and return dict
 	return {'modes': zern_modes, 'modesmat': zern_modes_mat, 'covmat':covmat, 'covmat_in':covmat_in, 'mask': grid_mask}
 
-def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None, center=(-0.5, -0.5), rad=-0.5, err=None):
+def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None, center=(-0.5, -0.5), rad=-0.5, rec_zern=True, err=None):
 	"""
 	Fit **nmodes** Zernike modes to a **wavefront**.
 
@@ -221,6 +221,7 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None,
 	@param [in] fitweight Mask to use as weights when fitting
 	@param [in] center Center of Zernike modes to fit
 	@param [in] rad Radius of Zernike modes to fit
+	@param [in] rec_zern Reconstruct Zernike modes and calculate errors.
 	@param [out] err Fitting errors
 	@return Tuple of (wf_zern_vec, wf_zern_rec, fitdiff) where the first element is a vector of Zernike mode amplitudes, the second element is a full 2D Zernike reconstruction and the last element is the 2D difference between the input wavefront and the full reconstruction.
 	@see See calc_zern_basis() for details on **zern_data** cache
@@ -268,7 +269,6 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None,
 	zern_basismat = zern_data['modesmat'][:nmodes]
 	grid_mask = zern_data['mask']
 
-	# Calculate inner products
 	wf_zern_vec = 0
 	grid_vec = grid_mask.reshape(-1)
 	if (fitweight != None):
@@ -279,24 +279,24 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None,
 
 		# LSQ fit with weighed data
 		wf_w = ((wavefront[yslice, xslice])[grid_mask]).reshape(1,-1) * weight
-		wf_zern_vec = np.dot(wf_w, np.linalg.pinv(zern_basismat[:, grid_vec] * weight))
+		wf_zern_vec = np.dot(wf_w, np.linalg.pinv(zern_basismat[:, grid_vec] * weight)).ravel()
 	else:
 		# LSQ fit with data. Only fit inside grid_mask
 
 		# Crop out central region of wavefront, then only select the orthogonal part of the Zernike modes (grid_mask)
  		wf_w = ((wavefront[yslice, xslice])[grid_mask]).reshape(1,-1)
-		wf_zern_vec = np.dot(wf_w, np.linalg.pinv(zern_basismat[:, grid_vec]))
+		wf_zern_vec = np.dot(wf_w, np.linalg.pinv(zern_basismat[:, grid_vec])).ravel()
 
-	wf_zern_vec.shape = (-1)
 	wf_zern_vec[:startmode-1] = 0
 
-	# Calculate full Zernike phase
-	wf_zern_rec = calc_zernike(wf_zern_vec, zern_data=zern_data, rad=min(wavefront.shape)/2)
-
-	# Calculate fit difference
-	fitdiff = (wf_zern_rec - wavefront[yslice, xslice])
-	# Make sure value outside mask is same as mean inside mask, better for plotting
-	fitdiff[grid_mask == False] = fitdiff[grid_mask].mean()
+	# Calculate full Zernike phase & fitting error
+	if (rec_zern):
+		wf_zern_rec = calc_zernike(wf_zern_vec, zern_data=zern_data, rad=min(wavefront.shape)/2)
+		fitdiff = (wf_zern_rec - wavefront[yslice, xslice])
+		fitdiff[grid_mask == False] = fitdiff[grid_mask].mean()
+	else:
+		wf_zern_rec = None
+		fitdiff = None
 
 	if (err != None):
 		# For calculating scalar fitting qualities, only use the area inside the mask
