@@ -34,11 +34,10 @@ def main():
 		print args
 	
 	# Load all data. If only one file, flatten
-	roit = tuple(args.roi)
 	if (len(args.infiles) > 1):
-		indata = np.r_[ [ read_file(f, roi=roit, squeeze=args.squeeze) for f in args.infiles] ]
+		indata = np.r_[ [ read_file(f, roi=args.roi, squeeze=args.squeeze) for f in args.infiles] ]
 	else: 
-		indata = read_file(args.infiles[0], roi=roit, squeeze=args.squeeze)
+		indata = read_file(args.infiles[0], roi=args.roi, squeeze=args.squeeze)
 
 	# Store to disk, add options depending on file type
 	if ('png' in os.path.splitext(args.outfile)[1].lower()):
@@ -60,7 +59,7 @@ def parsopts():
 	
 	g0 = parser.add_argument_group("""Input options when loading data. ROI can be 2, 4 or 6 arguments for 1, 2 or 3-dimensional data. ROI should be specified as [low, high] for each dimension.""")
 
-	g0.add_argument('--roi', nargs='*', type=int,
+	g0.add_argument('--roi', nargs='*', type=int, default=None,
 						help='region of interest for input files.')
 	g0.add_argument('--squeeze', action='store_true', default=True, 
 						help='trim 1-element axes from input files (np.squeeze).')
@@ -88,10 +87,14 @@ def checkopts(parser, args):
 	args.verb = 0
 	if (args.debug):
 		args.verb = sum(args.debug)
-	if (len(args.roi) not in [2,4,6]):
-		print "Error: roi should be 2, 4 or 6 arguments."
-		parser.print_usage()
-		exit(-1)
+	
+	if (args.roi):
+		args.roi = tuple(args.roi)
+		if (len(args.roi) not in [2,4,6]):
+			print "Error: roi should be 2, 4 or 6 arguments."
+			parser.print_usage()
+			exit(-1)
+
 
 # This must be the final part of the file, code after this won't be executed
 if __name__ == "__main__":
