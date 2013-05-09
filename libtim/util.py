@@ -25,7 +25,6 @@ import pyfits
 from time import asctime, gmtime, time, localtime
 import cPickle
 import json
-from libtim import shell
 
 #============================================================================
 # Defines

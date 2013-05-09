@@ -213,7 +213,7 @@ def calc_zern_infmat(subaps, nzern=10, zerncntr=None, zernrad=-1.0, singval=1.0,
 			show_shwfs_vecs(plslope, subaps, img=zbase, extent=extent, title=None, scale=10, pause=False, fignum=None, keep=True)
 			plt.plot(zerncntr[1], zerncntr[0], 'p', markersize=20)
 
-			tim.shell()
+			raw_input("continue...")
 			plt.close()
 
 	# np.linalg.pinv() takes the cutoff wrt the *maximum*, we want a cut-off

@@ -14,7 +14,6 @@ Testcases for zern.py library.
 from zern import *
 import unittest
 import libtim.im
-from libtim import shell
 import pylab as plt
 import pyfits
 from timeit import Timer

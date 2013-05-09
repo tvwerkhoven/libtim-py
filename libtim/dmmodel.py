@@ -44,8 +44,6 @@ import scipy.weave
 import libtim as tim
 import libtim.file
 import libtim.im
-# Drop to ipython during execution (call 'shell()')
-from IPython import embed as shell
 
 #===========================================================================
 # Routines

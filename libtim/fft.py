@@ -217,6 +217,5 @@ def embed_data(indata, direction=1, scale=2):
 		slice1 = slice(s[1]/2 - floor(s[1]/(2.*scale)), 
 						s[1]/2 + ceil(s[1]/(2.*scale)))
 
-		#tim.shell()
 		# Slice out the center and return it
 		return indata[slice0, slice1]
