@@ -23,7 +23,7 @@ This is libtim, providing various useful things
 """
 
 __all__ = ["libtim"]
-__version__ = "0.4.1"
+__version__ = "0.5.2"
 
 try:
 	from IPython import embed as shell # use shell() to stop the program
