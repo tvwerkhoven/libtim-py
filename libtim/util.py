@@ -237,8 +237,6 @@ def gen_metadata(metadata, *args, **kwargs):
 
 	This is intended to store all program execution parameters to disk such that this batch can later be reproduced, and the origin of the output can be traced back.
 
-	@todo Get revision tag from filename (sys.argv[0]) using git_rev()
-
 	@param [in] metadata Dict of other values to store
 	@param [in] *args Additional values to store
 	@param [in] **kwargs Additional key-value pairs to store
@@ -267,7 +265,6 @@ def gen_metadata(metadata, *args, **kwargs):
 	grev = git_rev(sys.argv[0])
 	if (grev):
 		metadict.update({'revision': grev})
-
 
 	# Add user-supplied values
 	metadict.update(metadata)
@@ -364,12 +361,18 @@ def mkfitshdr(cards, usedefaults=True):
 	clist = pyfits.CardList()
 
 	if (usedefaults):
+		grev = git_rev(sys.argv[0])
 		clist.append(pyfits.Card(key='prog', 
 								value=os.path.basename(sys.argv[0]),
 								comment='Program filename') )
 		clist.append(pyfits.Card(key='path', 
 								value=os.path.dirname(sys.argv[0]),
 								comment='Program path') )
+		if (grev):
+			clist.append(pyfits.Card(key='path', 
+								value=grev,
+								comment='Program git revision') )
+
 		clist.append(pyfits.Card(key='fsize', 
 								value=os.path.getsize(sys.argv[0]),
 								comment='Program filesize (bytes)') )
