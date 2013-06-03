@@ -362,10 +362,10 @@ def mkfitshdr(cards, usedefaults=True):
 
 	if (usedefaults):
 		grev = git_rev(sys.argv[0])
-		clist.append(pyfits.Card(key='prog', 
+		clist.append(pyfits.Card(key='progname', 
 								value=os.path.basename(sys.argv[0]),
 								comment='Program filename') )
-		clist.append(pyfits.Card(key='path', 
+		clist.append(pyfits.Card(key='progpath', 
 								value=os.path.dirname(sys.argv[0]),
 								comment='Program path') )
 		if (grev):
@@ -373,7 +373,7 @@ def mkfitshdr(cards, usedefaults=True):
 								value=grev,
 								comment='Program git revision') )
 
-		clist.append(pyfits.Card(key='fsize', 
+		clist.append(pyfits.Card(key='progsize', 
 								value=os.path.getsize(sys.argv[0]),
 								comment='Program filesize (bytes)') )
 		clist.append(pyfits.Card(key='mtime', 
@@ -383,7 +383,8 @@ def mkfitshdr(cards, usedefaults=True):
 								value=os.path.getctime(sys.argv[0]),
 								comment='Program metadata change time' ) )
 		clist.append(pyfits.Card(key='epoch', value=time(),
-								comment='Current seconds since epoch') )
+								comment='Current seconds since epoch from time.time()') )
+		# No comments for the last two fields because they are too large
 		clist.append(pyfits.Card(key='utctime', value=asctime(gmtime(time()))) )
 		clist.append(pyfits.Card(key='loctime', value=asctime(localtime(time()))) )
 
