@@ -369,7 +369,7 @@ def mkfitshdr(cards, usedefaults=True):
 								value=os.path.dirname(sys.argv[0]),
 								comment='Program path') )
 		if (grev):
-			clist.append(pyfits.Card(key='path', 
+			clist.append(pyfits.Card(key='gitrev', 
 								value=grev,
 								comment='Program git revision') )
 
