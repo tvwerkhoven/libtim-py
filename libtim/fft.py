@@ -19,7 +19,6 @@ Package for some utilities for Fourier transforms
 
 import numpy as np
 from collections import Iterable
-import libtim as tim
 from math import ceil, floor
 
 #============================================================================
