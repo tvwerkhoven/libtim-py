@@ -25,6 +25,7 @@ http://creativecommons.org/licenses/by-sa/3.0/
 
 # Import libs
 import numpy as np
+import scipy.signal
 import sys, os
 import time
 from os.path import join as pjoin
@@ -40,7 +41,7 @@ import libtim.xcorr
 
 from unwrap import flood_quality
 
-def sim_fringe(phase, cfreq, noiseamp=0):
+def sim_fringe(phase, cfreq, noiseamp=0, phaseoffset=0, noisesmooth=10):
 	"""
 	Simulate fringe pattern for **phase** interfering with flat 
 	reference beam with carrier frequency **cfreq**.
@@ -50,6 +51,7 @@ def sim_fringe(phase, cfreq, noiseamp=0):
 	@param [in] phase 2D array of phase [radians]
 	@param [in] cfreq 2D carrier frequency of reference wave [cycles/axis]
 	@param [in] noiseamp Amplitude of normal-random noise to add
+	@param [in] phaseoffset Phase offset for fringe patterns.
 	@return 2D real fringe pattern
 	"""
 
@@ -57,8 +59,14 @@ def sim_fringe(phase, cfreq, noiseamp=0):
 	position = np.indices(phase.shape)*1./np.r_[phase.shape].reshape(-1,1,1)
 
 	cfreq = np.array(cfreq).reshape(-1,1,1)
-	fringe = np.sin(2*np.pi*(cfreq*position).sum(0) + phase)
-	fnoise = np.random.randn(*fringe.shape)*noiseamp
+	fringe = np.sin(2*np.pi*(cfreq*position).sum(0) + phaseoffset + phase)
+	fnoise = np.random.randn(*fringe.shape)
+
+	if (noisesmooth):
+		smooth = tim.im.mk_rad_mask(noisesmooth)<1
+		fnoise = scipy.signal.fftconvolve(fnoise, smooth.astype(int), mode='same')
+	
+	fnoise *= noiseamp/fnoise.std()
 
 	return fringe+fnoise
 
@@ -171,7 +179,7 @@ def locate_sb(fftpow, cpeak=None):
 
 	return sb_loc
 
-def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap=True, wsize=-0.5, wfunc='cosine', cache={}, ret_pow=False, verb=0):
+def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap=True, wsize=-0.5, wfunc='cosine', cache={}, ret_pow=False, get_complex=False, verb=0):
 	"""
 	Filter out sideband from a real image, return phase and amplitude.
 
@@ -255,6 +263,10 @@ def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap
 		# 4. IFFT, get complex components
 		img_ifft = np.fft.ifft2(tim.fft.descramble(img_sh_filt, -1))
 
+		# 4b. Sometimes we only need the complex components
+		if (get_complex):
+			return img_ifft
+
 		# 5. Calculate phase and unwrap
 		phase_wr = np.arctan2(img_ifft.imag, img_ifft.real)
 		amp = np.abs(img_ifft**2.0)
@@ -318,8 +330,14 @@ def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap
 		else:
 			img_filt[:, :imgsh[1]/2] = 0
 		
-		# 4. Calculate phase and unwrap
+		# 4. IFFT, get complex components
 		img_ifft = np.fft.ifft2(tim.fft.descramble(img_filt, -1))
+
+		# 4b. Sometimes we only need the complex components
+		if (get_complex):
+			return img_ifft
+
+		# 5. Calculate phase and unwrap
 		phase_wr = np.arctan2(img_ifft.imag, img_ifft.real)
 		amp = np.abs(img_ifft**2.0)
 
@@ -400,6 +418,31 @@ def get_dark_flat(flats, darks, roi=(0,-1,0,-1)):
 			dkimg = sum( (tim.file.read_file(f, roi=roi).astype(float) for f in darks) ) * (1.0/len(darks))
 
 	return flimg, dkimg
+
+def avg_phase(wavecomps):
+	"""
+	Given a list of complex wave components **wavecomps**, average these 
+	phasor-wise.
+
+	We first rotate the complex phasors to have the same angle for the 
+	center element, then we average the the phases and take the arctangent, 
+	resulting in the phase.
+
+	@param [in] wavecomps Iterable of arrays of complex wave components.
+	@return Tuple of mean phase and mean amplitude
+	"""
+
+	mid = np.r_[wavecomps[0].shape]/2
+
+	# Rotate phasors such that the center element has zero rotation
+	wc_rot = np.zeros_like(wavecomps)
+	for wc, wcr in zip(wavecomps, wc_rot):
+		angle = -np.angle(wc[mid[0], mid[1]])
+		wcr.real = wc.real*np.cos(angle) - wc.imag*np.sin(angle)
+		wcr.imag = wc.real*np.sin(angle) + wc.imag*np.cos(angle)
+
+	# Compute phases from rotated complex wave components.
+	return np.arctan2(wc_rot.imag.mean(0), wc_rot.real.mean(0)), np.abs(wc_rot.mean(0)**2.0)
 
 ### EOF
 

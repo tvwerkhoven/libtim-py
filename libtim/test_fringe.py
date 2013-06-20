@@ -152,6 +152,69 @@ class TestFiltersb(unittest.TestCase):
 				self.assertEqual(np.isnan(amp).sum(), 0)
 				self.assertEqual(np.isnan(ftpow).sum(), 0)
 
+
+class TestAvgphase(unittest.TestCase):
+	# avg_phase(wavecomps)
+	def setUp(self):
+		self.log = logging.getLogger( "test_fringe" )
+		self.cf = (5, 7)
+		self.nfr = 32
+		self.noiseamp = 2.0
+		self.sz = (640, 480)
+
+		np.random.seed(43)
+		self.phase0 = 2*np.pi*np.random.random(self.nfr)
+		position = np.indices(self.sz)*1./np.r_[self.sz].reshape(-1,1,1)
+		self.phase = (3*position**2 + 2*position - 3*position**4).mean(0)
+		self.phase -= self.phase.mean()
+		self.fringes = [sim_fringe(self.phase, self.cf, noiseamp=self.noiseamp, phaseoffset=p) for p in self.phase0]
+
+	def test0_plot_input(self):
+		"""Show phases and fringes"""
+		plt.figure(100);plt.clf()
+		plt.imshow(self.phase)
+		plt.colorbar()
+
+		plt.figure(200);plt.clf()
+		plt.imshow(self.fringes[0])
+		plt.colorbar()
+		raw_input("...")
+
+	def test1_test_avg(self):
+		"""Compute complex wave components for each fringe, then average"""
+		compl = [filter_sideband(f, self.cf, 0.5, method='spectral', apt_mask=None, wsize=-0.5, wfunc='cosine', get_complex=True, verb=0) for f in self.fringes]
+		vmin, vmax = self.phase.min(), self.phase.max()
+
+		phase, amp = avg_phase(compl)
+		phase -= phase.mean()
+		dphase = phase - self.phase
+		dphase -= dphase.mean()
+		
+		
+		plt.figure(100);plt.clf()
+		plt.title("Input phase")
+		plt.imshow(self.phase, vmin=vmin, vmax=vmax)
+		plt.colorbar()
+
+		plt.figure(110);plt.clf()
+		plt.title("Input fringe 0")
+		plt.imshow(self.fringes[0])
+		plt.colorbar()
+
+
+		plt.figure(200);plt.clf()
+		plt.title("Recovered phase")
+		plt.imshow(phase, vmin=vmin, vmax=vmax)
+		plt.colorbar()
+
+		plt.figure(300);plt.clf()
+		plt.title("Phase difference")
+		plt.imshow(dphase, vmin=vmin/10., vmax=vmax/10.)
+		plt.colorbar()
+		raw_input("...")
+		tim.shell()
+
+
 if __name__ == "__main__":
 	import sys
 	sys.exit(unittest.main())
