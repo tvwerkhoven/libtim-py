@@ -65,7 +65,7 @@ def sim_fringe(phase, cfreq, noiseamp=0, phaseoffset=0, noisesmooth=10):
 	if (noisesmooth):
 		smooth = tim.im.mk_rad_mask(noisesmooth)<1
 		fnoise = scipy.signal.fftconvolve(fnoise, smooth.astype(int), mode='same')
-	
+
 	fnoise *= noiseamp/fnoise.std()
 
 	return fringe+fnoise
@@ -419,7 +419,7 @@ def get_dark_flat(flats, darks, roi=(0,-1,0,-1)):
 
 	return flimg, dkimg
 
-def avg_phase(wavecomps):
+def avg_phase(wavecomps, ampweight=False):
 	"""
 	Given a list of complex wave components **wavecomps**, average these 
 	phasor-wise.
@@ -429,7 +429,8 @@ def avg_phase(wavecomps):
 	resulting in the phase.
 
 	@param [in] wavecomps Iterable of arrays of complex wave components.
-	@return Tuple of mean phase and mean amplitude
+	@param [in] ampweight Weight phase averaging by amplitude
+	@return Tuple of (weighted) mean phase and mean amplitude
 	"""
 
 	mid = np.r_[wavecomps[0].shape]/2
@@ -442,7 +443,12 @@ def avg_phase(wavecomps):
 		wcr.imag = wc.real*np.sin(angle) + wc.imag*np.cos(angle)
 
 	# Compute phases from rotated complex wave components.
-	return np.arctan2(wc_rot.imag.mean(0), wc_rot.real.mean(0)), np.abs(wc_rot.mean(0)**2.0)
+	if (ampweight):
+		wc_rot_avg = np.average(wc_rot, axis=0, weights=np.abs(wc_rot**2.0).mean(1).mean(1))
+	else:
+		wc_rot_avg = np.average(wc_rot, axis=0)
+
+	return np.arctan2(wc_rot_avg.imag, wc_rot_avg.real), np.abs(wc_rot_avg.mean(0)**2.0)
 
 ### EOF
 

@@ -23,7 +23,7 @@ import logging
 logging.basicConfig( stream=sys.stderr )
 logging.getLogger( "test_fringe" ).setLevel( logging.DEBUG )
 
-SHOWPLOTS=False
+SHOWPLOTS=True
 
 class TestFringecal(unittest.TestCase):
 	# fringe_cal(refimgs, wsize=-0.5, cpeak=0, do_embed=True, store_pow=True, ret_pow=False, outdir='./'):
@@ -169,7 +169,7 @@ class TestAvgphase(unittest.TestCase):
 		position = np.indices(self.sz)*1./np.r_[self.sz].reshape(-1,1,1)
 		self.phase = (3*position**2 + 2*position - 3*position**4).mean(0)
 		self.phase -= self.phase.mean()
-		self.fringes = [sim_fringe(self.phase, self.cf, noiseamp=self.noiseamp, phaseoffset=p) for p in self.phase0]
+		self.fringes = [sim_fringe(self.phase, self.cf, noiseamp=np.random.random()*self.noiseamp, phaseoffset=p) for p in self.phase0]
 
 	def test0_plot_input(self):
 		"""Show phases and fringes"""
@@ -180,6 +180,18 @@ class TestAvgphase(unittest.TestCase):
 
 			plt.figure(200);plt.clf()
 			plt.imshow(self.fringes[0])
+			plt.colorbar()
+
+			plt.figure(201);plt.clf()
+			plt.imshow(self.fringes[1])
+			plt.colorbar()
+
+			plt.figure(202);plt.clf()
+			plt.imshow(self.fringes[2])
+			plt.colorbar()
+
+			plt.figure(203);plt.clf()
+			plt.imshow(self.fringes[3])
 			plt.colorbar()
 			raw_input("...")
 
@@ -199,10 +211,18 @@ class TestAvgphase(unittest.TestCase):
 			plt.imshow(self.phase, vmin=vmin, vmax=vmax)
 			plt.colorbar()
 
-			plt.figure(110);plt.clf()
-			plt.title("Input fringe 0")
-			plt.imshow(self.fringes[0])
-			plt.colorbar()
+			for i in [0, 5]:
+				plt.figure(110+i*10);plt.clf()
+				plt.title("Input fringe %d" % i)
+				plt.imshow(self.fringes[i])
+				plt.colorbar()
+
+				ph = np.arctan2(compl[i].imag, compl[i].real)
+				ph -= ph.mean()
+				plt.figure(111+i*10);plt.clf()
+				plt.title("Rec. phase %d" % i)
+				plt.imshow(ph, vmin=vmin, vmax=vmax)
+				plt.colorbar()
 
 			plt.figure(200);plt.clf()
 			plt.title("Recovered phase")
@@ -217,6 +237,24 @@ class TestAvgphase(unittest.TestCase):
 
 		# @todo This assert is probably very dependent on: noise, nfr and 
 		# the phase itself
+		print "mean(abs(phase residual)):", np.abs(dphase).mean()
+		print "max(phase)/10:", vmax/10.
+		self.assertLess(np.abs(dphase).mean(), vmax/10.)
+
+	def test1_test_avg_weighted(self):
+		"""Compute complex wave components for each fringe, then weighted average"""
+		compl = [filter_sideband(f, self.cf, 0.5, method='spectral', apt_mask=None, wsize=-0.5, wfunc='cosine', get_complex=True, verb=0) for f in self.fringes]
+		vmin, vmax = self.phase.min(), self.phase.max()
+
+		phase, amp = avg_phase(compl, ampweight=True)
+		phase -= phase.mean()
+		dphase = phase - self.phase
+		dphase -= dphase.mean()
+
+		# @todo This assert is probably very dependent on: noise, nfr and 
+		# the phase itself
+		print "mean(abs(phase residual)):", np.abs(dphase).mean()
+		print "max(phase)/10:", vmax/10.
 		self.assertLess(np.abs(dphase).mean(), vmax/10.)
 
 if __name__ == "__main__":
