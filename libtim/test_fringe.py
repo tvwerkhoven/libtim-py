@@ -23,6 +23,8 @@ import logging
 logging.basicConfig( stream=sys.stderr )
 logging.getLogger( "test_fringe" ).setLevel( logging.DEBUG )
 
+SHOWPLOTS=False
+
 class TestFringecal(unittest.TestCase):
 	# fringe_cal(refimgs, wsize=-0.5, cpeak=0, do_embed=True, store_pow=True, ret_pow=False, outdir='./'):
 	def setUp(self):
@@ -171,14 +173,15 @@ class TestAvgphase(unittest.TestCase):
 
 	def test0_plot_input(self):
 		"""Show phases and fringes"""
-		plt.figure(100);plt.clf()
-		plt.imshow(self.phase)
-		plt.colorbar()
+		if (SHOWPLOTS):
+			plt.figure(100);plt.clf()
+			plt.imshow(self.phase)
+			plt.colorbar()
 
-		plt.figure(200);plt.clf()
-		plt.imshow(self.fringes[0])
-		plt.colorbar()
-		raw_input("...")
+			plt.figure(200);plt.clf()
+			plt.imshow(self.fringes[0])
+			plt.colorbar()
+			raw_input("...")
 
 	def test1_test_avg(self):
 		"""Compute complex wave components for each fringe, then average"""
@@ -190,30 +193,31 @@ class TestAvgphase(unittest.TestCase):
 		dphase = phase - self.phase
 		dphase -= dphase.mean()
 		
-		
-		plt.figure(100);plt.clf()
-		plt.title("Input phase")
-		plt.imshow(self.phase, vmin=vmin, vmax=vmax)
-		plt.colorbar()
+		if (SHOWPLOTS):
+			plt.figure(100);plt.clf()
+			plt.title("Input phase")
+			plt.imshow(self.phase, vmin=vmin, vmax=vmax)
+			plt.colorbar()
 
-		plt.figure(110);plt.clf()
-		plt.title("Input fringe 0")
-		plt.imshow(self.fringes[0])
-		plt.colorbar()
+			plt.figure(110);plt.clf()
+			plt.title("Input fringe 0")
+			plt.imshow(self.fringes[0])
+			plt.colorbar()
 
+			plt.figure(200);plt.clf()
+			plt.title("Recovered phase")
+			plt.imshow(phase, vmin=vmin, vmax=vmax)
+			plt.colorbar()
 
-		plt.figure(200);plt.clf()
-		plt.title("Recovered phase")
-		plt.imshow(phase, vmin=vmin, vmax=vmax)
-		plt.colorbar()
+			plt.figure(300);plt.clf()
+			plt.title("Phase difference")
+			plt.imshow(dphase, vmin=vmin/10., vmax=vmax/10.)
+			plt.colorbar()
+			raw_input("...")
 
-		plt.figure(300);plt.clf()
-		plt.title("Phase difference")
-		plt.imshow(dphase, vmin=vmin/10., vmax=vmax/10.)
-		plt.colorbar()
-		raw_input("...")
-		tim.shell()
-
+		# @todo This assert is probably very dependent on: noise, nfr and 
+		# the phase itself
+		self.assertLess(np.abs(dphase).mean(), vmax/10.)
 
 if __name__ == "__main__":
 	import sys
