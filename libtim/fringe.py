@@ -448,7 +448,7 @@ def avg_phase(wavecomps, ampweight=False):
 	else:
 		wc_rot_avg = np.average(wc_rot, axis=0)
 
-	return np.arctan2(wc_rot_avg.imag, wc_rot_avg.real), np.abs(wc_rot_avg.mean(0)**2.0)
+	return np.arctan2(wc_rot_avg.imag, wc_rot_avg.real), np.abs(wc_rot_avg**2.0)
 
 ### EOF
 
