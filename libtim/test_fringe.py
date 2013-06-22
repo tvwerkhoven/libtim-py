@@ -32,6 +32,27 @@ class TestFringecal(unittest.TestCase):
 		self.cflst = [(3, 4), (18.3, 1.3), (22.22, 11.11)]
 		self.sz = (640, 480)
 
+	def test0a_cal(self):
+		"""Test function calls"""
+		for cfreq in self.cflst:
+			fpatt = sim_fringe(np.zeros(self.sz), cfreq)
+			
+			cfreq1 = fringe_cal([fpatt], store_pow=False, do_embed=False)[0]
+			self.assertAlmostEqual(sum(cfreq1), sum(cfreq), places=0)
+			np.testing.assert_almost_equal(cfreq1, cfreq, decimal=0)
+
+			cfreq1 = fringe_cal([fpatt, fpatt], store_pow=False, do_embed=False)[1]
+			self.assertAlmostEqual(sum(cfreq1), sum(cfreq), places=0)
+			np.testing.assert_almost_equal(cfreq1, cfreq, decimal=0)
+
+			cfreq1, fftpl, fftpzooml = fringe_cal([fpatt], store_pow=False, ret_pow=True, do_embed=False)
+			self.assertAlmostEqual(sum(cfreq1.mean(0)), sum(cfreq), places=0)
+			np.testing.assert_almost_equal(cfreq1.mean(0), cfreq, decimal=0)
+
+			cfreq1, fftpl, fftpzooml = fringe_cal([fpatt, fpatt, fpatt], store_pow=False, ret_pow=True, do_embed=False)
+			self.assertAlmostEqual(sum(cfreq1.mean(0)), sum(cfreq), places=0)
+			np.testing.assert_almost_equal(cfreq1.mean(0), cfreq, decimal=0)
+
 	def test1a_cal_flat(self):
 		"""Generate fringe pattern for flat phase"""
 		for cfreq in self.cflst:

@@ -88,6 +88,7 @@ def fringe_cal(refimgs, wsize=-0.5, cpeak=0, do_embed=True, store_pow=True, ret_
 
 	cfreql = []
 	fftpowl = []
+	fftpowzooml = []
 
 	fft_mask = tim.fft.mk_apod_mask(refimgs[0].shape, wsize=wsize, shape='rect', apod_f='cosine')
 
@@ -117,7 +118,8 @@ def fringe_cal(refimgs, wsize=-0.5, cpeak=0, do_embed=True, store_pow=True, ret_
 		if (store_pow):
 			tim.file.store_file(pjoin(outdir, 'fa_cal_pow_zoom'+postf+'.png'), np.log10(fft_pow_zoom))
 
-		fftpowl.append((refimg_pow, fft_pow_zoom))
+		fftpowl.append(refimg_pow)
+		fftpowzooml.append(fft_pow_zoom)
 
 		# If we embedded the data, the frequency we find is twice as high 
 		# because the input array was larger, correct this here
@@ -127,7 +129,7 @@ def fringe_cal(refimgs, wsize=-0.5, cpeak=0, do_embed=True, store_pow=True, ret_
 		cfreql.append(carr_freq)
 
 	if (ret_pow):
-		return np.r_[cfreql], fftpowl
+		return np.r_[cfreql], fftpowl, fftpowzooml
 	else:
 		return np.r_[cfreql]
 
