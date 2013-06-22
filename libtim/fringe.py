@@ -76,6 +76,8 @@ def fringe_cal(refimgs, wsize=-0.5, cpeak=0, do_embed=True, store_pow=True, ret_
 	fringes. This frame will be used to calculate the carrier frequency such
 	that subsequent images can be analysed around this frequency.
 
+	@bug Sometimes carrier frequencies found are *inside* the central blanked out area?
+
 	@param [in] refimgs List of reference fringe patterns
 	@param [in] wsize Apodisation window size
 	@param [in] cpeak Size of central peak in FT power that should be ignored
@@ -112,8 +114,8 @@ def fringe_cal(refimgs, wsize=-0.5, cpeak=0, do_embed=True, store_pow=True, ret_
 
 		# Zoom region: 1/6 of the radius (i.e. at least 6 pixels per fringe)
 		sh = refimg_pow.shape
-		fft_pow_zoom = refimg_pow[int(sh[0]/2.-sh[0]/12.):int(sh[0]/2.+sh[0]/12.),
-			int(sh[1]/2.-sh[1]/12.):int(sh[1]/2.+sh[1]/12.)]
+		npix = 12. / (1+int(do_embed))
+		fft_pow_zoom = refimg_pow[int(sh[0]/2.-sh[0]/npix):int(sh[0]/2.+sh[0]/npix), int(sh[1]/2.-sh[1]/npix):int(sh[1]/2.+sh[1]/npix)]
 
 		if (store_pow):
 			tim.file.store_file(pjoin(outdir, 'fa_cal_pow_zoom'+postf+'.png'), np.log10(fft_pow_zoom))
@@ -167,6 +169,7 @@ def locate_sb(fftpow, cpeak=None):
 	fftpow[rad_mask < cpeak] = 0
 
 	# Find sub-pixel maximum around brightest pixel
+	# @todo Perhaps this should be a wider center of gravity search, 9 pixels is a bit too small for real data
 	sb_loc = tim.xcorr.calc_subpixmax(fftpow, np.r_[fftpow.shape]/2., index=True)
 
 	# There are always two symmetrical sidebands, always find the one with the
