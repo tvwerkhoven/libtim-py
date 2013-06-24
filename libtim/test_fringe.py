@@ -24,6 +24,7 @@ logging.basicConfig( stream=sys.stderr )
 logging.getLogger( "test_fringe" ).setLevel( logging.DEBUG )
 
 SHOWPLOTS=True
+TESTDATAPATH=pjoin(os.path.dirname(__file__), "test_fringe_in/")
 
 class TestFringecal(unittest.TestCase):
 	# fringe_cal(refimgs, wsize=-0.5, cpeak=0, do_embed=True, store_pow=True, ret_pow=False, outdir='./'):
@@ -175,7 +176,6 @@ class TestFiltersb(unittest.TestCase):
 				self.assertEqual(np.isnan(amp).sum(), 0)
 				self.assertEqual(np.isnan(ftpow).sum(), 0)
 
-
 class TestAvgphase(unittest.TestCase):
 	# avg_phase(wavecomps)
 	def setUp(self):
@@ -277,6 +277,156 @@ class TestAvgphase(unittest.TestCase):
 		print "mean(abs(phase residual)):", np.abs(dphase).mean()
 		print "max(phase)/10:", vmax/10.
 		self.assertLess(np.abs(dphase).mean(), vmax/10.)
+
+class TestGradphase(unittest.TestCase):
+	def setUp(self):
+		self.log = logging.getLogger( "test_fringe" )
+
+		# NB: jpgs are required for correct [0,1] data range. PNG data range 
+		# [0, 255] gives weird results?
+		files = ['fringe_130622_154235Z_000082_img.jpg',
+			'fringe_130622_154235Z_000139_img.jpg',
+			'fringe_130622_154235Z_000220_img.jpg',
+			'fringe_130622_154235Z_000330_img.jpg',
+			'fringe_130622_154235Z_000412_img.jpg',
+			'fringe_130622_154235Z_000505_img.jpg']
+		self.fringes = [tim.file.read_file(pjoin(TESTDATAPATH,f)) for f in files]
+		self.sz = self.fringes[0].shape
+		self.cfreq = (7.81111508,  24.76214802)
+
+	def test0_fringe_phase(self):
+		"""Test nominal sideband filtering"""
+		cfreq = fringe_cal(self.fringes, store_pow=False, do_embed=True).mean(0)
+		# Should give approximately 7.81111508,  24.76214802
+		for fringe in self.fringes:
+			phase, amp, ftpow = filter_sideband(fringe, cfreq, 0.5, method='spectral', apt_mask=None, unwrap=True, wsize=-0.5, wfunc='cosine', ret_pow=True, verb=0)
+			vmin, vmax = phase.min(), phase.max()
+
+			plt.figure(110);plt.clf()
+			plt.title("Input fringes")
+			plt.imshow(fringe)
+			plt.colorbar()
+
+			plt.figure(200);plt.clf()
+			plt.title("Rec. phase")
+			plt.imshow(phase, vmin=vmin, vmax=vmax)
+			plt.colorbar()
+
+			plt.figure(300);plt.clf()
+			plt.title("Rec. amp")
+			plt.imshow(amp)
+			plt.colorbar()
+
+			plt.figure(400);plt.clf()
+			plt.title("Rec. FTpow")
+			plt.imshow(ftpow)
+			plt.colorbar()
+
+			raw_input("...")
+
+	def test0_fringe_phase_grad(self):
+		"""Test phase gradient calculation"""
+		phase, amp, ftpow = filter_sideband(self.fringe, self.cf, 0.5, method='spectral', apt_mask=None, unwrap=True, wsize=-0.5, wfunc='cosine', ret_pow=True, verb=0)
+		vmin, vmax = self.phase.min(), self.phase.max()
+
+		phgrad = phase_grad(self.phase)
+
+		plt.figure(100);plt.clf()
+		plt.title("Input phase")
+		plt.imshow(self.phase, vmin=vmin, vmax=vmax)
+		plt.colorbar()
+
+		plt.figure(200);plt.clf()
+		plt.title("Phase grad0")
+		plt.imshow(phgrad[0])
+		plt.colorbar()
+		plt.figure(201);plt.clf()
+		plt.title("Phase grad1")
+		plt.imshow(phgrad[1])
+		plt.colorbar()
+		plt.figure(201);plt.clf()
+		plt.title("Phase abs(grad)")
+		plt.imshow((phgrad[0]**2.+phgrad[1]**2.)**0.5)
+		plt.colorbar()
+
+		raw_input("...")
+
+	def test1_phase_grad_fit(self):
+		"""Test phase gradient calculation"""
+		cfreq = fringe_cal(self.fringes, store_pow=False, do_embed=True).mean(0)
+		zndata = tim.zern.calc_zern_basis(10, min(self.sz)/2)
+		zngrad = [phase_grad(zmode) for zmode in zndata['modes']]
+
+		plt.figure(300); plt.clf()
+		plt.title("Zern. vecs")
+
+		zvecs_reg = []
+		zvecs_grad = []
+
+		for fringe in self.fringes:
+			phase, amp, ftpow = filter_sideband(fringe, cfreq, 0.5, method='spectral', apt_mask=None, unwrap=True, wsize=-0.5, wfunc='cosine', ret_pow=True, verb=0)
+			phgrad = phase_grad(phase, clip=0)
+
+			# Fit Zernike on scalar values
+			zvec, zrec, zdiff = tim.zern.fit_zernike(phase, zern_data=zndata, fitweight=amp)
+			zvecs_reg.append(zvec)
+
+			# Now fit Zernikes on gradients
+			# This works partially, some modes have no gradient in X or Y, 
+			# and therefore fitting data to these modes gives arbitrary 
+			# results.
+			phgrad0vec = ((phgrad[0][zndata['mask']]) * amp[zndata['mask']]).reshape(1,-1)
+			zngrad0_mat = np.r_[ [zg[0][zndata['mask']] * amp[zndata['mask']] for zg in zngrad] ]
+			# zngrad0_vec = np.dot(phgrad0vec, np.linalg.pinv(zngrad0_mat)).ravel()
+
+			phgrad1vec = ((phgrad[1][zndata['mask']])).reshape(1,-1)
+			zngrad1_mat = np.r_[ [zg[1][zndata['mask']] * amp[zndata['mask']] for zg in zngrad] ]
+			# zngrad1_vec = np.dot(phgrad1vec, np.linalg.pinv(zngrad1_mat)).ravel()
+		
+			# Fit both gradients simultaneously
+			# This works best as modes with no [x,y] gradient still have 
+			# [y,x] gradient
+			phgradvec = np.hstack([phgrad0vec, phgrad1vec])
+			zngrad_mat = np.hstack([zngrad0_mat, zngrad1_mat])
+			zngrad_vec = np.dot(phgradvec, np.linalg.pinv(zngrad_mat)).ravel()
+			zvecs_grad.append(zngrad_vec)
+
+			plt.figure(100); plt.clf()
+			plt.title("Rec. phase")
+			plt.imshow(phase)
+			plt.colorbar()
+
+			plt.figure(101); plt.clf()
+			plt.title("Rec. amp")
+			plt.imshow(amp)
+			plt.colorbar()
+
+			plt.figure(110); plt.clf()
+			plt.title("Rec. grad0")
+			plt.imshow(phgrad[0], vmin=-0.03, vmax=0.03)
+			plt.colorbar()
+
+			plt.figure(120); plt.clf()
+			plt.title("Rec. grad1")
+			plt.imshow(phgrad[1], vmin=-0.03, vmax=0.03)
+			plt.colorbar()
+
+			plt.figure(200); plt.clf()
+			plt.title("Zern. rec")
+			plt.imshow(zrec)
+			plt.colorbar()
+
+			plt.figure(300); 
+			plt.plot(zvec, '-')
+			plt.plot(zngrad_vec, '--')
+
+		plt.figure(400); plt.clf()
+		plt.title("Zernike vectors for 6 fringes")
+		nz = np.arange(10)+1
+		plt.errorbar(nz-0.1, np.mean(zvecs_reg,0), yerr=np.std(zvecs_reg,0), elinewidth=3, fmt='.')
+		plt.errorbar(nz+0.1, np.mean(zvecs_grad,0), yerr=np.std(zvecs_grad,0), elinewidth=3, fmt='.')
+
+		tim.shell()
 
 if __name__ == "__main__":
 	import sys
