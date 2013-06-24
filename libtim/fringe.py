@@ -456,7 +456,7 @@ def avg_phase(wavecomps, ampweight=False):
 
 	return np.arctan2(wc_rot_avg.imag, wc_rot_avg.real)/2./np.pi, np.abs(wc_rot_avg**2.0)
 
-def phase_grad(wave, wrap=0, clip=0):
+def phase_grad(wave, wrap=0, clip=0, asvec=False):
 	"""
 	Calculate gradient of phase, pixel by pixel.
 
@@ -481,7 +481,10 @@ def phase_grad(wave, wrap=0, clip=0):
 		dwave0 = np.clip(dwave0, -clip, +clip)
 		dwave1 = np.clip(dwave1, -clip, +clip)
 
-	return dwave0, dwave1
+	if (asvec):
+		return np.hstack([dwave0.ravel(), dwave1.ravel()])
+	else:
+		return dwave0, dwave1
 
 ### EOF
 
