@@ -186,21 +186,22 @@ def locate_sb(fftpow, cpeak=None):
 
 def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap=True, wsize=-0.5, wfunc='cosine', cache={}, ret_pow=False, get_complex=False, verb=0):
 	"""
-	Filter out sideband from a real image, return phase and amplitude.
+	Filter out sideband from a real image, return phase and amplitude. Phase
+	is returned in radians, complex components are given 'as-is'.
 
 	For extracting the sideband we have three options:
 	1. Shift carrier frequency to origin using spectral shifting
 	2. Select a passband around the carrier frequency in Fourier space
 	3. Select a circular frequency region around the carrier frequency in Fourier space (work in progress)
 
-	# Spectral method:
+	# Spectral method (recommended):
 	1. Shift frequencies in image space such that carrier frequency is at the origin
 	2. Apodise image and Fourier transform
 	3. Lowpass filter around frequency zero. Due to spectral shifting, this selects our carrier frequency.
 	4. Inverse transform, get complex components
 	5. Calculate phase and unwrap
 
-	# Passband method:
+	# Passband method (not recommended):
 	1. Apodise image and Fourier transform
 	2. Bandpass filter around carrier frequency
 	3. Half-plane cut and inverse transform
@@ -280,7 +281,7 @@ def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap
 			phase_wr *= apt_mask
 			amp *= apt_mask
 
-		if (unwrap): phase = flood_quality(phase_wr, amp)/(2.0*np.pi)
+		if (unwrap): phase = flood_quality(phase_wr, amp)
 		else: phase = phase_wr
 
 		if (np.any(apt_mask)):
@@ -350,7 +351,7 @@ def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap
 			phase_wr *= apt_mask
 			amp *= apt_mask
 
-		if (unwrap): phase = flood_quality(phase_wr, amp)/(2.0*np.pi)
+		if (unwrap): phase = flood_quality(phase_wr, amp)
 		else: phase = phase_wr
 
 		# 5. Calculate slope to subtract
@@ -400,9 +401,9 @@ def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap
 		raise ValueError("Unknown method '%s'" % (method))
 
 	if (ret_pow):
-		return (phase, amp, fftpow)
+		return (phase/(2.0*np.pi), amp, fftpow)
 	else:
-		return (phase, amp)
+		return (phase/(2.0*np.pi), amp)
 
 def get_dark_flat(flats, darks, roi=(0,-1,0,-1)):
 	"""
@@ -427,7 +428,7 @@ def get_dark_flat(flats, darks, roi=(0,-1,0,-1)):
 def avg_phase(wavecomps, ampweight=False):
 	"""
 	Given a list of complex wave components **wavecomps**, average these 
-	phasor-wise.
+	phasor-wise. Returned phase is in radians.
 
 	We first rotate the complex phasors to have the same angle for the 
 	center element, then we average the the phases and take the arctangent, 
