@@ -454,7 +454,34 @@ def avg_phase(wavecomps, ampweight=False):
 	else:
 		wc_rot_avg = np.average(wc_rot, axis=0)
 
-	return np.arctan2(wc_rot_avg.imag, wc_rot_avg.real), np.abs(wc_rot_avg**2.0)
+	return np.arctan2(wc_rot_avg.imag, wc_rot_avg.real)/2./np.pi, np.abs(wc_rot_avg**2.0)
+
+def phase_grad(wave, wrap=0, clip=0):
+	"""
+	Calculate gradient of phase, pixel by pixel.
+
+	@param [in] wave Input phase
+	@param [in] wrap Wrap per-pixel phase variation by this value
+	@param [in] clip Clip gradient to this value
+	@return Tuple of (grad0, grad0)
+	"""
+
+	# Ignore first line of data in other than the differential direction to
+	# have equal dimensions for different gradients
+	dwave0 = wave[1:,1:] - wave[:-1,1:]
+	dwave1 = wave[1:,1:] - wave[1:, :-1]
+
+	if (wrap):
+		dwave0[dwave0>wrap] = dwave0[dwave0>wrap] - wrap
+		dwave0[dwave0<wrap] = dwave0[dwave0<wrap] + wrap
+		dwave1[dwave1>wrap] = dwave1[dwave1>wrap] - wrap
+		dwave1[dwave1<wrap] = dwave1[dwave1<wrap] + wrap
+
+	if (clip):
+		dwave0 = np.clip(dwave0, -clip, +clip)
+		dwave1 = np.clip(dwave1, -clip, +clip)
+
+	return dwave0, dwave1
 
 ### EOF
 
