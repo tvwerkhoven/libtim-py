@@ -231,7 +231,8 @@ def calc_zern_infmat(subaps, nzern=10, zerncntr=None, zernrad=-1.0, singval=1.0,
 		quality = np.trace(pseudo_i)/np.sum(pseudo_i)
 		if (verb>2):
 			print "calc_zern_infmat(): quality: %.g, singval: %.g"
-		if (quality < singval*0.8):
+		# @todo What was the idea of this check?
+		#if (quality < singval*0.8):
 
 	return zern_inv_mat, zernslopes*sfac, zbasis, extent
 
