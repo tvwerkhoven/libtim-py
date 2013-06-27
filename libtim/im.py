@@ -94,20 +94,10 @@ def mk_rad_prof(data, center=None, maxrange=None, step=1, procf=np.mean):
 
 	# Make radial mask
 	rad_mask = mk_rad_mask(data.shape[0], data.shape[1], norm=False, center=center)
-	# Above code is identical to
-	# rad_mask = np.indices(data.shape) - (np.r_[data.shape]/2).reshape(-1,1,1)
-	# rad_mask = np.sqrt((rad_mask**2.0).sum(0))
-
 
 	# Make radial profile using <step> pixel wide annuli with increasing 
 	# radius until <maxrange>. Calculate the mean in each annulus
 	profile = [procf(data[(rad_mask >= i) & (rad_mask < i+step)]) for i in xrange(0, maxrange, step)]
-
-	# Code above is equivalent to:
-	#profile = []
-	#for i in xrange(0, maxrange, step):
-	#	this_mask = (rad_mask >= i) & (rad_mask < i+step)
-	#	profile.append(procf(data[this_mask]))
 
 	return np.r_[profile]
 
