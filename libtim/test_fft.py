@@ -13,6 +13,7 @@ Testcases for fft.py library.
 
 from fft import *
 import unittest
+import libtim as tim
 import pylab as plt
 
 SHOWPLOTS=False
@@ -42,7 +43,8 @@ class TestScramble(unittest.TestCase):
 class TestEmbed(unittest.TestCase):
 	def setUp(self):
 		self.szlist = [(32, 32), (33, 33), (64, 65), (100, 201), (512, 512)]
-		self.imlist = [np.random.random((sz)) for sz in self.szlist]
+		imlist = [np.indices(sz) for sz in self.szlist]
+		self.imlist = [np.sin(im0/10.)+np.cos(im0/7.)+np.sin(im1/3.4)+np.cos(im1/11.) for im0, im1 in imlist]
 
 	def test0_try_scale2(self):
 		"""Try to see if embed works for scale=2"""
@@ -80,6 +82,26 @@ class TestEmbed(unittest.TestCase):
 			ememim = embed_data(emim, direction=-1, scale=3)
 			#print "test1_unity_scale3(): im = %s, em = %s" % (str(im.shape), str(emim.shape))
 			self.assertTrue(np.allclose(ememim, im))
+
+	def test2_compare_lib(self):
+		"""Compare our embedding with library embedding in case of FFTs"""
+		for im in self.imlist:
+			sz = im.shape
+			fft0 = np.fft.fft2(im)
+			# We embed ourselves, then FFT
+			emim = embed_data(im, direction=1, scale=2)
+			fft1 = np.fft.fft2(emim)
+
+			# Here we use numpy embedding
+			fft2 = np.fft.fft2(im, s=np.r_[sz]*2)
+
+			# Test the power, the phase is different because of embedding 
+			# implementations
+			np.testing.assert_almost_equal(np.abs(fft1), np.abs(fft2))
+
+			# This should be equal as well
+			np.testing.assert_almost_equal(np.abs(fft0), np.abs(fft2[::2,::2]))
+
 
 class TestApodMask(unittest.TestCase):
 	def setUp(self):
