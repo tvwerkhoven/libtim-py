@@ -34,7 +34,7 @@ class TestCoG(unittest.TestCase):
 	def test1a_check_calc_cog(self):
 		"""Try to see if calc_cog output is  sane"""
 		for im, p in zip(self.imlist, self.maxpos):
-			cog = calc_cog(im)
+			cog = tuple(calc_cog(im, index=True))
 			self.assertEqual(cog, p)
 
 	def test1b_check_calc_cog(self):
