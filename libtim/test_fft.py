@@ -17,6 +17,28 @@ import pylab as plt
 
 SHOWPLOTS=False
 
+class TestScramble(unittest.TestCase):
+	def setUp(self):
+		self.szlist = [(32, 32), (33, 33), (64, 65), (100, 201), (512, 512)]
+		self.imlist = [np.random.random((sz)) for sz in self.szlist]
+
+	def test0_try_funcs(self):
+		"""Try to see if function works"""
+		for im in self.imlist:
+			im1 = descramble(im, direction=1)
+			im2 = descramble(im1, direction=-1)
+
+	
+	def test1_try_identity(self):
+		"""Try to see if function can restore its effect"""
+		for im in self.imlist:
+			im1 = descramble(im, direction=1)
+			im2 = descramble(im1, direction=-1)
+
+			np.testing.assert_equal(im, im2)
+			self.assertFalse(np.allclose(im, im1))
+			self.assertFalse(np.allclose(im1, im2))
+
 class TestEmbed(unittest.TestCase):
 	def setUp(self):
 		self.szlist = [(32, 32), (33, 33), (64, 65), (100, 201), (512, 512)]
@@ -58,7 +80,6 @@ class TestEmbed(unittest.TestCase):
 			ememim = embed_data(emim, direction=-1, scale=3)
 			#print "test1_unity_scale3(): im = %s, em = %s" % (str(im.shape), str(emim.shape))
 			self.assertTrue(np.allclose(ememim, im))
-
 
 class TestApodMask(unittest.TestCase):
 	def setUp(self):

@@ -168,17 +168,19 @@ def descramble(data, direction=1):
 	"""
 	(de)scramble **data**, usually used for Fourier transform.
 
-	'Scrambling' data means to swap around quadrant 1 with 3 and 2 with 4 in a data matrix. The effect is that the zero frequency is no longer at **data[0,0]** but in the middle of the matrix
+	'Scrambling' data means to swap around quadrant 1 with 3 and 2 with 4 in 
+	a data matrix. The effect is that the zero frequency is no longer at 
+	**data[0,0]** but in the middle of the matrix
 
 	@param [in] data Data to (de)scramble
 	@param [in] direction 1: scramble, -1: descramble
 	@return (de)scrambled data
 	"""
 
-	for ax,rollvec in enumerate(np.r_[data.shape]/2):
-		data = np.roll(data, direction*rollvec, ax)
-
-	return data
+	if (direction == 1):
+		return np.fft.fftshift(data)
+	else:
+		return np.fft.ifftshift(data)
 
 def embed_data(indata, direction=1, scale=2):
 	"""
