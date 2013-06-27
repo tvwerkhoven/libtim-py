@@ -13,9 +13,11 @@ license versions 3.0 or higher, see
 http://creativecommons.org/licenses/by-sa/3.0/
 """
 
-# Import libs
+# Import local libs
 from fringe import *
-import libtim as tim
+import shwfs
+
+# Import other libs
 import unittest
 import numpy as np
 import pylab as plt
@@ -94,7 +96,37 @@ class TestFringecal(unittest.TestCase):
 			self.assertAlmostEqual(sum(cfreq1), sum(cfreq), places=1)
 			np.testing.assert_almost_equal(cfreq1, cfreq, decimal=1)
 
-	def test3_cal_qual(self):
+	def test3a_cal_real(self):
+		"""Test quality of fringe_cal with real data"""
+		files = ['fringe_130622_154235Z_000082_img.jpg',
+			'fringe_130622_154235Z_000139_img.jpg',
+			'fringe_130622_154235Z_000220_img.jpg',
+			'fringe_130622_154235Z_000330_img.jpg',
+			'fringe_130622_154235Z_000412_img.jpg',
+			'fringe_130622_154235Z_000505_img.jpg']
+		fringes = [tim.file.read_file(pjoin(TESTDATAPATH,f)) for f in files]
+		sz = fringes[0].shape
+		cfreq = (7.81111508,  24.76214802)
+
+		do_embed = True
+		cfreqs0, impowl, impowzml = fringe_cal(fringes, wsize=-0.5, cpeak=0, do_embed=do_embed, method='parabola', store_pow=False, ret_pow=True, outdir='./')
+		cfreq0 = np.mean(cfreqs0, 0)
+		cfreqs1 = fringe_cal(fringes, wsize=-0.5, cpeak=0, do_embed=do_embed, method='cog', store_pow=False, ret_pow=False, outdir='./')
+		cfreq1 = np.mean(cfreqs1, 0)
+		sz = np.r_[impowzml[0].shape]/(1+do_embed)
+		cfreq2 = np.argwhere(impowzml[0] == impowzml[0].max())[0]/2 - sz/2
+		
+		for impowzm in impowzml:
+			plt.figure(100); plt.clf()
+			plt.title("Carr. freq. FFT power log zoom")
+			plt.imshow(np.log10(impowzm), extent=(-sz[1]/2, sz[1]/2, -sz[0]/2, sz[0]/2))
+			plt.plot(cfreq2[1], cfreq2[0], "+") # Maximum pixel
+			plt.plot(cfreq0[1], cfreq0[0], "^") # Parabolic interpolation
+			plt.plot(cfreq1[1], cfreq1[0], "*") # Center of gravity
+			
+			raw_input("...")
+
+	def test3b_cal_qual(self):
 		"""Test quality of fringe_cal with noise"""
 		self.log.debug("cf: carr freq, noise: noise fractio; ratio1*e3: embedded cfreq quality, ratio2*e3: no embed cfreq quality")
 		for idx, cfreq in enumerate(self.cflst):
