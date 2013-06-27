@@ -38,6 +38,7 @@ import libtim.util
 import libtim.file
 import libtim.fft
 import libtim.xcorr
+import libtim.shwfs
 
 from unwrap import flood_quality
 
@@ -70,7 +71,7 @@ def sim_fringe(phase, cfreq, noiseamp=0, phaseoffset=0, noisesmooth=10):
 
 	return fringe+fnoise
 
-def fringe_cal(refimgs, wsize=-0.5, cpeak=0, do_embed=True, store_pow=True, ret_pow=False, outdir='./'):
+def fringe_cal(refimgs, wsize=-0.5, cpeak=0, do_embed=True, method='parabola', store_pow=True, ret_pow=False, outdir='./'):
 	"""
 	Calibrate fringe analysis here using a reference frame with pure carrier
 	fringes. This frame will be used to calculate the carrier frequency such
@@ -82,6 +83,7 @@ def fringe_cal(refimgs, wsize=-0.5, cpeak=0, do_embed=True, store_pow=True, ret_
 	@param [in] wsize Apodisation window size
 	@param [in] cpeak Size of central peak in FT power that should be ignored
 	@param [in] do_embed Embed data before FFT. This improves sideband localisation.
+	@param [in] method Method to determine the sideband center, see locate_sb
 	@param [in] store_pow Store the Fourier power spectrum
 	@param [in] ret_pow Return Fourier power spectra
 	@param [in] outdir Directory to store output to
@@ -110,7 +112,7 @@ def fringe_cal(refimgs, wsize=-0.5, cpeak=0, do_embed=True, store_pow=True, ret_
 			refimg_ft = tim.fft.embed_data(refimg_ft, direction=-1)
 
 		refimg_pow = np.abs(refimg_ft**2.0)
-		carr_freq = locate_sb(refimg_pow, cpeak)
+		carr_freq = locate_sb(refimg_pow, cpeak=cpeak, method=method)
 
 		# Zoom region: 1/6 of the radius (i.e. at least 6 pixels per fringe)
 		sh = refimg_pow.shape
@@ -135,7 +137,7 @@ def fringe_cal(refimgs, wsize=-0.5, cpeak=0, do_embed=True, store_pow=True, ret_
 	else:
 		return np.r_[cfreql]
 
-def locate_sb(fftpow, cpeak=None):
+def locate_sb(fftpow, cpeak=None, method='parabola'):
 	"""
 	Given a (descrambled) Fourier power spectrum **fftpow**, find the 
 	location of the (first) side-band peak.
@@ -148,6 +150,7 @@ def locate_sb(fftpow, cpeak=None):
 
 	@param [in] fftpow Descrambled power spectrum to analyze
 	@param [in] cpeak Radius of central region to ignore. If None, find ourselves
+	@param [in] method Method to determine the sideband center, either parabola for a 2D parabolic fit or cog for center of gravity. The former is slightly more precise, the latter is more robust
 	@return Numpy array of (x, y) subpixel maximum of first sideband
 	"""
 
@@ -159,18 +162,28 @@ def locate_sb(fftpow, cpeak=None):
 		rad_prof = tim.im.mk_rad_prof(fftpow)
 		# Detect where intensity stops declining. Skip first pixel because this is already low due to removing the mean from the FFT
 		d_rad_prof = rad_prof[1:-1] - rad_prof[2:]
-		cpeak = np.argwhere(d_rad_prof < 0)[0][0] + 1
+		cpeak = np.argwhere(d_rad_prof < 0)[0][0]
 
 	# Make radial coordinate mask
-	rad_mask = np.indices(fftpow.shape) - (np.r_[fftpow.shape]/2).reshape(-1,1,1)
-	rad_mask = np.sqrt((rad_mask**2.0).sum(0))
+	rad_mask = tim.im.mk_rad_mask(fftpow.shape[0], fftpow.shape[1], norm=False)
 
-	# Set center <cpeak> pixels to 0
-	fftpow[rad_mask < cpeak] = 0
+	# Ignore center <cpeak> pixels in further processing
+	fftpow[rad_mask <= cpeak] = 0
 
+	sz = np.r_[fftpow.shape]
 	# Find sub-pixel maximum around brightest pixel
-	# @todo Perhaps this should be a wider center of gravity search, 9 pixels is a bit too small for real data
-	sb_loc = tim.xcorr.calc_subpixmax(fftpow, np.r_[fftpow.shape]/2., index=True)
+	if (method == 'parabola'):
+		# @todo Perhaps this should be a wider center of gravity search, 9 pixels is a bit too small for real data
+		sb_loc = tim.xcorr.calc_subpixmax(fftpow, sz/2., index=True)
+	elif (method == "cog"):
+		# Select 10% of image around maximum value, calculate CoG
+		max0, max1 = np.argwhere(fftpow == fftpow.max())[0]
+		r0, r1 = sz/20
+		fftpow_crop = fftpow[max0-r0:max0+r0, max1-r1:max1+r1]
+		crop_mid = tim.shwfs.calc_cog(fftpow_crop, index=True)
+		sb_loc = np.r_[max0-r0, max1-r1] - sz/2. + crop_mid
+	else:
+		raise ValueError("Unknown method (parabola or cog)")
 
 	# There are always two symmetrical sidebands, always find the one with the
 	# highest sum to ensure we always find the same.
@@ -472,6 +485,7 @@ def phase_grad(wave, wrap=0, clip=0, asvec=False):
 	dwave1 = wave[1:,1:] - wave[1:, :-1]
 
 	if (wrap):
+		# @todo: >wrap should be >pi, wrap offset should be 2 pi (?)
 		dwave0[dwave0>wrap] = dwave0[dwave0>wrap] - wrap
 		dwave0[dwave0<wrap] = dwave0[dwave0<wrap] + wrap
 		dwave1[dwave1>wrap] = dwave1[dwave1>wrap] - wrap
