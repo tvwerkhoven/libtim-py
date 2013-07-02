@@ -208,6 +208,40 @@ class TestFiltersb(unittest.TestCase):
 				self.assertEqual(np.isnan(amp).sum(), 0)
 				self.assertEqual(np.isnan(ftpow).sum(), 0)
 
+	def test2_filtersb_test_real(self):
+		"""Test if filter_sideband() on real data for inspection"""
+		# NB: jpgs are required for correct [0,1] data range. PNG data range 
+		# [0, 255] gives weird results?
+		files = ['fringe_130622_154235Z_000082_img.jpg',
+			'fringe_130622_154235Z_000139_img.jpg',
+			'fringe_130622_154235Z_000220_img.jpg',
+			'fringe_130622_154235Z_000330_img.jpg',
+			'fringe_130622_154235Z_000412_img.jpg',
+			'fringe_130622_154235Z_000505_img.jpg']
+		fringes = [tim.file.read_file(pjoin(TESTDATAPATH,f)) for f in files]
+
+		cfreq = fringe_cal(fringes, store_pow=False, do_embed=True).mean(0)
+		aptmask = tim.im.mk_rad_mask(*fringes[0].shape) < 1
+
+		FACACHE = {}
+		phasepow_l = [filter_sideband(i, cfreq, 0.5, method='spectral', apt_mask=aptmask, unwrap=True, wsize=-0.5, wfunc='cosine', cache=FACACHE, ret_pow=True, get_complex=False, verb=0) for i in fringes]
+
+		for im, phase in zip(fringes, phasepow_l):
+			plt.figure(400, figsize=(4,4)); plt.clf()
+			ax0 = plt.subplot2grid((2,2),(0, 0))
+			ax0.set_title("intensity")
+			ax0.imshow(im)
+			ax1 = plt.subplot2grid((2,2),(0, 1))
+			ax1.set_title("log side band power")
+			ax1.imshow(np.log(phase[2]))
+			ax2 = plt.subplot2grid((2,2),(1, 0))
+			ax2.set_title("phase")
+			ax2.imshow(phase[0])
+			ax3 = plt.subplot2grid((2,2),(1, 1))
+			ax3.set_title("amplitude")
+			ax3.imshow(phase[1])
+			raw_input("...")
+
 class TestAvgphase(unittest.TestCase):
 	# avg_phase(wavecomps)
 	def setUp(self):
