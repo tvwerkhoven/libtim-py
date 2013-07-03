@@ -12,6 +12,7 @@ import im
 import warnings
 import numpy as np
 import pylab as plt
+from os.path import join as pjoin
 
 def comp_influence(inflmeas, inflact, binfac=None, singval=1.0, add_offset=False, verb=0):
 	"""
@@ -98,7 +99,7 @@ def comp_influence(inflmeas, inflact, binfac=None, singval=1.0, add_offset=False
 
 	return infl
 
-def inspect_influence(inflact, inflmeas, apt_mask, infldat=None, what="all", fignum0=1000):
+def inspect_influence(inflact, inflmeas, apt_mask, infldat=None, what="all", fignum0=1000, store=False, outdir='./'):
 	"""
 	Given influence data, inspect it
 	"""
@@ -117,12 +118,14 @@ def inspect_influence(inflact, inflmeas, apt_mask, infldat=None, what="all", fig
 		plt.xlabel("Mode [#]")
 		plt.ylabel("Singular value [AU]")
 		plt.plot(svd_s)
+		if (store): plt.savefig(pjoin(outdir, "cal_singvals.pdf"))
 
 		plt.figure(fignum0+101); plt.clf()
 		plt.title("Singvals [log] (n=%d, sum=%.4g, c=%.4g)" % (len(svd_s), svd_s.sum(), svd_s[0]/svd_s[-1]))
 		plt.xlabel("Mode [#]")
 		plt.ylabel("Singular value [AU]")
 		plt.semilogy(svd_s)
+		if (store): plt.savefig(pjoin(outdir, "cal_singvals_logy.pdf"))
 		raw_input("Continue...")
 
 	if (what in ["all", "offset"]):
@@ -138,6 +141,7 @@ def inspect_influence(inflact, inflmeas, apt_mask, infldat=None, what="all", fig
 		plt.title("Offset phase (system aberration)")
 		plt.imshow(thisvec, vmin=imin, vmax=imax)
 		plt.colorbar()
+		if (store): plt.savefig(pjoin(outdir, "cal_offset_phase.pdf"))
 		raw_input("Continue...")
 
 	if (what in ["all", "actrec"]):
@@ -147,6 +151,7 @@ def inspect_influence(inflact, inflmeas, apt_mask, infldat=None, what="all", fig
 		plt.ylabel("Measurement [#]")
 		plt.imshow(infldat['actmat_rec'])
 		plt.colorbar()
+		if (store): plt.savefig(pjoin(outdir, "cal_actmat_rec.pdf"))
 		raw_input("Continue...")
 
 	if (what in ["all", "inflact"]):
@@ -163,6 +168,7 @@ def inspect_influence(inflact, inflmeas, apt_mask, infldat=None, what="all", fig
 			plt.title("Actuator %d influence" % (idx))
 			plt.imshow(thisvec, vmin=imin, vmax=imax)
 			plt.colorbar()
+			if (store): plt.savefig(pjoin(outdir, "cal_infl_vec_%d.pdf" % (idx)))
 			if (raw_input("Continue [b=break]...") == 'b'): break
 
 	if (what in ["all", "sysmodes"]):
@@ -179,6 +185,7 @@ def inspect_influence(inflact, inflmeas, apt_mask, infldat=None, what="all", fig
 			plt.title("DM base %d, s=%g (%g)" % (idx, svd_s[idx], svd_s[idx]/svd_s.sum()))
 			plt.imshow(thisbase, vmin=imin, vmax=imax)
 			plt.colorbar()
+			if (store): plt.savefig(pjoin(outdir, "cal_dm_base_vec_%d.pdf" % (idx)))
 			if (raw_input("Continue [b=break]...") == 'b'): break
 
 	if (what in ["all", "measrec"]):
@@ -195,6 +202,7 @@ def inspect_influence(inflact, inflmeas, apt_mask, infldat=None, what="all", fig
 			plt.title("influence meas. %d rec" % (idx))
 			plt.imshow(thismeasrec, vmin=imin, vmax=imax)
 			plt.colorbar()
+			if (store): plt.savefig(pjoin(outdir, "cal_infl_vec_%d_rec.pdf" % (idx)))
 			if (raw_input("Continue [b=break]...") == 'b'): break
 
 	raw_input("Will now exit and close windows...")
