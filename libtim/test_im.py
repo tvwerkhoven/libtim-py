@@ -35,13 +35,10 @@ class TestUtilFuncs(unittest.TestCase):
 		mk_rad_mask(10, 64)
 
 	def test0b_mkradmask(self):
-		"""Test mk_rad_mask fails"""
-		with self.assertRaises(ValueError):
-			mk_rad_mask(0)
-		with self.assertRaises(ValueError):
-			mk_rad_mask(-1)
-		with self.assertRaises(ValueError):
-			mk_rad_mask(-10, -10)
+		"""Test incorrect array sizes"""
+		self.assertFalse(np.any(mk_rad_mask(0)))
+		self.assertFalse(np.any(mk_rad_mask(-1)))
+		self.assertFalse(np.any(mk_rad_mask(-10, -10)))
 
 	def test0c_mkradmask_offset(self):
 		"""Test mk_rad_mask with center offset"""

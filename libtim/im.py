@@ -25,6 +25,7 @@ from matplotlib.figure import Figure
 from matplotlib import cm
 from matplotlib.backends.backend_pdf import FigureCanvasPdf as FigureCanvas
 import datetime
+import warnings
 
 from file import filenamify
 from util import mkfitshdr
@@ -37,24 +38,30 @@ from util import mkfitshdr
 # Routines
 #=============================================================================
 
-def mk_rad_mask(r0, r1=None, norm=True, center=None):
+def mk_rad_mask(r0, r1=None, norm=True, center=None, dtype=np.float):
 	"""
-	Make a rectangular matrix of size (r0, r1) where the value of each element is the Euclidean distance to **center**. If **center** is not given, it is the middle of the matrix. If **norm** is True (default), the distance is normalized to half the radius, i.e. values will range from [-1, 1] for both axes.
+	Make a rectangular matrix of size (r0, r1) where the value of each 
+	element is the Euclidean distance to **center**. If **center** is not 
+	given, it is the middle of the matrix. If **norm** is True (default), 
+	the distance is normalized to half the radius, i.e. values will range 
+	from [-1, 1] for both axes.
 
-	If only r0 is given, the matrix will be (r0, r0). If r1 is also given, the matrix will be (r0, r1)
+	If only r0 is given, the matrix will be (r0, r0). If r1 is also given, 
+	the matrix will be (r0, r1)
 
-	To make a circular binary mask of (r0, r0), use mk_rad_mask(r0) < 1
+	To make a circular binary mask of (r0, r0), use
+		mk_rad_mask(r0) < 1
 
 	@param [in] r0 The width (and height if r1==None) of the mask.
 	@param [in] r1 The height of the mask.
 	@param [in] norm Normalize the distance such that 2/(r0, r1) equals a distance of 1.
-	@param [in] center Set distance origin to **center** (defaults to the middle pixel of the rectangle)
+	@param [in] center Set distance origin to **center** (defaults to the middle of the rectangle)
 	"""
 
 	if (not r1):
 		r1 = r0
-	if (r0 < 1 or r1 < 1):
-		raise ValueError("r0, r1 should be > 0")
+	if (r0 < 0 or r1 < 0):
+		warnings.warn("mk_rad_mask(): r0 < 0 or r1 < 0?")
 	
 	if (center != None and norm and sum(center)/len(center) > 1):
 		raise ValueError("|center| should be < 1 if norm is set")	
@@ -67,11 +74,11 @@ def mk_rad_mask(r0, r1=None, norm=True, center=None):
 	# 2.0/r0 first and multiply r0v with it depending on **norm**, this will 
 	# yield different results due to rounding errors.
 	if (norm):
-		r0v = np.linspace(-1-center[0], 1-center[0], r0).reshape(-1,1)
-		r1v = np.linspace(-1-center[1], 1-center[1], r1).reshape(1,-1)
+		r0v = np.linspace(-1-center[0], 1-center[0], r0).astype(dtype).reshape(-1,1)
+		r1v = np.linspace(-1-center[1], 1-center[1], r1).astype(dtype).reshape(1,-1)
 	else:
-		r0v = np.linspace(0-center[0], r0-center[0], r0).reshape(-1,1)
-		r1v = np.linspace(0-center[1], r1-center[1], r1).reshape(1,-1)
+		r0v = np.linspace(0-center[0], r0-center[0], r0).astype(dtype).reshape(-1,1)
+		r1v = np.linspace(0-center[1], r1-center[1], r1).astype(dtype).reshape(1,-1)
 	
 	return (r0v**2. + r1v**2.)**0.5
 
