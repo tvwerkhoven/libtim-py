@@ -328,17 +328,24 @@ def stellar_detrend(mflux, mtime, fluxerr, phase, mask=slice(None), opoly=2, osp
 # LIGHT CURVE MODEL
 #=============================================================================
 
-def transit_model_dp7(phase, sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmodel=400, asintpf=False, method=0, verb=0, plot=0):
+def transit_model_dp7(phase, sr=9.9085, ep=5.44, ca=0.0320, g=0.894, om=0.49, nmodel=400, asintpf=False, method=0, verb=0, plot=0):
 	"""
-	Disintegrating planet light curve modeling assuming an optically thin 
+	Disintegrating planet light curve modelling assuming an optically thin 
 	cloud. All calculations are done in one dimension (azimuth).
 
 	Last change: 29 Jun 2012. 
 	
 	Transcoded from dp7.pro (Matteo Brogi) to Python (Tim van Werkhoven)
 
-	Old default params: sr=20.865*(1.-0.63**2.)**0.5, ep=5.1, ca=0.03, g=0.874, om=0.65, nmodel=400
-	New default params: sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654
+	sr = ArcSin[Sqrt[(1 - b^2)]*Rs/a] * 180 / Pi
+
+	with Rs = 4.52*10^8 m, a = 1.95*10^9 m
+
+	- Old default params: sr=20.865*(1.-0.63**2.)**0.5, ep=5.1, ca=0.03, g=0.874, om=0.65, nmodel=400
+	- New default params:     sr=10.36,  ep=5.13, ca=0.03, g=0.875, om=0.654
+	- 20130703 13Q data avg:  sr=9.9085, ep=5.44, ca=0.0320, g=0.894, om=0.49
+	- 20130703 13Q data deep: sr=11.336, ep=5.61, ca=0.0407, g=0.796, om=1.02
+	- 20130703 13Q data shlw: sr=10.687, ep=4.58, ca=0.0171, g=0.894, om=0.49
 	
 	@param [in] phase Vector of phases, from [0, 1]
 	@param [in] sr Crossed stellar path in degrees
@@ -357,6 +364,7 @@ def transit_model_dp7(phase, sr=10.36, ep=5.13, ca=0.03, g=0.875, om=0.654, nmod
 	# a = 0.013AU in meters
 	# ra = arcsin(r/a)
 	# sra = sr in radians
+	# b = (chord/2.*radius)^2
 
 	#nmodel = 400                              # Light curve sampling
 	binsz = 2.*np.pi/(nmodel)                # Bin size
