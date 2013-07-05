@@ -75,7 +75,7 @@ def comp_influence(inflmeas, inflact, binfac=None, singval=1.0, add_offset=False
 
 	# Add offset vector if requested
 	if (add_offset):
-		inflact = np.hstack([ inflact, np.ones_like(inflact0[:,0:1]) ])
+		inflact = np.hstack([ inflact, np.ones_like(inflact[:,0:1]) ])
 
 	# 2. Compute the influence matrix
 	inflmat = np.dot(np.linalg.pinv(inflact), inflmeas)
