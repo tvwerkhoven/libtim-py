@@ -14,7 +14,7 @@ import numpy as np
 import pylab as plt
 from os.path import join as pjoin
 
-def comp_influence(inflmeas, inflact, binfac=None, singval=1.0, add_offset=False, verb=0):
+def comp_influence(inflmeas, inflact, binfac=None, singval=1.0, add_offset=False, use_zernike=False, verb=0):
 	"""
 	Calculate the system influence matrix and its inverse from calibration 
 	data, using **singval** as cut-off for the singular value decomposition.
@@ -63,6 +63,16 @@ def comp_influence(inflmeas, inflact, binfac=None, singval=1.0, add_offset=False
 		else:
 			warnings.warn("Not binning, factor not divisor!")
 	
+	if (use_zernike):
+		pass
+		# thisinflmeas = []
+		# thismode = np.zeros(CAM_CFG['mask'].shape)
+		# for m in self.inflmeas:
+		# 	thismode[CAM_CFG['mask']] = m
+		# 	thiszern = tim.zern.fit_zernike(thismode, zern_data=self.zern_cache, nmodes=self.nmodes, rec_zern=False)[0]
+		# 	thisinflmeas.append(thiszern)
+		# thisinflmeas = np.r_[thisinflmeas]
+
 	# Add offset vector if requested
 	if (add_offset):
 		inflact = np.hstack([ inflact, np.ones_like(inflact0[:,0:1]) ])
