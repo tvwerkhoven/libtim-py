@@ -150,7 +150,7 @@ def locate_sb(fftpow, cpeak=None, method='parabola'):
 
 	@param [in] fftpow Descrambled power spectrum to analyze
 	@param [in] cpeak Radius of central region to ignore. If None, find ourselves
-	@param [in] method Method to determine the sideband center, either parabola for a 2D parabolic fit or cog for center of gravity. The former is slightly more precise, the latter is more robust
+	@param [in] method Method to determine the sideband center, either 'parabola' for a 2D parabolic fit or 'cog' for center of gravity. The former is slightly more precise, the latter is more robust
 	@return Numpy array of (x, y) subpixel maximum of first sideband
 	"""
 
