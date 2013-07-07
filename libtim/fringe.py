@@ -47,7 +47,10 @@ def sim_fringe(phase, cfreq, noiseamp=0, phaseoffset=0, noisesmooth=10):
 	Simulate fringe pattern for **phase** interfering with flat 
 	reference beam with carrier frequency **cfreq**.
 
-	Based on "Fourier-transform method of fringe-pattern analysis for computer-based topography and interferometry" Journal of the Optical Society of America, Vol. 72, No. 1. (1 January 1982), pp. 156-160, doi:10.1364/josa.72.000156 by Mitsuo Takeda, Hideki Ina, Seiji Kobayashi
+	Based on "Fourier-transform method of fringe-pattern analysis for 
+	computer-based topography and interferometry" Journal of the Optical 
+	Society of America, Vol. 72, No. 1. (1 January 1982), pp. 156-160, 
+	doi:10.1364/josa.72.000156 by Mitsuo Takeda, Hideki Ina, Seiji Kobayashi
 
 	@param [in] phase 2D array of phase [radians]
 	@param [in] cfreq 2D carrier frequency of reference wave [cycles/axis]
@@ -449,7 +452,7 @@ def avg_phase(wavecomps, ampweight=False):
 
 	@param [in] wavecomps Iterable of arrays of complex wave components.
 	@param [in] ampweight Weight phase averaging by amplitude
-	@return Tuple of (weighted) mean phase and mean amplitude
+	@return Tuple of (weighted) mean phase (in rad) and mean amplitude
 	"""
 
 	mid = np.r_[wavecomps[0].shape]/2
@@ -471,9 +474,15 @@ def avg_phase(wavecomps, ampweight=False):
 
 def phase_grad(wave, wrap=0, clip=0, asvec=False):
 	"""
-	Calculate gradient of phase, pixel by pixel.
+	Calculate gradient of phase (in rad), pixel by pixel. The gradient is 
+	defined as:
 
-	@param [in] wave Input phase
+		g_i = (ph_i - ph_i-1)
+
+	where **g_i** is the gradient, and **ph_i** is the phase in pixel i. The 
+	first row of pixels is always 0 because the gradient is undefined there.
+
+	@param [in] wave Input phase [rad]
 	@param [in] wrap Wrap per-pixel phase variation by this value
 	@param [in] clip Clip gradient to this value
 	@return Tuple of (grad0, grad0)
