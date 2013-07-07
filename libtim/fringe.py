@@ -495,10 +495,11 @@ def phase_grad(wave, wrap=0, clip=0, asvec=False):
 	@return Tuple of (grad0, grad0)
 	"""
 
-	# Ignore first line of data in other than the differential direction to
-	# have equal dimensions for different gradients
-	dwave0 = wave[1:,1:] - wave[:-1,1:]
-	dwave1 = wave[1:,1:] - wave[1:, :-1]
+	# Add line of zeros for undefined gradients
+	dwave = wave[1:, :] - wave[:-1, :]
+	dwave0 = np.vstack([np.zeros_like(wave[0:1]), dwave])
+	dwave = wave[:, 1:] - wave[:, :-1]
+	dwave1 = np.hstack([np.zeros_like(wave[:,0:1]), dwave])
 
 	if (wrap):
 		# @todo: >wrap should be >pi, wrap offset should be 2 pi (?)
