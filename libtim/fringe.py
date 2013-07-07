@@ -242,8 +242,10 @@ def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap
 	@param [in] cache Will be filled with cached items. Re-supply next call to speed up process
 	@param [in] ret_pow Return Fourier power around **cfreq** as well.
 	@param [in] verb Verbosity
-	@returns Tuple of (phase, amplitude) as numpy.ndarrays
+	@returns Tuple of (phase [rad], amplitude) as numpy.ndarrays
 	"""
+
+	cfreq = np.asanyarray(cfreq)
 
 	if (method == 'spectral'):
 		# 1a. Calculate shift matrix
@@ -251,7 +253,7 @@ def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap
 			sshift = cache['spec_sshift']
 		else:
 			slope = np.indices(img.shape, dtype=np.float) / np.r_[img.shape].reshape(-1,1,1)
-			slope = np.sum(slope * np.round(cfreq).reshape(-1,1,1), 0)
+			slope = np.sum(slope * cfreq.reshape(-1,1,1), 0)
 			sshift = np.exp(-1j * 2 * np.pi * slope)
 			cache['spec_sshift'] = sshift
 
