@@ -167,26 +167,32 @@ def locate_sb(fftpow, cpeak=None, method='parabola'):
 		d_rad_prof = rad_prof[1:-1] - rad_prof[2:]
 		cpeak = np.argwhere(d_rad_prof < 0)[0][0]
 
-	# Make radial coordinate mask
-	rad_mask = tim.im.mk_rad_mask(fftpow.shape[0], fftpow.shape[1], norm=False)
-
 	# Ignore center <cpeak> pixels in further processing
+	sz = np.r_[fftpow.shape]
+	rad_mask = tim.im.mk_rad_mask(*sz, norm=False)
 	fftpow[rad_mask <= cpeak] = 0
 
-	sz = np.r_[fftpow.shape]
 	# Find sub-pixel maximum around brightest pixel
 	if (method == 'parabola'):
 		# @todo Perhaps this should be a wider center of gravity search, 9 pixels is a bit too small for real data
 		sb_loc = tim.xcorr.calc_subpixmax(fftpow, sz/2., index=True)
 	elif (method == "cog"):
-		# Select 10% of image around maximum value, calculate CoG
+		# Select half image so we exclude the other sideband, otherwise the
+		# CoG will go to the origin.
 		max0, max1 = np.argwhere(fftpow == fftpow.max())[0]
-		r0, r1 = sz/20
-		fftpow_crop = fftpow[max0-r0:max0+r0, max1-r1:max1+r1]
+		dmax0, dmax1 = (max0, max1) - sz/2
+
+		# Crop a region around maximum, never include the origin, take a 
+		# symmetric crop region in both axes. Make sure the maximum is in 
+		# the center
+		r0 = np.min([abs(dmax0), abs(dmax0), sz[0]/20, sz[1]/20])
+		fftpow_crop = fftpow[max0-r0:max0+r0+1, max1-r0:max1+r0+1]
+		# From this crop region, calculate the CoG
 		crop_mid = tim.shwfs.calc_cog(fftpow_crop, index=True)
-		sb_loc = np.r_[max0-r0, max1-r1] - sz/2. + crop_mid
+		# Give maximum back in coordinates of fftpow 
+		sb_loc = np.r_[max0-r0, max1-r0] - sz/2. + crop_mid
 	else:
-		raise ValueError("Unknown method (parabola or cog)")
+		raise ValueError("Unknown method (use 'parabola' or 'cog')")
 
 	# There are always two symmetrical sidebands, always find the one with the
 	# highest sum to ensure we always find the same.
