@@ -224,7 +224,7 @@ def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap
 	4. Calculate phase and unwrap
 	5. Remove carrier frequency tilt in phase
 
-	# Circular method:
+	# Circular method: (WIP)
 	1. Apodise image and Fourier transform
 	2. Apply circular filter around carrier frequency
 	3. Inverse transform single sideband
