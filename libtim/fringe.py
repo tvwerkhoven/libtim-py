@@ -200,7 +200,7 @@ def locate_sb(fftpow, cpeak=None, method='parabola'):
 
 	return sb_loc
 
-def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap=True, wsize=-0.5, wfunc='cosine', cache={}, ret_pow=False, get_complex=False, verb=0):
+def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap=True, wsize=-0.5, wfunc='cosine', do_embed=True, cache={}, ret_pow=False, get_complex=False, verb=0):
 	"""
 	Filter out sideband from a real image, return phase and amplitude. Phase
 	is returned in radians, complex components are given 'as-is'.
@@ -262,14 +262,17 @@ def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap
 		if cache.has_key('spec_apodmask'):
 			apod_mask = cache['spec_apodmask']
 		else:
-			apod_mask = tim.fft.mk_apod_mask(img.shape, wsize=wsize, apod_f=wfunc)
+			apod_mask = tim.fft.mk_apod_mask(img.shape, wsize=wsize, shape='circ', apod_f=wfunc)
 			cache['spec_apodmask'] = apod_mask
 
 		img_apod = img_sh * apod_mask
+		if (do_embed):
+			img_apod = tim.fft.embed_data(img_apod, direction=1)
+
 		img_sh_ft = tim.fft.descramble(np.fft.fft2(img_apod))
 
 		# 3. Lowpass filter and crop
-		lowpass = sbsize * (np.r_[cfreq]**2.0).sum()**0.5
+		lowpass = (1+do_embed) * sbsize * (np.r_[cfreq]**2.0).sum()**0.5
 		if cache.has_key('spec_lowpassmask'):
 			lowpass_mask = cache['spec_lowpassmask']
 		else:
@@ -284,6 +287,8 @@ def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap
 
 		# 4. IFFT, get complex components
 		img_ifft = np.fft.ifft2(tim.fft.descramble(img_sh_filt, -1))
+		if (do_embed):
+			img_ifft = tim.fft.embed_data(img_ifft, direction=-1)
 
 		# 4b. Sometimes we only need the complex components
 		if (get_complex):
@@ -417,9 +422,9 @@ def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap
 		raise ValueError("Unknown method '%s'" % (method))
 
 	if (ret_pow):
-		return (phase/(2.0*np.pi), amp, fftpow)
+		return (phase, amp, fftpow)
 	else:
-		return (phase/(2.0*np.pi), amp)
+		return (phase, amp)
 
 def get_dark_flat(flats, darks, roi=(0,-1,0,-1)):
 	"""
@@ -470,7 +475,7 @@ def avg_phase(wavecomps, ampweight=False):
 	else:
 		wc_rot_avg = np.average(wc_rot, axis=0)
 
-	return np.arctan2(wc_rot_avg.imag, wc_rot_avg.real)/2./np.pi, np.abs(wc_rot_avg**2.0)
+	return np.arctan2(wc_rot_avg.imag, wc_rot_avg.real), np.abs(wc_rot_avg**2.0)
 
 def phase_grad(wave, wrap=0, clip=0, asvec=False):
 	"""
