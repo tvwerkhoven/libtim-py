@@ -485,7 +485,7 @@ def avg_phase(wavecomps, ampweight=False):
 
 	return np.arctan2(wc_rot_avg.imag, wc_rot_avg.real), np.abs(wc_rot_avg**2.0)
 
-def phase_grad(wave, wrap=0, clip=0, asvec=False):
+def phase_grad(wave, wrap=0, clip=0, apt_mask=slice(None), asvec=False):
 	"""
 	Calculate gradient of phase (in rad), pixel by pixel. The gradient is 
 	defined as:
@@ -495,9 +495,15 @@ def phase_grad(wave, wrap=0, clip=0, asvec=False):
 	where **g_i** is the gradient, and **ph_i** is the phase in pixel i. The 
 	first row of pixels is always 0 because the gradient is undefined there.
 
+	**Warning**: do not input data which has been cropped by an aperture 
+	mask already, as this will give very sharp gradient edges. Instead, give 
+	the full phase and mask the gradient with **apt_mask**.
+
 	@param [in] wave Input phase [rad]
 	@param [in] wrap Wrap per-pixel phase variation by this value
 	@param [in] clip Clip gradient to this value
+	@param [in] apt_mask Return only data inside this boolean mask
+	@param [in] asvec Return as vector
 	@return Tuple of (grad0, grad0)
 	"""
 
@@ -519,9 +525,9 @@ def phase_grad(wave, wrap=0, clip=0, asvec=False):
 		dwave1 = np.clip(dwave1, -clip, +clip)
 
 	if (asvec):
-		return np.hstack([dwave0.ravel(), dwave1.ravel()])
+		return np.hstack([dwave0[apt_mask].ravel(), dwave1[apt_mask].ravel()])
 	else:
-		return dwave0, dwave1
+		return dwave0[apt_mask], dwave1[apt_mask]
 
 ### EOF
 
