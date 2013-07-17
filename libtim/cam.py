@@ -8,12 +8,25 @@
 @copyright Copyright (c) 2013 Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
 """
 
+import file
+import im
+import cv
+import os
 import numpy as np
 from os.path import join as pjoin
 
 # Global camera configuration dict
 # @TODO Make OO
 CAM_CFG = {}
+CAM_FLATFIELD="cam_flatfield.fits"
+CAM_DARKFIELD="cam_darkfield.fits"
+CAM_APTMASK="cam_apt_mask.fits"
+
+# Verbosity masks
+VERB_M = (1<<4)-1
+
+# Verb levels, use as: (verb&VERB_M) > L_INFO
+L_INFO = 0; L_XNFO = 1; L_DEBG = 2; L_XDBG = 3
 
 def cam_setup(camidx=0, roi=None, flatf=None, darkf=None, maskshape='all', procd=32, usecam=True, outdir='./', verb=0):
 	"""
@@ -48,8 +61,7 @@ def cam_setup(camidx=0, roi=None, flatf=None, darkf=None, maskshape='all', procd
 		if (os.path.exists(newdarkf)):
 			os.unlink(newdarkf)
 		os.link(darkf, newdarkf)
-		GLOB_ARGS.darkf = darkf
-		darkim = tim.file.read_file(darkf).astype(npdtype)
+		darkim = file.read_file(darkf).astype(npdtype)
 		CAM_CFG['dark'] = cv.fromarray(darkim)
 	if (flatf and os.path.isfile(flatf)):
 		if (verb&VERB_M > L_DEBG): print "Processing flat frame(s)..."
@@ -57,14 +69,15 @@ def cam_setup(camidx=0, roi=None, flatf=None, darkf=None, maskshape='all', procd
 		if (os.path.exists(newflatf)):
 			os.unlink(newflatf)
 		os.link(flatf, newflatf)
-		GLOB_ARGS.flatf = newflatf
-		flatim = tim.file.read_file(flatf).astype(npdtype)
+		flatim = file.read_file(flatf).astype(npdtype)
 		CAM_CFG['flat'] = cv.fromarray(flatim)
-  		if (CAM_CFG['dark']):
+  		if (CAM_CFG.has_key('dark')):
   			cv.Sub(CAM_CFG['flat'], CAM_CFG['dark'], CAM_CFG['flat'])
 
 	if (verb&VERB_M > L_XNFO):  print "Configuring camera..."
 
+	if (not CAM_CFG.has_key('window')):
+		CAM_CFG['window'] = 'cam_live'
 	cv.NamedWindow(CAM_CFG['window'], cv.CV_WINDOW_AUTOSIZE)
 	cv.NamedWindow("cam_histogram", cv.CV_WINDOW_AUTOSIZE)
 	CAM_CFG['idx'] = camidx
@@ -89,12 +102,12 @@ def cam_setup(camidx=0, roi=None, flatf=None, darkf=None, maskshape='all', procd
 	CAM_CFG['frame'] = cv.CreateImage(CAM_CFG['dshape'][::-1], cvdtype, 1)
 
 	if (maskshape == 'circ'):
-		CAM_CFG['mask'] = tim.im.mk_rad_mask(*CAM_CFG['dshape']) < 1
+		CAM_CFG['mask'] = im.mk_rad_mask(*CAM_CFG['dshape']) < 1
 	else:
 		CAM_CFG['mask'] = np.ones(CAM_CFG['dshape']).astype(np.bool)
 	CAM_CFG['imask'] = (CAM_CFG['mask'] == False)
 
-	tim.file.store_file(pjoin(outdir, CAM_APTMASK), CAM_CFG['mask'].astype(np.uint8))
+	file.store_file(pjoin(outdir, CAM_APTMASK), CAM_CFG['mask'].astype(np.uint8), clobber=True)
 
 	if (verb&VERB_M > L_INFO):  print "Camera setup complete..."
 
@@ -142,9 +155,9 @@ def cam_getimage(show=False, dfcorr=True, raw=False, showhisto=True, waitkey=25)
 	if (raw):
 		return cv.CloneImage(procf)
 
-	if (CAM_CFG['dark'] and dfcorr):
+	if (CAM_CFG.has_key('dark') and dfcorr):
 		cv.Sub(procf, CAM_CFG['dark'], procf)
-	if (CAM_CFG['flat'] and dfcorr):
+	if (CAM_CFG.has_key('flat') and dfcorr):
 		cv.Div(procf, CAM_CFG['flat'], procf)
 	# We *don't* apply the aperture mask here because we might need the data
 	
