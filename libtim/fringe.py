@@ -502,7 +502,7 @@ def phase_grad(wave, wrap=0, clip=0, apt_mask=slice(None), asvec=False):
 	@param [in] wave Input phase [rad]
 	@param [in] wrap Wrap per-pixel phase variation by this value
 	@param [in] clip Clip gradient to this value
-	@param [in] apt_mask Return only data inside this boolean mask
+	@param [in] apt_mask Return only data inside this boolean mask (only for asvec!)
 	@param [in] asvec Return as vector
 	@return Tuple of (grad0, grad0)
 	"""
@@ -527,7 +527,7 @@ def phase_grad(wave, wrap=0, clip=0, apt_mask=slice(None), asvec=False):
 	if (asvec):
 		return np.hstack([dwave0[apt_mask].ravel(), dwave1[apt_mask].ravel()])
 	else:
-		return dwave0[apt_mask], dwave1[apt_mask]
+		return dwave0, dwave1
 
 ### EOF
 
