@@ -239,13 +239,19 @@ def calc_zern_infmat(subaps, nzern=10, zerncntr=None, zernrad=-1.0, singval=1.0,
 	return zern_inv_mat, zernslopes*sfac, zbasis, extent
 
 
-def find_mla_grid(wfsimg, size, clipsize=None, minif=0.6, nmax=-1, copy=True, method='bounds', sort=False, verb=0):
+def find_mla_grid(wfsimg, size, clipsize=None, minif=0.6, nmax=-1, copy=True, method='boundsclip', sort=False, verb=0):
 	"""
 	Given a Shack-hartmann wave front sensor image, find a grid of 
 	subapertures (sa) of approximately **size** big.
 
 	The image will be destroyed during analysis, unless **copy** is True 
-	(default)
+	(default).
+
+	The returned MLA grid coordinates can be as center coordinates or as 
+	bounds, formatted as (min0, max0, min1, max1) for each subaperture. If 
+	the method is 'boundsclip', these bounds are additionally clipped to
+	the input image size such that they are safe to be used as slicing 
+	bounds.
 	
 	@param [in] wfsimg Image to analyze
 	@param [in] size Subaperture size [pixels]
@@ -253,7 +259,7 @@ def find_mla_grid(wfsimg, size, clipsize=None, minif=0.6, nmax=-1, copy=True, me
 	@param [in] minif Minimimum pixel value to have to consider it as a new subaperture, as fraction of the global maximum.
 	@param [in] nmax Maximum number of subapertures to search for (-1 for no max)
 	@param [in] copy Copy image before modifying
-	@param [in] method Coordinate format to return, either 'bounds' or 'center'
+	@param [in] method Coordinate format to return, either 'bounds', 'boundsclip' or center'
 	@param [in] sort Sort subaperture coordinates
 	@param [in] verb Plot intermediate results
 	@return list of subaperture coordinates
@@ -284,7 +290,12 @@ def find_mla_grid(wfsimg, size, clipsize=None, minif=0.6, nmax=-1, copy=True, me
 			break
 		
 		# Add this subaperture, either by bounds or central coordinate
-		if (method == 'bounds'):
+		if (method == 'boundsclip'):
+			newsa = (max(p[0] - size[0]/2, 0), 
+					min(p[0] + size[0]/2, wfsimg.shape[0]),
+					max(p[1] - size[1]/2, 0),
+					min(p[1] + size[1]/2, wfsimg.shape[1])
+		elif (method == 'bounds'):
 			newsa = (p[0] - size[0]/2, 
 					p[0] + size[0]/2,
 					p[1] - size[1]/2,
