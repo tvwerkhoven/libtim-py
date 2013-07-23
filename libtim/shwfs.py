@@ -294,7 +294,7 @@ def find_mla_grid(wfsimg, size, clipsize=None, minif=0.6, nmax=-1, copy=True, me
 			newsa = (max(p[0] - size[0]/2, 0), 
 					min(p[0] + size[0]/2, wfsimg.shape[0]),
 					max(p[1] - size[1]/2, 0),
-					min(p[1] + size[1]/2, wfsimg.shape[1])
+					min(p[1] + size[1]/2, wfsimg.shape[1]))
 		elif (method == 'bounds'):
 			newsa = (p[0] - size[0]/2, 
 					p[0] + size[0]/2,
