@@ -304,9 +304,9 @@ def find_mla_grid(wfsimg, size, clipsize=None, minif=0.6, nmax=-1, copy=True, me
 			newsa = tuple(p)
 		subap_grid.append(newsa)
 		
-		# Clear out this subaperture so we don't add it again
-
-		wfsimg[p[0]-cs[0]/2:p[0]+cs[0]/2, p[1]-cs[1]/2:p[1]+cs[1]/2] = wfsimg.min()
+		# Clear out this subaperture so we don't add it again. To make sure 
+		# we don't clip the whole image, clip the indices
+		wfsimg[max(p[0]-cs[0]/2,0):min(p[0]+cs[0]/2,wfsimg.shape[0]), max(p[1]-cs[1]/2,0):min(p[1]+cs[1]/2,wfsimg.shape[1])] = wfsimg.min()
 		
 		if (nmax > 0 and len(subap_grid) >= nmax):
 			break
