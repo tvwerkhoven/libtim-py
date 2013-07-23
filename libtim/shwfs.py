@@ -70,10 +70,12 @@ def calc_cog(img, clip=0, clipf=None, index=False):
 	@return Sub-pixel coordinate of center of gravity ordered by data dimension (c0, c1)
 	"""
 
+	# When clipping, always (up)cast to float in case we have some unsigned 
+	# data
 	if (clip > 0):
-		img = np.clip(img.copy() - clip, 0, img.max())
+		img = np.clip(img.copy().astype(float) - clip, 0, img.max())
 	elif (clipf != None):
-		img = np.clip(img.copy() - clipf(img), 0, img.max())
+		img = np.clip(img.copy().astype(float) - clipf(img), 0, img.max())
 
 	ims = img.sum()
 
