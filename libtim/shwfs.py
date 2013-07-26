@@ -32,7 +32,7 @@ import libtim.zern
 # Routines
 #==========================================================================
 
-def calc_cog(img, clip=0, clipf=None, index=False):
+def calc_cog(img, clip=0, clipf=None, index=False, check=True):
 	"""
 	Calculate center of gravity for a given 1, 2 or 3-dimensional array 
 	**img**, optionally thresholding the data at **clip** first.
@@ -67,6 +67,7 @@ def calc_cog(img, clip=0, clipf=None, index=False):
 	@param [in] index If True, return CoG in pixel **index** coordinate, otherwise return pixel **center** coordinate.
 	@param [in] clip Subtract this value from the data 
 	@param [in] clipf Subtract clipf(img) from the data (if no clip)
+	@param [in] clipcheck Check if clipping still gives some data, raise if not
 	@return Sub-pixel coordinate of center of gravity ordered by data dimension (c0, c1)
 	"""
 
@@ -74,8 +75,12 @@ def calc_cog(img, clip=0, clipf=None, index=False):
 	# data
 	if (clip > 0):
 		img = np.clip(img.copy().astype(float) - clip, 0, img.max())
+		if (clipcheck):
+			assert img.max() > 0, "clipped image has only zeros"
 	elif (clipf != None):
 		img = np.clip(img.copy().astype(float) - clipf(img), 0, img.max())
+		if (clipcheck):
+			assert img.max() > 0, "clipped image has only zeros"
 
 	ims = img.sum()
 
