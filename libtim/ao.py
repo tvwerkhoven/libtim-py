@@ -171,7 +171,7 @@ def inspect_influence(actmat, measmat, apt_mask, infldat=None, what="all", fignu
 		plt.ylabel("Singular value [AU]")
 		plt.semilogy(svd_s)
 		if (store): plt.savefig(pjoin(outdir, "cal_singvals_logy.pdf"))
-		raw_input("Continue...")
+		if (interactive): raw_input("Continue...")
 
 	if (what in ["all", "offset"]):
 		# Init new empty image
@@ -186,7 +186,7 @@ def inspect_influence(actmat, measmat, apt_mask, infldat=None, what="all", fignu
 		plt.imshow(thisvec*plot_mask, vmin=imin, vmax=imax)
 		plt.colorbar()
 		if (store): plt.savefig(pjoin(outdir, "cal_offset_phase.pdf"))
-		raw_input("Continue...")
+		if (interactive): raw_input("Continue...")
 
 	if (what in ["all", "actrec"]):
 		plt.figure(fignum0+250); plt.clf()
@@ -205,7 +205,7 @@ def inspect_influence(actmat, measmat, apt_mask, infldat=None, what="all", fignu
 		plt.imshow((actmat[:-1]-infldat['actmat_rec']).T)
 		plt.colorbar()
 		if (store): plt.savefig(pjoin(outdir, "cal_actmat_rec.pdf"))
-		raw_input("Continue...")
+		if (interactive): raw_input("Continue...")
 
 	if (what in ["all", "actmat"]):
 		# Init new empty image
@@ -221,7 +221,8 @@ def inspect_influence(actmat, measmat, apt_mask, infldat=None, what="all", fignu
 			plt.imshow(thisvec*plot_mask, vmin=imin, vmax=imax)
 			plt.colorbar()
 			if (store): plt.savefig(pjoin(outdir, "cal_infl_vec_%d.pdf" % (idx)))
-			if (raw_input("Continue [b=break]...") == 'b'): break
+			if (interactive): 
+				if (raw_input("Continue [b=break]...") == 'b'): break
 
 	if (what in ["all", "sysmodes"]):
 		# Init new empty image
@@ -237,9 +238,10 @@ def inspect_influence(actmat, measmat, apt_mask, infldat=None, what="all", fignu
 			plt.imshow(thisbase*plot_mask, vmin=imin, vmax=imax)
 			plt.colorbar()
 			if (store): plt.savefig(pjoin(outdir, "cal_dm_base_vec_%d.pdf" % (idx)))
-			if (raw_input("Continue [b=break]...") == 'b'): break
+			if (interactive):
+				if (raw_input("Continue [b=break]...") == 'b'): break
 
-	if (what in ["all", "measrec"]):
+	if (what in ["measrec"]):
 		measmat_rec = np.dot(infldat['inflmat'], actmat[:-1])
 		thismeasrec = np.zeros(dshape)
 		for idx, measvec_rec in enumerate(measmat_rec.T):
@@ -253,7 +255,8 @@ def inspect_influence(actmat, measmat, apt_mask, infldat=None, what="all", fignu
 			plt.imshow(thismeasrec*plot_mask, vmin=imin, vmax=imax)
 			plt.colorbar()
 			if (store): plt.savefig(pjoin(outdir, "cal_infl_vec_%d_rec.pdf" % (idx)))
-			if (raw_input("Continue [b=break]...") == 'b'): break
+			if (interactive):
+				if (raw_input("Continue [b=break]...") == 'b'): break
 
 	raw_input("Will now exit and close windows...")
 	for fnum in [100, 101, 200, 250, 300, 400, 500]:
