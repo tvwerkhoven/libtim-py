@@ -31,14 +31,6 @@ def comp_influence(measmat, actmat, binfac=None, singval=1.0, add_offset=False, 
 	where **actmat^+** is the pseudo inverse of **actmat** using all 
 	singular values.
 
-	We check this solution with:
-
-		(3a)  epsilon = measmat - infl_mat . actmat
-		(3b)  measmat_rec = infl_mat . actmat
-		(3c)  actmat_rec = measmat . infl_mat^+
-
-	where **epsilon** should be small compared to the mean of **measmat**.
-
 	Finally we obtain the control matrix from the inverse of the influence 
 	matrix, **infl_mat^+** by singular value decomposing **infl_mat** 
 	using a limited set of singular values for regularisation:
@@ -48,6 +40,14 @@ def comp_influence(measmat, actmat, binfac=None, singval=1.0, add_offset=False, 
 		(4c)  ctrl_mat = V . diag(1/s) . U^T
 
 	where ctrl_mat is (n_act, n_meas)
+
+	We check this solution with:
+
+		(3a)  epsilon = measmat - infl_mat . actmat
+		(3b)  measmat_rec = infl_mat . actmat
+		(3c)  actmat_rec = measmat . infl_mat^+
+
+	where **epsilon** should be small compared to the mean of **measmat**.
 
 	@param [in] measmat Calibration measurements, size (n_data, n_meas)
 	@param [in] actmat Calibration actuations (n_act, n_meas)
@@ -91,9 +91,10 @@ def comp_influence(measmat, actmat, binfac=None, singval=1.0, add_offset=False, 
 
 	# 4b. Decompose influence matrix with SVD
 	infl['svdcomps'] = svd_U, svd_s, svd_Vh = np.linalg.svd(infl['inflmat'], full_matrices=False)
-	nmodes = lambda s, perc: np.argwhere(s.cumsum()/s.sum() >= perc)[0][0] if s.sum() else 0
+	# Compute how many modes are required to get *at least* perc singular value power (perc in [0, 1])
+	nmodes = lambda s, perc: np.argwhere(s.cumsum()/s.sum() >= min(perc, 1.0))[0][0]+1 if s.sum() else 0
 	svd_s_red = svd_s.copy()
-	svd_s_red[nmodes(svd_s, singval)+1:] = np.inf
+	svd_s_red[nmodes(svd_s, singval):] = np.inf
 
 	# 4c. Compute (regularized) control matrix
 	# V . diag(1/s) . U^H
