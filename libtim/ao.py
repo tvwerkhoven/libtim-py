@@ -95,8 +95,10 @@ def comp_influence(measmat, actmat, binfac=None, singval=1.0, add_offset=False, 
 	svd_s_red[nmodes(svd_s, singval)+1:] = np.inf
 
 	# 4c. Compute (regularized) control matrix
-	# V . diag(1/s) . U^T
-	infl['ctrlmat'] = np.dot(svd_Vh.conj(), np.dot(np.diag(1.0/svd_s_red), svd_U.T))
+	# V . diag(1/s) . U^H
+	# We take the conjugate transpose here in case the input data are complex
+	# See http://mathworld.wolfram.com/ConjugateTranspose.html
+	infl['ctrlmat'] = np.dot(svd_Vh.conj().T, np.dot(np.diag(1.0/svd_s_red), svd_U.conj().T))
 
 	# 3c. Check the quality in reconstructing the actuation matrix
 	infl['actmat_rec'] = np.dot(infl['ctrlmat'],measmat - infl['offsetmeas'])
