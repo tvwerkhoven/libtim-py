@@ -9,6 +9,7 @@
 """
 
 import im
+import zern
 import warnings
 import numpy as np
 import pylab as plt
@@ -121,16 +122,16 @@ def comp_zernike_ctrl(inflmat, apt_mask):
 	"""
 
 	# This does not work for SHWFS influence matrices, which usually have 
-	# <500 measurements (i.e. n_subp<250).
+	# <500 measurements (i.e. n_subp<250 or n_pix<500).
 	assert inflmat.shape[0] > 500, "Influence matrix has less than 500 data points?"
 
 	# Compute Zernike control matrix for this system
-	zndata = tim.zern.calc_zern_basis(20, apt_mask.shape[0]/2, modestart=2, calc_covmat=False)
-	zernactmat = np.dot(np.linalg.pinv(infldat), zndata['modesmat'][:,apt_mask.ravel()].T)
+	zndata = zern.calc_zern_basis(20, apt_mask.shape[0]/2, modestart=2, calc_covmat=False)
+	zernactmat = np.dot(np.linalg.pinv(inflmat), zndata['modesmat'][:,apt_mask.ravel()].T)
 
 	return zernactmat
 
-def inspect_influence(actmat, measmat, apt_mask, infldat=None, what="all", fignum0=1000, store=False, outdir='./'):
+def inspect_influence(actmat, measmat, apt_mask, infldat=None, what="all", fignum0=1000, store=False, interactive=True, outdir='./'):
 	"""
 	Given influence data, inspect it
 	"""
