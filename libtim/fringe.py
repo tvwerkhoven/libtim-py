@@ -454,7 +454,7 @@ def get_dark_flat(flats, darks, roi=(0,-1,0,-1)):
 
 	return flimg, dkimg
 
-def avg_phase(wavecomps, ampweight=False):
+def avg_phase(wavecomps, ampweight=False, getcomplex=False):
 	"""
 	Given a list of complex wave components **wavecomps**, average these 
 	phasor-wise. Returned phase is in radians.
@@ -482,6 +482,9 @@ def avg_phase(wavecomps, ampweight=False):
 		wc_rot_avg = np.average(wc_rot, axis=0, weights=np.abs(wc_rot**2.0).mean(1).mean(1))
 	else:
 		wc_rot_avg = np.average(wc_rot, axis=0)
+	
+	if (getcomplex):
+		return wc_rot_avg
 
 	return np.arctan2(wc_rot_avg.imag, wc_rot_avg.real), np.abs(wc_rot_avg**2.0)
 
@@ -507,7 +510,7 @@ def phase_grad(wave, wrap=0, clip=0, apt_mask=slice(None), asvec=False):
 	@return Tuple of (grad0, grad0)
 	"""
 
-	# Add line of zeros for undefined gradients
+	# Add line of zeros for undefined gradients to match input shape
 	dwave = wave[1:, :] - wave[:-1, :]
 	dwave0 = np.vstack([np.zeros_like(wave[0:1]), dwave])
 	dwave = wave[:, 1:] - wave[:, :-1]
