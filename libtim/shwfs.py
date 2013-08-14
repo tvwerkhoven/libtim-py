@@ -32,7 +32,7 @@ import libtim.zern
 # Routines
 #==========================================================================
 
-def calc_cog(img, clip=0, clipf=None, index=False, check=True):
+def calc_cog(img, clip=0, clipf=None, index=False, clipcheck=True):
 	"""
 	Calculate center of gravity for a given 1, 2 or 3-dimensional array 
 	**img**, optionally thresholding the data at **clip** first.
@@ -554,6 +554,37 @@ def show_shwfs_vecs(shiftvec, subaps, refpos=None, img=None, extent=None, title=
 	if (pause): raw_input("Press any key to continue...")
 	if (not keep): plt.close()
 
+def sim_shwfs(wave, mlagrid, pad=True, scale=2):
+	"""
+	Simulate the SHWFS image of a complex wave, using **mlagrid** for 
+	lenslet positions. The complex wave is defined as:
+
+		E \propto A \exp(-i*phi)
+
+	i.e.
+
+		e_wave = amp * np.exp(-1j*phi)
+
+	@returns Float array of equal shape as **wave** with the SHWFS image
+	"""
+
+	assert wave.dtype in [np.complex64, np.complex128, np.complex256, complex], "sim_shwfs(): require complex wave as input"
+
+	shwfs = np.zeros(wave.shape)
+	for mla in mlagrid:
+		# Crop subaperture
+		wavecrop = wave[mla[0]:mla[1], mla[2]:mla[3]]
+		# Pad with zeros
+		if (pad):
+			wavecrop = tim.fft.embed_data(wavecrop, scale=scale)
+		# FFT, compute power, shift to irigin
+		wavecropft = np.fft.fftshift(np.abs(np.fft.fft2(wavecrop))**2.)
+		# De-pad, insert in larger image
+		if (pad):
+			wavecropft = tim.fft.embed_data(wavecropft, -1, scale=scale)
+		shwfs[mla[0]:mla[1], mla[2]:mla[3]] = wavecropft
+
+	return shwfs
 
 if __name__ == "__main__":
 	sys.exit(unittest.main())
