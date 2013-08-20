@@ -23,6 +23,10 @@ import numpy as np
 import unittest
 import libtim as tim
 import libtim.zern
+try:
+	import pyfftw
+except:
+	pass
 
 #==========================================================================
 # Defines
@@ -570,7 +574,7 @@ def sim_shwfs(wave, mlagrid, pad=True, scale=2):
 
 	assert wave.dtype in [np.complex64, np.complex128, np.complex256, complex], "sim_shwfs(): require complex wave as input"
 
-	shwfs = np.zeros(wave.shape)
+	shwfs = np.zeros(wave.shape, dtype=wave.dtype)
 
 	# Slow code, left here as illustration
 	# for mla in mlagrid:
@@ -587,20 +591,29 @@ def sim_shwfs(wave, mlagrid, pad=True, scale=2):
 	# 	shwfs[mla[0]:mla[1], mla[2]:mla[3]] = wavecropft
 
 	# Faster code, does the same as above except skipping some data shuffling
+	try:
+		fftfunc = pyfftw.interfaces.numpy_fft.fft2
+		wavecrop = pyfftw.n_byte_align_empty((sasz, sasz), 16, 'complex128')
+		pyfftw.interfaces.cache.enable()
+	except:
+		fftfunc = np.fft.fft2
+		wavecrop = np.zeros((sasz, sasz), dtype=wave.dtype)
+
 	for mla in mlagrid:
 		# Crop subaperture (2.5µs)
-		wavecrop = wave[mla[0]:mla[1], mla[2]:mla[3]]
+		wavecrop[:] = wave[mla[0]:mla[1], mla[2]:mla[3]]
 
-		# FFT, take power (200µs)
-		wavecropft = np.abs(np.fft.fft2(wavecrop, s = wavecrop.shape*np.r_[scale]))**2.
+		# FFT (150µs)
+		wavecropft = fftfunc(wavecrop, s = wavecrop.shape*np.r_[scale])
 
 		# Replace into image array (4 * 7.5µs), quadrant by quadrant
 		shwfs[mla[0]:mla[1]-sasz/2, mla[2]:mla[3]-sasz/2] = wavecropft[-sasz/2:, -sasz/2:]
 		shwfs[mla[0]+sasz/2:mla[1], mla[2]:mla[3]-sasz/2] = wavecropft[:sasz/2, -sasz/2:]
 		shwfs[mla[0]:mla[1]-sasz/2, mla[2]+sasz/2:mla[3]] = wavecropft[-sasz/2:, :sasz/2]
 		shwfs[mla[0]+sasz/2:mla[1], mla[2]+sasz/2:mla[3]] = wavecropft[:sasz/2, :sasz/2]
-
-	return shwfs
+	
+	# Compute power (550µs)
+	return np.abs(shwfs)**2.0
 
 if __name__ == "__main__":
 	sys.exit(unittest.main())
