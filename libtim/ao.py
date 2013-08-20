@@ -15,7 +15,7 @@ import numpy as np
 import pylab as plt
 from os.path import join as pjoin
 
-def comp_influence(measmat, actmat, binfac=None, singval=1.0, add_offset=False, use_zernike=False, verb=0):
+def comp_influence(measmat, actmat, binfac=None, singval=1.0, nmodes=0, add_offset=False, use_zernike=False, verb=0):
 	"""
 	Calculate the system influence matrix and its inverse from calibration 
 	data, using **singval** as cut-off for the singular value decomposition.
@@ -52,6 +52,8 @@ def comp_influence(measmat, actmat, binfac=None, singval=1.0, add_offset=False, 
 	@param [in] measmat Calibration measurements, size (n_data, n_meas)
 	@param [in] actmat Calibration actuations (n_act, n_meas)
 	@param [in] binfac Bin measurement data (measmat) by this factor
+	@param [in] singval Amount of singular value to use (relative, [0, 1])
+	@param [in] nmodes Number of modes to use in inversion (cut-off if negative)
 	@param [in] verb Verbosity
 	@return Dictionary with keys inflmat, epsilon, offsetmeas, offsetact, ctrlmat, svdcomps (as U, s, Vh))
 	"""
@@ -92,9 +94,16 @@ def comp_influence(measmat, actmat, binfac=None, singval=1.0, add_offset=False, 
 	# 4b. Decompose influence matrix with SVD
 	infl['svdcomps'] = svd_U, svd_s, svd_Vh = np.linalg.svd(infl['inflmat'], full_matrices=False)
 	# Compute how many modes are required to get *at least* perc singular value power (perc in [0, 1])
-	nmodes = lambda s, perc: np.argwhere(s.cumsum()/s.sum() >= min(perc, 1.0))[0][0]+1 if s.sum() else 0
+	nmodes_f = lambda s, perc: np.argwhere(s.cumsum()/s.sum() >= min(perc, 1.0))[0][0]+1 if s.sum() else 0
+	if (nmodes < 0):
+		nmodes = len(svd_s) + nmodes
+	elif (nmodes > 0):
+		pass
+	else:
+		nmodes = nmodes_f(svd_s, singval)
+
 	svd_s_red = svd_s.copy()
-	svd_s_red[nmodes(svd_s, singval):] = np.inf
+	svd_s_red[nmodes:] = np.inf
 
 	# 4c. Compute (regularized) control matrix
 	# V . diag(1/s) . U^H
