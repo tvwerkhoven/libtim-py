@@ -253,6 +253,15 @@ def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap
 
 	cfreq = np.asanyarray(cfreq)
 
+	# Try to user faster fftw routines here, fallback to numpy versions
+	try:
+		fft2func = pyfftw.interfaces.numpy_fft.fft2
+		ifft2func = pyfftw.interfaces.numpy_fft.ifft2
+		pyfftw.interfaces.cache.enable()
+	except:
+		fft2func = np.fft.fft2
+		ifft2func = np.fft.ifft2
+
 	if (method == 'spectral'):
 		# 1a. Calculate shift matrix
 		if cache.has_key('spec_sshift'):
@@ -263,10 +272,10 @@ def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap
 			sshift = np.exp(-1j * 2 * np.pi * slope)
 			cache['spec_sshift'] = sshift
 
-		# 1b. Shift image after removing the mean
+		# 1b. Shift image after removing the mean (0.6ms)
 		img_sh = (img - img.mean()) * sshift
 
-		# 2. Apodise image and FFT
+		# 2. Apodise image (0.280ms)
 		if cache.has_key('spec_apodmask'):
 			apod_mask = cache['spec_apodmask']
 		else:
@@ -274,29 +283,33 @@ def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap
 			cache['spec_apodmask'] = apod_mask
 
 		img_apod = img_sh * apod_mask
+
+		# 2b. FFT image (7.8ms)
 		if (do_embed):
-			img_apod = tim.fft.embed_data(img_apod, direction=1)
+			img_sh_ft = fft2func(img_apod, s=apod_mask.shape*np.r_[2])
+		else:
+			img_sh_ft = fft2func(img_apod)
 
-		img_sh_ft = tim.fft.descramble(np.fft.fft2(img_apod))
-
-		# 3. Lowpass filter and crop
+		# 3. Lowpass filter (1.3ms)
 		lowpass = (1+do_embed) * sbsize * (np.r_[cfreq]**2.0).sum()**0.5
 		if cache.has_key('spec_lowpassmask'):
 			lowpass_mask = cache['spec_lowpassmask']
 		else:
 			lowpass_mask = tim.fft.mk_apod_mask(img_sh_ft.shape, apodsz=lowpass*2, shape='circle', wsize=-.5, apod_f=wfunc)
+			lowpass_mask = np.fft.ifftshift(lowpass_mask)
 			cache['spec_lowpassmask'] = lowpass_mask
 		img_sh_filt = img_sh_ft * lowpass_mask
 
 		if (ret_pow):
 			sz = img_sh_filt.shape
-			fftpow = np.abs(img_sh_filt[sz[0]/2-lowpass:sz[0]/2+lowpass,
+			img_sh_filts = np.fft.fftshift(img_sh_filt)
+			fftpow = np.abs(img_sh_filts[sz[0]/2-lowpass:sz[0]/2+lowpass,
 				sz[1]/2-lowpass:sz[1]/2+lowpass].copy())**2.0
 
-		# 4. IFFT, get complex components
-		img_ifft = np.fft.ifft2(tim.fft.descramble(img_sh_filt, -1))
+		# 4. IFFT (8.3ms), get complex components
+		img_ifft = ifft2func(img_sh_filt)
 		if (do_embed):
-			img_ifft = tim.fft.embed_data(img_ifft, direction=-1)
+			img_ifft = img_ifft[:img.shape[0],:img.shape[1]]
 
 		# 4b. Sometimes we only need the complex components
 		if (get_complex):
