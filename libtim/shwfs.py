@@ -571,18 +571,34 @@ def sim_shwfs(wave, mlagrid, pad=True, scale=2):
 	assert wave.dtype in [np.complex64, np.complex128, np.complex256, complex], "sim_shwfs(): require complex wave as input"
 
 	shwfs = np.zeros(wave.shape)
+
+	# Slow code, left here as illustration
+	# for mla in mlagrid:
+	# 	# Crop subaperture
+	# 	wavecrop = wave[mla[0]:mla[1], mla[2]:mla[3]]
+	# 	# Pad with zeros
+	# 	if (pad):
+	# 		wavecrop = tim.fft.embed_data(wavecrop, scale=scale)
+	# 	# FFT, compute power, shift to irigin
+	# 	wavecropft = np.fft.fftshift(np.abs(np.fft.fft2(wavecrop))**2.)
+	# 	# De-pad, insert in larger image
+	# 	if (pad):
+	# 		wavecropft = tim.fft.embed_data(wavecropft, -1, scale=scale)
+	# 	shwfs[mla[0]:mla[1], mla[2]:mla[3]] = wavecropft
+
+	# Faster code, does the same as above except skipping some data shuffling
 	for mla in mlagrid:
-		# Crop subaperture
+		# Crop subaperture (2.5µs)
 		wavecrop = wave[mla[0]:mla[1], mla[2]:mla[3]]
-		# Pad with zeros
-		if (pad):
-			wavecrop = tim.fft.embed_data(wavecrop, scale=scale)
-		# FFT, compute power, shift to irigin
-		wavecropft = np.fft.fftshift(np.abs(np.fft.fft2(wavecrop))**2.)
-		# De-pad, insert in larger image
-		if (pad):
-			wavecropft = tim.fft.embed_data(wavecropft, -1, scale=scale)
-		shwfs[mla[0]:mla[1], mla[2]:mla[3]] = wavecropft
+
+		# FFT, take power (200µs)
+		wavecropft = np.abs(np.fft.fft2(wavecrop, s = wavecrop.shape*np.r_[scale]))**2.
+
+		# Replace into image array (4 * 7.5µs), quadrant by quadrant
+		shwfs[mla[0]:mla[1]-sasz/2, mla[2]:mla[3]-sasz/2] = wavecropft[-sasz/2:, -sasz/2:]
+		shwfs[mla[0]+sasz/2:mla[1], mla[2]:mla[3]-sasz/2] = wavecropft[:sasz/2, -sasz/2:]
+		shwfs[mla[0]:mla[1]-sasz/2, mla[2]+sasz/2:mla[3]] = wavecropft[-sasz/2:, :sasz/2]
+		shwfs[mla[0]+sasz/2:mla[1], mla[2]+sasz/2:mla[3]] = wavecropft[:sasz/2, :sasz/2]
 
 	return shwfs
 
