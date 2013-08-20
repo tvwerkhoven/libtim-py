@@ -125,7 +125,7 @@ def comp_influence(measmat, actmat, binfac=None, singval=1.0, nmodes=0, add_offs
 
 	return infl
 
-def comp_zernike_ctrl(inflmat, apt_mask):
+def comp_zernike_ctrl(inflmat, apt_mask, zerncache=None):
 	"""
 	Given the influence matrix of a system as phase, compute a matrix that 
 	maps Zernike vectors to system control vectors.
@@ -136,8 +136,10 @@ def comp_zernike_ctrl(inflmat, apt_mask):
 	assert inflmat.shape[0] > 500, "Influence matrix has less than 500 data points?"
 
 	# Compute Zernike control matrix for this system
-	zndata = zern.calc_zern_basis(20, apt_mask.shape[0]/2, modestart=2, calc_covmat=False)
-	zernactmat = np.dot(np.linalg.pinv(inflmat), zndata['modesmat'][:,apt_mask.ravel()].T)
+	if (zerncache == None):
+		zerncache = zern.calc_zern_basis(20, apt_mask.shape[0]/2, modestart=2, calc_covmat=False)
+
+	zernactmat = np.dot(np.linalg.pinv(inflmat), zerncache['modesmat'][:,apt_mask.ravel()].T)
 
 	return zernactmat
 
