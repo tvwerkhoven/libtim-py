@@ -487,10 +487,11 @@ def avg_phase(wavecomps, ampweight=False, getcomplex=False):
 	@return Tuple of (weighted) mean phase (in rad) and mean amplitude
 	"""
 
-	mid = np.r_[wavecomps[0].shape]/2
+	wc0 = wavecomps[0]
+	mid = np.r_[wc0.shape]/2
+	wc_rot = np.empty((len(wavecomps),)+wc0.shape, dtype=wc0.dtype)
 
 	# Rotate phasors such that the center element has zero rotation
-	wc_rot = np.zeros_like(wavecomps)
 	for wc, wcr in zip(wavecomps, wc_rot):
 		angle = -np.angle(wc[mid[0], mid[1]])
 		wcr.real = wc.real*np.cos(angle) - wc.imag*np.sin(angle)
