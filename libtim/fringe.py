@@ -29,6 +29,10 @@ import scipy.signal
 import sys, os
 import time
 from os.path import join as pjoin
+try:
+	import pyfftw
+except:
+	pass
 
 # Import my own utilities
 import libtim as tim
@@ -252,12 +256,14 @@ def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap
 	"""
 
 	cfreq = np.asanyarray(cfreq)
-
+	
 	# Try to user faster fftw routines here, fallback to numpy versions
 	try:
 		fft2func = pyfftw.interfaces.numpy_fft.fft2
 		ifft2func = pyfftw.interfaces.numpy_fft.ifft2
+		# Enable cache, set timeout to one day because cache culling has a race condition (https://github.com/hgomersall/pyFFTW/issues/21)
 		pyfftw.interfaces.cache.enable()
+		pyfftw.interfaces.cache.set_keepalive_time(3600*24)
 	except:
 		fft2func = np.fft.fft2
 		ifft2func = np.fft.ifft2
@@ -309,7 +315,7 @@ def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap
 		# 4. IFFT (8.3ms), get complex components
 		img_ifft = ifft2func(img_sh_filt)
 		if (do_embed):
-			img_ifft = img_ifft[:img.shape[0],:img.shape[1]]
+			img_ifft = img_ifft[:img.shape[0],:img.shape[1]].copy()
 
 		# 4b. Sometimes we only need the complex components
 		if (get_complex):
