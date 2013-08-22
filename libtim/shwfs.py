@@ -596,27 +596,24 @@ def sim_shwfs(wave, mlagrid, pad=True, scale=2):
 
 	# Faster code, does the same as above except skipping some data shuffling
 
-	# FFTW does not really give a speed up, but caching gives some trouble, 
-	# so we disable it
-	# try:
-	# 	fftfunc = pyfftw.interfaces.numpy_fft.fft2
-	# 	wavecrop = pyfftw.n_byte_align_empty((sasz, sasz), pyfftw.simd_alignment, dtype=wave.dtype)
-	# 	# Enable cache, set timeout to one day because cache culling has a race condition (https://github.com/hgomersall/pyFFTW/issues/21)
-	# 	pyfftw.interfaces.cache.enable()
-	# 	pyfftw.interfaces.cache.set_keepalive_time(3600*24)
-	# except:
-	# 	fftfunc = np.fft.fft2
-	# 	wavecrop = np.zeros((sasz, sasz), dtype=wave.dtype)
-
-	fftfunc = np.fft.fft2
-	wavecrop = np.zeros((sasz, sasz), dtype=wave.dtype)
+	# FFTW gives a slight speed up (30%) when using caching.
+	try:
+		fftfunc = pyfftw.interfaces.numpy_fft.fft2
+		wavecrop = pyfftw.n_byte_align_empty((sasz, sasz), pyfftw.simd_alignment, dtype=wave.dtype)
+		# Enable cache, set timeout to one day because cache culling has a race condition (https://github.com/hgomersall/pyFFTW/issues/21)
+		pyfftw.interfaces.cache.enable()
+		pyfftw.interfaces.cache.set_keepalive_time(3600*24)
+	except:
+		fftfunc = np.fft.fft2
+		wavecrop = np.zeros((sasz, sasz), dtype=wave.dtype)
 
 	for mla in mlagrid:
 		# Crop subaperture (2.5µs)
 		wavecrop[:] = wave[mla[0]:mla[1], mla[2]:mla[3]]
 
-		# FFT (100µs)
-		wavecropft = fftfunc(wavecrop, s = wavecrop.shape*np.r_[scale])
+		# FFT (100µs), convert s to tuple beacuse of PyFFTW cache ID hasing 
+		# bug (https://github.com/hgomersall/pyFFTW/issues/22)
+		wavecropft = fftfunc(wavecrop, s=tuple(wavecrop.shape*np.r_[scale]))
 
 		# Replace into image array (4 * 7.5µs), quadrant by quadrant
 		shwfs[mla[0]:mla[1]-sasz/2, mla[2]:mla[3]-sasz/2] = wavecropft[-sasz/2:, -sasz/2:]
