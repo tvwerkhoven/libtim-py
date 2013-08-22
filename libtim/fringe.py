@@ -292,7 +292,7 @@ def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap
 
 		# 2b. FFT image (7.8ms)
 		if (do_embed):
-			img_sh_ft = fft2func(img_apod, s=apod_mask.shape*np.r_[2])
+			img_sh_ft = fft2func(img_apod, s=tuple(apod_mask.shape*np.r_[2]))
 		else:
 			img_sh_ft = fft2func(img_apod)
 
