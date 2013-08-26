@@ -29,6 +29,7 @@ import scipy.signal
 import sys, os
 import time
 from os.path import join as pjoin
+# Use pyfftw if available, else fall back to numpy
 try:
 	import pyfftw
 except:
@@ -37,8 +38,6 @@ except:
 # Import my own utilities
 import libtim as tim
 import libtim.im
-import libtim.zern
-import libtim.util
 import libtim.file
 import libtim.fft
 import libtim.xcorr
@@ -552,5 +551,81 @@ def phase_grad(wave, wrap=0, clip=0, apt_mask=slice(None), asvec=False):
 	else:
 		return dwave0, dwave1
 
-### EOF
+def calc_phasevec(waves, basismat, method='scalar', apt_mask=None, mlagrid=None, scale=1):
+	"""
+	Compute phase vector in a certain basis set from filtered complex waves 
+	(from filter_sideband()).
 
+	- Scalar method: measure phase as arctangent of complex components, fit basis modes to recovered shape
+	- Gradient method: same as scalar, but subsequently take the gradient of the phase to fit basis modes onto. This is better because it works around singularities and other discontinuities
+	- Virtual Shack Hartmann (vshwfs) method: compute virtual Shack Hartmann image from the complex input waves, then use this to measure the local phase gradients and reconstruct into a set of basis modes, also sidetepping potential singularity problems [rueckel2006].
+
+	@param [in] waves List of complex waves
+	@param [in] basis Matrix with set of basis modes of (∏(waves.shape), n)
+	@param [in] method Phase computation method, one of (scalar, gradient, vshwfs)
+	@param [in] apt_mask Aperture mask (only for scalar, gradient)
+	@param [in] mlagrid SH microlens array grid (only for vshwfs)
+	@param [in] scale SH FFT zoom scale (only for vshwfs)
+	@return Tuple of (phasvec, wfs image)
+	"""
+
+	if (method in ['scalar', 'gradient']):
+		if (apt_mask == None):
+			# slice(None) doesn't work because we cannot ravel() it
+			apt_mask = np.ones(waves[0].shape, dtype=bool)
+	elif (method == 'vshwfs'):
+		if (mlagrid == None):
+			raise RuntimeError("Require mlagrid when using vshwfs method")
+		else:
+			mlagrid = np.array(mlagrid)
+
+	if (method == 'scalar'):
+		phasewr, amp = avg_phase(waves)
+		phase = flood_quality(phasewr, amp)
+
+		wfsimg = phase - phase.mean()
+
+		# Fit basis modes, weigh with amplitude
+		weight = amp[apt_mask]
+		phasew = (phase[apt_mask] * weight).ravel()
+		basismatw = (basismat[apt_mask.ravel()] * weight.reshape(-1,1))
+		modevec = np.linalg.lstsq(basismatw, phasew)[0]
+		
+	elif (method == 'gradient'):
+		phasewr, amp = avg_phase(waves)
+		phase = flood_quality(phasewr, amp)
+
+		wfsimg = phase - phase.mean()
+
+		# Compute horizontal and vertical gradient in phase
+		phgradvec = phase_grad(phase, apt_mask=apt_mask, asvec=True)
+
+		# Concatenate amp and apt_mask to get same size as gradient vector
+		amp2vec = np.hstack([amp[apt_mask].ravel(), amp[apt_mask].ravel()])
+		apt2mask = np.hstack([apt_mask.ravel(), apt_mask.ravel()])
+
+		# Compute basis modes from gradients
+		basismatw = basismat[apt2mask.ravel()] * amp2vec.reshape(-1,1)
+		phasew = (phgradvec*amp2vec).ravel()
+		modevec = np.linalg.lstsq(basismatw, phasew)[0]
+
+	elif (method == 'vshwfs'):
+		# Compute mean of series of vshwfs images
+		wfsimg = vshwfs_im = np.mean([tim.shwfs.sim_shwfs(wv, mlagrid, scale=scale) for wv in waves], axis=0)
+		# Measure shift vector
+		sasz = (mlagrid[:, 1::2] - mlagrid[:, ::2])
+		vshwfs_vec = np.array([tim.shwfs.calc_cog(vshwfs_im[m[0]:m[1],m[2]:m[3]], index=True) for m in mlagrid]) - sasz/2.
+		# Compute intensity in each subaperture to use as fitting weight
+		vshwfs_pow = np.array( [vshwfs_im[m[0]:m[1],m[2]:m[3]].mean() for m in mlagrid] )
+		vshwfs_pow = np.repeat(vshwfs_pow, 2)
+		
+		# Fit basis mode vector
+		basismatw = basismat * vshwfs_pow.reshape(-1,1)
+		vshwfsw = vshwfs_vec.ravel() * vshwfs_pow
+		modevec = np.linalg.lstsq(basismatw, vshwfsw)[0]
+	else:
+		raise RuntimeError("Method not in ['scalar', 'gradient', 'vshwfs']")
+
+	return modevec, wfsimg
+
+### EOF

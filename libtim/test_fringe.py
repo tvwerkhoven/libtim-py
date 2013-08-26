@@ -18,6 +18,7 @@ from fringe import *
 import shwfs
 
 # Import other libs
+from timeit import Timer
 import unittest
 import numpy as np
 import pylab as plt
@@ -665,6 +666,145 @@ class TestGradphase(unittest.TestCase):
 		plt.legend(loc='best')
 
 		tim.shell()
+
+class TestCalcPhaseVec(unittest.TestCase):
+	def setUp(self):
+		self.log = logging.getLogger( "test_fringe" )
+
+		### Load real fringes
+		# NB: jpgs are required for correct [0,1] data range. PNG data range 
+		# [0, 255] gives weird results?
+		files = ['fringe_130622_154235Z_000082_img.jpg',
+			'fringe_130622_154235Z_000139_img.jpg',
+			'fringe_130622_154235Z_000220_img.jpg',
+			'fringe_130622_154235Z_000330_img.jpg',
+			'fringe_130622_154235Z_000412_img.jpg',
+			'fringe_130622_154235Z_000505_img.jpg']
+		self.fringes = [tim.file.read_file(pjoin(TESTDATAPATH,f)) for f in files]
+		self.sz = self.fringes[0].shape
+		self.cfreq = (7.81111508,  24.76214802)
+		self.fcache = {}
+		np.random.seed(1337)
+
+		minsz = np.min(self.sz)
+		apt_mask0 = tim.im.mk_rad_mask(minsz)
+		# Make circular radial mask in rectangular array
+		self.apt_mask = np.ones(self.sz)
+		self.apt_mask[self.sz[0]/2-minsz/2:self.sz[0]/2+minsz/2, self.sz[1]/2-minsz/2:self.sz[1]/2+minsz/2] = apt_mask0
+		self.apt_mask = self.apt_mask < 1
+		# Make NaN aperture mask for plotting
+		self.nan_mask = np.ones(self.sz)
+		self.nan_mask[self.apt_mask == False] = np.nan
+
+	def test0_calls_scalar(self):
+		"Test if calling the function with method=scalar works"
+		rnd = np.random.random
+		fakewaves = [rnd(self.sz) + rnd(self.sz)*1j for i in range(10)]
+		fakemat = rnd(self.sz + (10,))
+
+		calc_phasevec(fakewaves, fakemat.reshape(-1,10), method='scalar')
+		calc_phasevec(fakewaves, fakemat.reshape(-1,10), method='scalar', apt_mask=self.apt_mask)
+		calc_phasevec(fakewaves, fakemat.reshape(-1,10)[:,:1], method='scalar', apt_mask=self.apt_mask)
+		calc_phasevec([w[::2,::2] for w in fakewaves] , fakemat[::2,::2].reshape(-1,10), method='scalar', apt_mask=self.apt_mask[::2,::2])
+
+	def test0_calls_gradient(self):
+		"Test if calling the function with method=gradient works"
+		rnd = np.random.random
+		fakewaves = [rnd(self.sz) + rnd(self.sz)*1j for i in range(10)]
+		fakemat = rnd((np.product(self.sz)*2, 10))
+
+		calc_phasevec(fakewaves, fakemat, method='gradient')
+		calc_phasevec(fakewaves, fakemat, method='gradient', apt_mask=self.apt_mask)
+		calc_phasevec(fakewaves, fakemat[:,:1], method='gradient', apt_mask=self.apt_mask)
+		calc_phasevec([w[::2,::2] for w in fakewaves] , fakemat[::4], method='gradient', apt_mask=self.apt_mask[::2,::2])
+
+	def test0_calls_vshwfs(self):
+		"Test if calling the function with method=vshwfs works"
+		# Make fake microlens grid
+		x0arr = np.arange(self.sz[0]*0.25, (self.sz[0]-16)*0.75, 16)
+		y0arr = np.arange(self.sz[1]*0.10, (self.sz[1]-16)*0.90, 16)
+		mlagrid = [(x0, x0+16, y0, y0+16) for x0 in x0arr for y0 in y0arr]
+
+		rnd = np.random.random
+		fakewaves = [rnd(self.sz) + rnd(self.sz)*1j for i in range(10)]
+		fakemat = rnd((len(mlagrid)*2, 10))
+
+		calc_phasevec(fakewaves, fakemat, method='vshwfs', mlagrid=mlagrid)
+		calc_phasevec(fakewaves, fakemat, method='vshwfs', mlagrid=mlagrid, scale=3)
+		calc_phasevec(fakewaves, fakemat[:,:1], method='vshwfs', mlagrid=mlagrid, scale=3)
+
+	def test2_consistency(self, shscl=2):
+		"Test if the three methods give consistent results"
+		# Compute Zernike basis set 
+		zern_data = tim.zern.calc_zern_basis(11, self.apt_mask.shape[0]/2, modestart=2, calc_covmat=False)
+
+		# Make fake microlens grid
+		x0arr = np.arange(self.sz[0]*0.25, (self.sz[0]-16)*0.75, 16)
+		y0arr = np.arange(self.sz[1]*0.10, (self.sz[1]-16)*0.90, 16)
+		mlagrid = [(x0, x0+16, y0, y0+16) for x0 in x0arr for y0 in y0arr]
+
+		# Compute basis mode matrices for different methods
+		zmodemat = zern_data['modesmat'].T
+		zmodegradmat = np.r_[ [phase_grad(zmode, asvec=True) for zmode in zern_data['modes']] ].T
+		znshwfsmat = np.r_[ [tim.shwfs.sim_shwfs(np.exp(1j*zmode), mlagrid, scale=shscl) for zmode in zern_data['modes']] ]
+		zmodeshmat = np.r_[ [([tim.shwfs.calc_cog(znshwfs[m[0]:m[1],m[2]:m[3]], index=True) for m in mlagrid] - np.r_[16, 16]/2).ravel() for znshwfs in znshwfsmat] ].T
+
+		# Make fake complex waves for a random Zernike phase
+		zvec = np.random.random(11)-0.5
+		zphase = np.dot(zern_data['modesmat'].T, zvec).reshape(zern_data['modes'][0].shape)
+		waves = [np.exp(1j*zphase)]
+
+		# Recover Zernike vector from complex wave
+		zvec0, zimg0 = calc_phasevec(waves, zmodemat, method='scalar', apt_mask=self.apt_mask)
+		zvec1, zimg1 = calc_phasevec(waves, zmodegradmat, method='gradient', apt_mask=self.apt_mask)
+		zvec2, zimg2 = calc_phasevec(waves, zmodeshmat, method='vshwfs', apt_mask=self.apt_mask, mlagrid=mlagrid, scale=shscl)
+
+		self.assertAlmostEqual(np.abs(zvec0-zvec).mean(), 0, delta=0.01)
+		np.testing.assert_allclose(zvec0, zvec, atol=0.05)
+
+	def test2_speedtest(self):
+		"Test speed for different reconstruction methods"
+		t1 = Timer("""
+a=calc_phasevec(fakewaves, fakemat, method='scalar')
+		""", """import numpy as np
+from fringe import calc_phasevec
+sz = (256, 256)
+rnd = np.random.random
+fakewaves = [rnd(sz) + rnd(sz)*1j for i in range(4)]
+fakemat = rnd((np.product(sz), 20))""")
+
+		t2 = Timer("""
+a=calc_phasevec(fakewaves, fakemat, method='scalar')
+		""", """import numpy as np
+from fringe import calc_phasevec
+sz = (256, 256)
+rnd = np.random.random
+fakewaves = [rnd(sz) + rnd(sz)*1j for i in range(4)]
+fakemat = rnd((np.product(sz)*2, 20))""")
+
+		t3 = Timer("""
+a=calc_phasevec(fakewaves, fakemat, method='vshwfs', mlagrid=mlagrid, scale=2)
+		""", """import numpy as np
+from fringe import calc_phasevec
+sz = (256, 256)
+sasz = 16
+x0arr = np.arange(sz[0]*0.25, (sz[0]-sasz)*0.75, sasz).astype(int)
+y0arr = np.arange(sz[1]*0.11, (sz[1]-sasz)*0.90, sasz).astype(int)
+mlagrid = [(x0, x0+sasz, y0, y0+sasz) for x0 in x0arr for y0 in y0arr]
+
+rnd = np.random.random
+fakewaves = [rnd(sz) + rnd(sz)*1j for i in range(4)]
+fakemat = rnd((len(mlagrid)*2, 20))""")
+
+		print "calc_phasevec(): timing results:"
+		t_scalar = 1e3*min(t1.repeat(2, 10))/10
+		print "calc_phasevec(): scalar %.3g msec/it" % (t_scalar)
+		t_gradient = 1e3*min(t2.repeat(2, 10))/10
+		print "calc_phasevec(): gradient %.3g msec/it" % (t_gradient)
+		t_vshwfs = 1e3*min(t3.repeat(2, 10))/10
+		print "calc_phasevec(): vshwfs %.3g msec/it" % (t_vshwfs)
+
+
 
 if __name__ == "__main__":
 	import sys
