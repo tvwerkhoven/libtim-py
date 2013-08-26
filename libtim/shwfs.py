@@ -574,6 +574,7 @@ def sim_shwfs(wave, mlagrid, pad=True, scale=2):
 
 	assert wave.dtype in [np.complex64, np.complex128, np.complex256, complex], "sim_shwfs(): require complex wave as input"
 
+	mlagrid = np.array(mlagrid)
 	sasz = (mlagrid[0][1::2] - mlagrid[0][::2]).astype(int)
 	assert sasz[0] == sasz[1], "non-square subapertures not supported"
 	sasz = sasz[0]
