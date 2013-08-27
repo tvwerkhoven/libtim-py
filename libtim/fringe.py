@@ -621,8 +621,10 @@ def calc_phasevec(waves, basismat, method='scalar', apt_mask=None, mlagrid=None,
 		except (KeyError, TypeError) as e:
 			# KeyError: cache empty, TypeError: cache=None
 			grad_basismat = np.r_[ [phase_grad(mode.reshape(waves[0].shape), apt_mask=apt_mask, asvec=True) for mode in basismat.T] ].T
-			if (e == KeyError):
+			try:
 				cache['grad_basismat'] = grad_basismat
+			except:
+				pass
 
 		# Compute basis modes from gradients
 		grad_basismatw = grad_basismat * amp2vec.reshape(-1,1)
@@ -646,8 +648,10 @@ def calc_phasevec(waves, basismat, method='scalar', apt_mask=None, mlagrid=None,
 			# KeyError: cache empty, TypeError: cache=None
 			shwfsmat = np.r_[ [tim.shwfs.sim_shwfs(np.exp(1j*mode.reshape(waves[0].shape)), mlagrid, scale=scale) for mode in basismat.T] ]
 			vshwfs_basismat = np.r_[ [([tim.shwfs.calc_cog(shwfsim[m[0]:m[1],m[2]:m[3]], index=True) for m in mlagrid] - sasz/2.).ravel() for shwfsim in shwfsmat] ].T
-			if (e == KeyError):
+			try:
 				cache['vshwfs_basismat'] = vshwfs_basismat
+			except:
+				pass
 
 		# Fit basis mode vector
 		vshwfs_basismatw = vshwfs_basismat * vshwfs_pow.reshape(-1,1)
