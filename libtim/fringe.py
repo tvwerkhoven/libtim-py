@@ -592,8 +592,9 @@ def calc_phasevec(waves, basismat, method='scalar', apt_mask=None, mlagrid=None,
 	if (method == 'scalar'):
 		phasewr, amp = avg_phase(waves)
 		phase = flood_quality(phasewr, amp)
+		phase -= phase[apt_mask].mean()
 
-		wfsimg = phase - phase.mean()
+		wfsimg = phase
 
 		# Fit basis modes, weigh with amplitude
 		weight = amp[apt_mask]
