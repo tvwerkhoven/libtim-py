@@ -209,7 +209,7 @@ def locate_sb(fftpow, cpeak=None, method='parabola'):
 
 	return sb_loc
 
-def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap=True, wsize=-0.5, wfunc='cosine', do_embed=True, cache={}, ret_pow=False, get_complex=False, verb=0):
+def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap=True, wsize=-0.5, wfunc='cosine', do_embed=True, cache={}, ret_pow=False, pow_list=None, get_complex=False, verb=0):
 	"""
 	Filter out sideband from a real image, return phase and amplitude. Phase
 	is returned in radians, complex components are given 'as-is'.
@@ -250,6 +250,7 @@ def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap
 	@param [in] wfunc Window function for apodisation mask, see tim.fft.mk_apod_mask
 	@param [in] cache Will be filled with cached items. Re-supply next call to speed up process
 	@param [in] ret_pow Return Fourier power around **cfreq** as well.
+	@param [in] pow_list If a list, store FT power here
 	@param [in] verb Verbosity
 	@returns Tuple of (phase [rad], amplitude) as numpy.ndarrays
 	"""
@@ -305,11 +306,15 @@ def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap
 			cache['spec_lowpassmask'] = lowpass_mask
 		img_sh_filt = img_sh_ft * lowpass_mask
 
-		if (ret_pow):
-			sz = img_sh_filt.shape
-			img_sh_filts = np.fft.fftshift(img_sh_filt)
-			fftpow = np.abs(img_sh_filts[sz[0]/2-lowpass:sz[0]/2+lowpass,
+		if (ret_pow or pow_list != None):
+			sz = img_sh_ft.shape
+			img_sh_fts = np.fft.fftshift(img_sh_ft)
+			fftpow = np.abs(img_sh_fts[sz[0]/2-lowpass:sz[0]/2+lowpass,
 				sz[1]/2-lowpass:sz[1]/2+lowpass].copy())**2.0
+			try:
+				pow_list.append(np.abs(img_sh_fts)**2.0)
+			except:
+				pass
 
 		# 4. IFFT (8.3ms), get complex components
 		img_ifft = ifft2func(img_sh_filt)
