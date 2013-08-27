@@ -711,11 +711,13 @@ class TestCalcPhaseVec(unittest.TestCase):
 		"Test if calling the function with method=gradient works"
 		rnd = np.random.random
 		fakewaves = [rnd(self.sz) + rnd(self.sz)*1j for i in range(10)]
-		fakemat = rnd((np.product(self.sz)*2, 10))
+		fakemat = rnd((np.product(self.sz), 10))
+		thiscache = {}
 
 		calc_phasevec(fakewaves, fakemat, method='gradient')
 		calc_phasevec(fakewaves, fakemat, method='gradient', apt_mask=self.apt_mask)
-		calc_phasevec(fakewaves, fakemat[:,:1], method='gradient', apt_mask=self.apt_mask)
+		calc_phasevec(fakewaves, fakemat[:,:1], method='gradient', apt_mask=self.apt_mask, cache=thiscache)
+		calc_phasevec(fakewaves, fakemat[:,:1], method='gradient', apt_mask=self.apt_mask, cache=thiscache)
 		calc_phasevec([w[::2,::2] for w in fakewaves] , fakemat[::4], method='gradient', apt_mask=self.apt_mask[::2,::2])
 
 	def test0_calls_vshwfs(self):
@@ -727,10 +729,13 @@ class TestCalcPhaseVec(unittest.TestCase):
 
 		rnd = np.random.random
 		fakewaves = [rnd(self.sz) + rnd(self.sz)*1j for i in range(10)]
-		fakemat = rnd((len(mlagrid)*2, 10))
+		fakemat = rnd((np.product(self.sz), 10))
+		thiscache = {}
 
 		calc_phasevec(fakewaves, fakemat, method='vshwfs', mlagrid=mlagrid)
 		calc_phasevec(fakewaves, fakemat, method='vshwfs', mlagrid=mlagrid, scale=3)
+		calc_phasevec(fakewaves, fakemat, method='vshwfs', mlagrid=mlagrid, scale=3, cache=thiscache)
+		calc_phasevec(fakewaves, fakemat, method='vshwfs', mlagrid=mlagrid, scale=3, cache=thiscache)
 		calc_phasevec(fakewaves, fakemat[:,:1], method='vshwfs', mlagrid=mlagrid, scale=3)
 
 	def test2_consistency(self, shscl=2):
@@ -745,9 +750,6 @@ class TestCalcPhaseVec(unittest.TestCase):
 
 		# Compute basis mode matrices for different methods
 		zmodemat = zern_data['modesmat'].T
-		zmodegradmat = np.r_[ [phase_grad(zmode, asvec=True) for zmode in zern_data['modes']] ].T
-		znshwfsmat = np.r_[ [tim.shwfs.sim_shwfs(np.exp(1j*zmode), mlagrid, scale=shscl) for zmode in zern_data['modes']] ]
-		zmodeshmat = np.r_[ [([tim.shwfs.calc_cog(znshwfs[m[0]:m[1],m[2]:m[3]], index=True) for m in mlagrid] - np.r_[16, 16]/2).ravel() for znshwfs in znshwfsmat] ].T
 
 		# Make fake complex waves for a random Zernike phase
 		zvec = np.random.random(11)-0.5
@@ -756,8 +758,8 @@ class TestCalcPhaseVec(unittest.TestCase):
 
 		# Recover Zernike vector from complex wave
 		zvec0, zimg0 = calc_phasevec(waves, zmodemat, method='scalar', apt_mask=self.apt_mask)
-		zvec1, zimg1 = calc_phasevec(waves, zmodegradmat, method='gradient', apt_mask=self.apt_mask)
-		zvec2, zimg2 = calc_phasevec(waves, zmodeshmat, method='vshwfs', apt_mask=self.apt_mask, mlagrid=mlagrid, scale=shscl)
+		zvec1, zimg1 = calc_phasevec(waves, zmodemat, method='gradient', apt_mask=self.apt_mask)
+		zvec2, zimg2 = calc_phasevec(waves, zmodemat, method='vshwfs', apt_mask=self.apt_mask, mlagrid=mlagrid, scale=shscl)
 
 		self.assertAlmostEqual(np.abs(zvec0-zvec).mean(), 0, delta=0.01)
 		np.testing.assert_allclose(zvec0, zvec, atol=0.05)

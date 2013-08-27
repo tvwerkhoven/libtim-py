@@ -551,7 +551,7 @@ def phase_grad(wave, wrap=0, clip=0, apt_mask=slice(None), asvec=False):
 	else:
 		return dwave0, dwave1
 
-def calc_phasevec(waves, basismat, method='scalar', apt_mask=None, mlagrid=None, scale=1):
+def calc_phasevec(waves, basismat, method='scalar', apt_mask=None, mlagrid=None, scale=1, cache=None):
 	"""
 	Compute phase vector in a certain basis set from filtered complex waves 
 	(from filter_sideband()).
@@ -560,12 +560,17 @@ def calc_phasevec(waves, basismat, method='scalar', apt_mask=None, mlagrid=None,
 	- Gradient method: same as scalar, but subsequently take the gradient of the phase to fit basis modes onto. This is better because it works around singularities and other discontinuities
 	- Virtual Shack Hartmann (vshwfs) method: compute virtual Shack Hartmann image from the complex input waves, then use this to measure the local phase gradients and reconstruct into a set of basis modes, also sidetepping potential singularity problems [rueckel2006].
 
+	For gradient and vshwfs, we compute a derivative of the basis modes 
+	matrix suitable for fitting these data to. These are stored in the 
+	dictionary **cache** which can be reused.
+
 	@param [in] waves List of complex waves
-	@param [in] basis Matrix with set of basis modes of (∏(waves.shape), n)
+	@param [in] basis Matrix with set of basis modes of shape (∏(waves.shape), n)
 	@param [in] method Phase computation method, one of (scalar, gradient, vshwfs)
 	@param [in] apt_mask Aperture mask (only for scalar, gradient)
 	@param [in] mlagrid SH microlens array grid (only for vshwfs)
 	@param [in] scale SH FFT zoom scale (only for vshwfs)
+	@param [in] cache Dict to cache static stuff in
 	@return Tuple of (phasvec, wfs image)
 	"""
 
@@ -604,10 +609,19 @@ def calc_phasevec(waves, basismat, method='scalar', apt_mask=None, mlagrid=None,
 		amp2vec = np.hstack([amp[apt_mask].ravel(), amp[apt_mask].ravel()])
 		apt2mask = np.hstack([apt_mask.ravel(), apt_mask.ravel()])
 
+		# Check if we have the gradient basis matrix
+		try:
+			grad_basismat = cache['grad_basismat']
+		except (KeyError, TypeError) as e:
+			# KeyError: cache empty, TypeError: cache=None
+			grad_basismat = np.r_[ [phase_grad(mode.reshape(waves[0].shape), apt_mask=apt_mask, asvec=True) for mode in basismat.T] ].T
+			if (e == KeyError):
+				cache['grad_basismat'] = grad_basismat
+
 		# Compute basis modes from gradients
-		basismatw = basismat[apt2mask.ravel()] * amp2vec.reshape(-1,1)
+		grad_basismatw = grad_basismat * amp2vec.reshape(-1,1)
 		phasew = (phgradvec*amp2vec).ravel()
-		modevec = np.linalg.lstsq(basismatw, phasew)[0]
+		modevec = np.linalg.lstsq(grad_basismatw, phasew)[0]
 
 	elif (method == 'vshwfs'):
 		# Compute mean of series of vshwfs images
@@ -618,11 +632,21 @@ def calc_phasevec(waves, basismat, method='scalar', apt_mask=None, mlagrid=None,
 		# Compute intensity in each subaperture to use as fitting weight
 		vshwfs_pow = np.array( [vshwfs_im[m[0]:m[1],m[2]:m[3]].mean() for m in mlagrid] )
 		vshwfs_pow = np.repeat(vshwfs_pow, 2)
-		
+
+		# Check if we have the vshwfs basis matrix
+		try:
+			vshwfs_basismat = cache['vshwfs_basismat']
+		except (KeyError, TypeError) as e:
+			# KeyError: cache empty, TypeError: cache=None
+			shwfsmat = np.r_[ [tim.shwfs.sim_shwfs(np.exp(1j*mode.reshape(waves[0].shape)), mlagrid, scale=scale) for mode in basismat.T] ]
+			vshwfs_basismat = np.r_[ [([tim.shwfs.calc_cog(shwfsim[m[0]:m[1],m[2]:m[3]], index=True) for m in mlagrid] - sasz/2.).ravel() for shwfsim in shwfsmat] ].T
+			if (e == KeyError):
+				cache['vshwfs_basismat'] = vshwfs_basismat
+
 		# Fit basis mode vector
-		basismatw = basismat * vshwfs_pow.reshape(-1,1)
+		vshwfs_basismatw = vshwfs_basismat * vshwfs_pow.reshape(-1,1)
 		vshwfsw = vshwfs_vec.ravel() * vshwfs_pow
-		modevec = np.linalg.lstsq(basismatw, vshwfsw)[0]
+		modevec = np.linalg.lstsq(vshwfs_basismatw, vshwfsw)[0]
 	else:
 		raise RuntimeError("Method not in ['scalar', 'gradient', 'vshwfs']")
 
