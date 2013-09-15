@@ -286,7 +286,7 @@ def fit_zernike(wavefront, zern_data={}, nmodes=10, startmode=1, fitweight=None,
 		# LSQ fit with data. Only fit inside grid_mask
 
 		# Crop out central region of wavefront, then only select the orthogonal part of the Zernike modes (grid_mask)
- 		wf_w = ((wavefront[yslice, xslice])[grid_mask]).reshape(1,-1)
+		wf_w = ((wavefront[yslice, xslice])[grid_mask]).reshape(1,-1)
 		#wf_zern_vec = np.dot(wf_w, np.linalg.pinv(zern_basismat[:, grid_vec])).ravel()
 		# This is 5x faster
 		wf_zern_vec = np.linalg.lstsq(zern_basismat[:, grid_vec].T, wf_w.ravel())[0]
