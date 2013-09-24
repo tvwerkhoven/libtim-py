@@ -632,16 +632,16 @@ def calc_phasevec(waves, basismat, method='scalar', apt_mask=None, mlagrid=None,
 		modevec = np.linalg.lstsq(grad_basismatw, phasew)[0]
 
 	elif (method == 'vshwfs'):
-		# Compute mean of series of vshwfs images
+		# Compute mean of series of virtual shwfs images
 		wfsimg = vshwfs_im = np.mean([tim.shwfs.sim_shwfs(wv, mlagrid, scale=scale) for wv in waves], axis=0)
-		# Measure shift vector
+		# Measure shift vector for all subapertures
 		sasz = (mlagrid[:, 1::2] - mlagrid[:, ::2])
 		vshwfs_vec = np.array([tim.shwfs.calc_cog(vshwfs_im[m[0]:m[1],m[2]:m[3]], index=True) for m in mlagrid]) - sasz/2.
 		# Compute intensity in each subaperture to use as fitting weight
 		vshwfs_pow = np.array( [vshwfs_im[m[0]:m[1],m[2]:m[3]].mean() for m in mlagrid] )
 		vshwfs_pow = np.repeat(vshwfs_pow, 2)
 
-		# Check if we have the vshwfs basis matrix
+		# Compute matrix of vSHWFS response for all basis modes
 		try:
 			vshwfs_basismat = cache['vshwfs_basismat']
 		except (KeyError, TypeError) as e:
@@ -653,7 +653,7 @@ def calc_phasevec(waves, basismat, method='scalar', apt_mask=None, mlagrid=None,
 			except:
 				pass
 
-		# Fit basis mode vector
+		# Fit phase as mode vector using basis mode matrix
 		vshwfs_basismatw = vshwfs_basismat * vshwfs_pow.reshape(-1,1)
 		vshwfsw = vshwfs_vec.ravel() * vshwfs_pow
 		modevec = np.linalg.lstsq(vshwfs_basismatw, vshwfsw)[0]
