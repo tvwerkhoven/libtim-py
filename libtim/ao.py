@@ -182,6 +182,13 @@ def inspect_influence(actmat, measmat, apt_mask, infldat=None, what="all", fignu
 		plt.ylabel("Singular value [AU]")
 		plt.semilogy(svd_s)
 		if (store): plt.savefig(pjoin(outdir, "cal_singvals_logy.pdf"))
+
+		plt.figure(fignum0+102); plt.clf()
+		plt.title("1-singvals cumsum (n=%d, sum=%.4g, c=%.4g)" % (len(svd_s), svd_s.sum(), svd_s[0]/svd_s[-1]))
+		plt.xlabel("Mode [#]")
+		plt.ylabel("Residual singval [AU]")
+		plt.semilogy(1-svd_s.cumsum()/svd_s.sum())
+		if (store): plt.savefig(pjoin(outdir, "cal_singvals_cumsum_logy.pdf"))
 		if (interactive): raw_input("Continue...")
 
 	if (what in ["all", "offset"]):
