@@ -104,6 +104,8 @@ def comp_influence(measmat, actmat, binfac=None, singval=1.0, nmodes=0, add_offs
 
 	svd_s_red = svd_s.copy()
 	svd_s_red[nmodes:] = np.inf
+	infl['usedmodes'] = nmodes
+	infl['totmodes'] = len(svd_s)
 
 	# 4c. Compute (regularized) control matrix
 	# V . diag(1/s) . U^H
