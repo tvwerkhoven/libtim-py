@@ -174,7 +174,7 @@ def bin_data(data, binfac=None):
 
 	# If data.shape is not divisable by binfac, skip
 	if (data.shape/np.r_[binfac] != data.shape/np.r_[1.0*binfac]).any():
-		return
+		return data
 
 	# If binfac is legal, start binning
 	if (binfac != None and int(binfac) == binfac and binfac > 0):
