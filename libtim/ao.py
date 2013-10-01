@@ -279,5 +279,5 @@ def inspect_influence(actmat, measmat, apt_mask, infldat=None, what="all", fignu
 				if (raw_input("Continue [b=break]...") == 'b'): break
 
 	raw_input("Will now exit and close windows...")
-	for fnum in [100, 101, 200, 250, 300, 400, 500]:
+	for fnum in [100, 101, 102, 200, 250, 300, 400, 500]:
 		plt.figure(fignum0 + fnum); plt.close()
