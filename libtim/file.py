@@ -170,6 +170,13 @@ def bin_data(data, binfac=None):
 	@return Binned data
 	"""
 
+	binfac = int(binfac)
+
+	# If data.shape is not divisable by binfac, skip
+	if (data.shape/np.r_[binfac] == data.shape/np.r_[1.0*binfac]).any():
+		return
+
+	# If binfac is legal, start binning
 	if (binfac != None and int(binfac) == binfac and binfac > 0):
 		ibin = int(binfac)
 		data = data.astype(np.float)
