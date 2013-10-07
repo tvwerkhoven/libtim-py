@@ -165,10 +165,18 @@ def bin_data(data, binfac=None):
 	"""
 	Bin **data** by a integer factor **binfac** in all dimensions.
 
+	If binfac == None, simply pass along the data.
+
 	@param [in] data Data to bin, should be 1, 2 or 3-dimensional
 	@param [in] binfac Factor to bin by, should be integer and >0
 	@return Binned data
 	"""
+
+	# Check if binfac is given and legal
+	if (binfac == None):
+		return data
+	if (int(binfac) != binfac or binfac <= 0):
+		raise RuntimeError("binfac must be a positive integer.")
 
 	binfac = int(binfac)
 
@@ -177,17 +185,16 @@ def bin_data(data, binfac=None):
 		return data
 
 	# If binfac is legal, start binning
-	if (binfac != None and int(binfac) == binfac and binfac > 0):
-		ibin = int(binfac)
-		data = data.astype(np.float)
-		if data.ndim == 1:
-			data = np.sum(data[i::binfac] for i in range(binfac))
-		elif data.ndim == 2:
-			data = sum(data[i::binfac, j::binfac] for i in range(binfac) for j in range(binfac))
-		elif data.ndim == 3:
-			data = sum(data[i::binfac, j::binfac, k::binfac] for i in range(binfac) for j in range(binfac) for k in range(binfac))
-		else:
-			raise RuntimeError("This many dimensions is not supported by binning")
+	ibin = int(binfac)
+	data = data.astype(np.float)
+	if data.ndim == 1:
+		data = np.sum(data[i::binfac] for i in range(binfac))
+	elif data.ndim == 2:
+		data = sum(data[i::binfac, j::binfac] for i in range(binfac) for j in range(binfac))
+	elif data.ndim == 3:
+		data = sum(data[i::binfac, j::binfac, k::binfac] for i in range(binfac) for j in range(binfac) for k in range(binfac))
+	else:
+		raise RuntimeError("This many dimensions is not supported by binning")
 	return data
 
 
