@@ -556,7 +556,7 @@ def phase_grad(wave, wrap=0, clip=0, apt_mask=slice(None), asvec=False):
 	else:
 		return dwave0, dwave1
 
-def calc_phasevec(waves, basismat, method='scalar', apt_mask=None, mlagrid=None, scale=1, cache=None):
+def calc_phasevec(waves, basismat, method='scalar', apt_mask=None, mlagrid=None, scale=1, weigh=True, cache=None):
 	"""
 	Compute phase vector in a certain basis set from filtered complex waves 
 	(from filter_sideband()).
@@ -597,7 +597,10 @@ def calc_phasevec(waves, basismat, method='scalar', apt_mask=None, mlagrid=None,
 		wfsimg = phase
 
 		# Fit basis modes, weigh with amplitude
-		weight = amp[apt_mask]
+		if (weigh):
+			weight = amp[apt_mask]
+		else:
+			weight = np.ones(amp[apt_mask].shape)
 		phasew = (phase[apt_mask] * weight).ravel()
 		basismatw = (basismat[apt_mask.ravel()] * weight.reshape(-1,1))
 		modevec = np.linalg.lstsq(basismatw, phasew)[0]
@@ -626,9 +629,14 @@ def calc_phasevec(waves, basismat, method='scalar', apt_mask=None, mlagrid=None,
 			except:
 				pass
 
+		# Apply weighting 
+		if (weigh):
+			weight = amp2vec
+		else:
+			weight = np.ones(amp2vec.shape)
 		# Compute basis modes from gradients
-		grad_basismatw = grad_basismat * amp2vec.reshape(-1,1)
-		phasew = (phgradvec*amp2vec).ravel()
+		grad_basismatw = grad_basismat * weight.reshape(-1,1)
+		phasew = (phgradvec*weight).ravel()
 		modevec = np.linalg.lstsq(grad_basismatw, phasew)[0]
 
 	elif (method == 'vshwfs'):
@@ -653,9 +661,14 @@ def calc_phasevec(waves, basismat, method='scalar', apt_mask=None, mlagrid=None,
 			except:
 				pass
 
+		if (weigh):
+			weight = vshwfs_pow
+		else:
+			weight = np.ones(vshwfs_pow.shape)
+
 		# Fit phase as mode vector using basis mode matrix
-		vshwfs_basismatw = vshwfs_basismat * vshwfs_pow.reshape(-1,1)
-		vshwfsw = vshwfs_vec.ravel() * vshwfs_pow
+		vshwfs_basismatw = vshwfs_basismat * weight.reshape(-1,1)
+		vshwfsw = vshwfs_vec.ravel() * weight
 		modevec = np.linalg.lstsq(vshwfs_basismatw, vshwfsw)[0]
 	else:
 		raise RuntimeError("Method not in ['scalar', 'gradient', 'vshwfs']")
