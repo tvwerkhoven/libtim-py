@@ -143,10 +143,10 @@ def fringe_cal(refimgs, wsize=-0.5, cpeak=0, do_embed=True, method='parabola', s
 	else:
 		return np.r_[cfreql]
 
-def locate_sb(fftpow, cpeak=None, method='parabola'):
+def locate_sb(fftpow, cpeak=None, method='cog', binfac=8):
 	"""
 	Given a (descrambled) Fourier power spectrum **fftpow**, find the 
-	location of the (first) side-band peak.
+	location of the (first) side-band peak wrt the center of the image.
 
 	**cpeak** defines the radius of the central region to ignore to prevent 
 	conflicts with possible central maxima. If not set, this will be 
@@ -154,10 +154,16 @@ def locate_sb(fftpow, cpeak=None, method='parabola'):
 	locating the first minimum. The radius at which this minimum lies will 
 	be used as blocking filter.
 
+	To find the sideband, the data is first binned with **binfac** after 
+	which the brightest pixel is located, which should be approximately 
+	where the side band is. After binning, the subpixel maximum is located 
+	using either parabolic fitting or center of gravity weighting.
+
 	@param [in] fftpow Descrambled power spectrum to analyze
-	@param [in] cpeak Radius of central region to ignore. If None, find ourselves
-	@param [in] method Method to determine the sideband center, either 'parabola' for a 2D parabolic fit or 'cog' for center of gravity. The former is slightly more precise, the latter is more robust
-	@return Numpy array of (x, y) subpixel maximum of first sideband
+	@param [in] cpeak Radius of central region to ignore. If None, find automatically
+	@param [in] method Method to determine the sideband subpixel center, either 'parabola' for a 2D parabolic fit or 'cog' for center of gravity. The former is slightly more precise, the latter is more robust. If None, use integer-pixel method
+	@return Numpy array of (x, y) subpixel maximum (wrt center) of first sideband
+	@raises ValueError for cpeak < 0 or method not in [cog, parabola]
 	"""
 
 	if (cpeak < 0):
@@ -166,44 +172,50 @@ def locate_sb(fftpow, cpeak=None, method='parabola'):
 	# Detect central peak if not given
 	if (not cpeak):
 		rad_prof = tim.im.mk_rad_prof(fftpow)
-		# Detect where intensity stops declining. Skip first pixel because this is already low due to removing the mean from the FFT
-		d_rad_prof = rad_prof[1:-1] - rad_prof[2:]
-		cpeak = np.argwhere(d_rad_prof < 0)[0][0]
+		# Detect where intensity stops declining. Skip first two pixels because this is already low due to removing the mean from the FFT
+		d_rad_prof = rad_prof[2:-1] - rad_prof[3:]
+		cpeak = np.argwhere(d_rad_prof < 0)[0][0] + 2
 
 	# Ignore center <cpeak> pixels in further processing
 	sz = np.r_[fftpow.shape]
 	rad_mask = tim.im.mk_rad_mask(*sz, norm=False)
 	fftpow[rad_mask <= cpeak] = 0
 
+	#@bug Need to crop fftpow first to assure binning works
+	# Downsample image to reduce noise sensitivity, then get brightest pixel (which is a patch)
+	fftpow2 = tim.file.bin_data(fftpow, binfac=binfac)
+	#binfac = fftpow.shape[0]/fftpow2.shape[0]
+	max0, max1 = sb_loc = np.argwhere(fftpow2 == fftpow2.max())[0]*binfac
+
+	# Find brightest pixel inside brightest binned patch
+	bfh = binfac/2
+	fftpow_crop = fftpow[max0-bfh:max0+bfh, max1-bfh:max1+bfh]
+	sb_loc += np.argwhere(fftpow_crop == fftpow_crop.max())[0]-bfh
+
 	# Find sub-pixel maximum around brightest pixel
 	if (method == 'parabola'):
-		# @todo Perhaps this should be a wider center of gravity search, 9 pixels is a bit too small for real data
-		sb_loc = tim.xcorr.calc_subpixmax(fftpow, sz/2., index=True)
+		# Use binned image also for parabola fittin. This should be more 
+		# robust and still give a decent center.
+		sb_loc = tim.xcorr.calc_subpixmax(fftpow2, 0, index=True) * binfac
 	elif (method == "cog"):
-		# Select half image so we exclude the other sideband, otherwise the
-		# CoG will go to the origin.
-		max0, max1 = np.argwhere(fftpow == fftpow.max())[0]
+		max0, max1 = sb_loc
 		dmax0, dmax1 = (max0, max1) - sz/2
 
 		# Crop a region around maximum, never include the origin, take a 
 		# symmetric crop region in both axes. Make sure the maximum is in 
 		# the center
-		r0 = np.min([abs(dmax0), abs(dmax0), sz[0]/20, sz[1]/20])
+		r0 = np.min([abs(dmax0), abs(dmax1), sz[0]/20, sz[1]/20])
 		fftpow_crop = fftpow[max0-r0:max0+r0+1, max1-r0:max1+r0+1]
 		# From this crop region, calculate the CoG
 		crop_mid = tim.shwfs.calc_cog(fftpow_crop, index=True)
 		# Give maximum back in coordinates of fftpow 
-		sb_loc = np.r_[max0-r0, max1-r0] - sz/2. + crop_mid
-	else:
-		raise ValueError("Unknown method (use 'parabola' or 'cog')")
+		sb_loc = np.r_[max0-r0, max1-r0] + crop_mid
 
-	# There are always two symmetrical sidebands, always find the one with the
-	# highest sum to ensure we always find the same.
-	# (-15, 25) and (15, 25) will work
-	# (-5, 5) and (5, -5) will not work
-	# (0, 10) and (0, -10) will work
-	# (-0.001, 10), (0, 10) and (0, -10) will work
+	# There are always two symmetrical sidebands, always find the one with 
+	# the highest sum to ensure we always find the same, otherwise averaging 
+	# sideband locations doesn't work.
 	## @bug Fix me, this will not work always
+	sb_loc -= sz/2.
 	if (np.sum(-sb_loc) > np.sum(sb_loc)):
 		return -sb_loc
 
