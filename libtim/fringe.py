@@ -166,7 +166,7 @@ def locate_sb(fftpow, cpeak=None, method='cog', binfac=8):
 	@raises ValueError for cpeak < 0 or method not in [cog, parabola]
 	"""
 
-	if (cpeak < 0):
+	if (cpeak and cpeak < 0):
 		raise ValueError("negative <cpeak> is illegal!")
 
 	# Detect central peak if not given
