@@ -246,6 +246,14 @@ def filter_sideband(img, cfreq, sbsize, method='spectral', apt_mask=None, unwrap
 	@returns Tuple of (phase [rad], amplitude) as numpy.ndarrays
 	"""
 
+	try:
+		assert len(cfreq) == 2
+	except Exception as e:
+		raise e.__class__("cfreq should be a 2-element vector (%s)"%e.message)
+
+	assert type(sbsize) in [float, int], "sbsize should be a real scalar"
+	assert type(wsize) in [float, int], "wsize should be a real scalar"
+
 	cfreq = np.asanyarray(cfreq)
 	
 	# Try to user faster fftw routines here, fallback to numpy versions
