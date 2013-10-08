@@ -33,36 +33,36 @@ class TestFringecal(unittest.TestCase):
 	# fringe_cal(refimgs, wsize=-0.5, cpeak=0, do_embed=True, store_pow=True, ret_pow=False, outdir='./'):
 	def setUp(self):
 		self.log = logging.getLogger( "test_fringe" )
-		self.cflst = [(3, 4), (18.3, 1.3), (22.22, 11.11)]
+		self.cflst = [(10, 4), (18.3, 1.3), (22.22, 11.11)]
 		self.sz = (320, 240)
 
 	def test0a_cal(self):
 		"""Test function calls"""
 		for cfreq in self.cflst:
 			fpatt = sim_fringe(np.zeros(self.sz), cfreq)
-			
-			cfreq1 = fringe_cal([fpatt], store_pow=False, do_embed=False)[0]
+
+			cfreq1 = fringe_cal([fpatt], store_pow=False, do_embed=False)
 			self.assertAlmostEqual(sum(cfreq1), sum(cfreq), places=0)
 			np.testing.assert_almost_equal(cfreq1, cfreq, decimal=0)
 
-			cfreq1 = fringe_cal([fpatt, fpatt], store_pow=False, do_embed=False)[1]
+			cfreq1 = fringe_cal([fpatt, fpatt], store_pow=False, do_embed=False)
 			self.assertAlmostEqual(sum(cfreq1), sum(cfreq), places=0)
 			np.testing.assert_almost_equal(cfreq1, cfreq, decimal=0)
 
-			cfreq1, fftpl, fftpzooml = fringe_cal([fpatt], store_pow=False, ret_pow=True, do_embed=False)
-			self.assertAlmostEqual(sum(cfreq1.mean(0)), sum(cfreq), places=0)
-			np.testing.assert_almost_equal(cfreq1.mean(0), cfreq, decimal=0)
+			cfreq1, cfpow = fringe_cal([fpatt], store_pow=False, ret_pow=True, do_embed=False)
+			self.assertAlmostEqual(sum(cfreq1), sum(cfreq), places=0)
+			np.testing.assert_almost_equal(cfreq1, cfreq, decimal=0)
 
-			cfreq1, fftpl, fftpzooml = fringe_cal([fpatt, fpatt, fpatt], store_pow=False, ret_pow=True, do_embed=False)
-			self.assertAlmostEqual(sum(cfreq1.mean(0)), sum(cfreq), places=0)
-			np.testing.assert_almost_equal(cfreq1.mean(0), cfreq, decimal=0)
+			cfreq1, cfpow = fringe_cal([fpatt, fpatt, fpatt], store_pow=False, ret_pow=True, do_embed=False)
+			self.assertAlmostEqual(sum(cfreq1), sum(cfreq), places=0)
+			np.testing.assert_almost_equal(cfreq1, cfreq, decimal=0)
 
 	def test1a_cal_flat(self):
 		"""Generate fringe pattern for flat phase"""
 		for cfreq in self.cflst:
 			fpatt = sim_fringe(np.zeros(self.sz), cfreq)
-			cfreq1a = fringe_cal([fpatt], store_pow=False, do_embed=False)[0]
-			cfreq1b = fringe_cal([fpatt], store_pow=False, do_embed=False, method='cog')[0]
+			cfreq1a = fringe_cal([fpatt], store_pow=False, do_embed=False)
+			cfreq1b = fringe_cal([fpatt], store_pow=False, do_embed=False, method='cog')
 			cfrata = 1.-np.r_[cfreq]/cfreq1a
 			cfratb = 1.-np.r_[cfreq]/cfreq1b
 			self.log.debug("ref: %.3f, %.3f, rec1: %.3f, %.3f, rec2: %.2g, %.2g", cfreq[0], cfreq[1], cfreq1a[0], cfreq1a[1], cfreq1b[0], cfreq1b[1])
@@ -75,7 +75,7 @@ class TestFringecal(unittest.TestCase):
 		"""Generate fringe pattern for flat phase, embed"""
 		for cfreq in self.cflst:
 			fpatt = sim_fringe(np.zeros(self.sz), cfreq)
-			cfreq1 = fringe_cal([fpatt], store_pow=False, do_embed=True)[0]
+			cfreq1 = fringe_cal([fpatt], store_pow=False, do_embed=True)
 			cfrat = 1.-np.r_[cfreq]/cfreq1
 			self.log.debug("ref: %.3f, %.3f, rec: %.3f, %.3f, ratio: %.2g, %.2g", cfreq[0], cfreq[1], cfreq1[0], cfreq1[1], cfrat[0], cfrat[1])
 			self.assertAlmostEqual(sum(cfreq1), sum(cfreq), places=1)
@@ -85,7 +85,7 @@ class TestFringecal(unittest.TestCase):
 		"""Generate fringe pattern for flat phase with noise"""
 		for cfreq in self.cflst:
 			fpatt = sim_fringe(np.zeros(self.sz), cfreq, noiseamp=0.5)
-			cfreq1 = fringe_cal([fpatt], store_pow=False, do_embed=False)[0]
+			cfreq1 = fringe_cal([fpatt], store_pow=False, do_embed=False)
 			cfrat = 1.-np.r_[cfreq]/cfreq1
 			self.log.debug("ref: %.3f, %.3f, rec: %.3f, %.3f, ratio: %.2g, %.2g", cfreq[0], cfreq[1], cfreq1[0], cfreq1[1], cfrat[0], cfrat[1])
 			self.assertAlmostEqual(sum(cfreq1), sum(cfreq), places=0)
@@ -95,7 +95,7 @@ class TestFringecal(unittest.TestCase):
 		"""Generate fringe pattern for flat phase with noise, embed"""
 		for cfreq in self.cflst:
 			fpatt = sim_fringe(np.zeros(self.sz), cfreq, noiseamp=0.5)
-			cfreq1 = fringe_cal([fpatt], store_pow=False, do_embed=True)[0]
+			cfreq1 = fringe_cal([fpatt], store_pow=False, do_embed=True)
 			cfrat = 1.-np.r_[cfreq]/cfreq1
 			self.log.debug("ref: %.3f, %.3f, rec: %.3f, %.3f, ratio: %.2g, %.2g", cfreq[0], cfreq[1], cfreq1[0], cfreq1[1], cfrat[0], cfrat[1])
 			self.assertAlmostEqual(sum(cfreq1), sum(cfreq), places=1)
@@ -114,22 +114,21 @@ class TestFringecal(unittest.TestCase):
 		cfreq = (7.81111508,  24.76214802)
 
 		do_embed = True
-		cfreqs0, impowl, impowzml = fringe_cal(fringes, wsize=-0.5, cpeak=0, do_embed=do_embed, method='parabola', store_pow=False, ret_pow=True, outdir='./')
-		cfreq0 = np.mean(cfreqs0, 0)
-		cfreqs1 = fringe_cal(fringes, wsize=-0.5, cpeak=0, do_embed=do_embed, method='cog', store_pow=False, ret_pow=False, outdir='./')
-		cfreq1 = np.mean(cfreqs1, 0)
-		sz = np.r_[impowzml[0].shape]/(1+do_embed)
-		cfreq2 = np.argwhere(impowzml[0] == impowzml[0].max())[0]/2 - sz/2
-		
-		for impowzm in impowzml:
-			plt.figure(100); plt.clf()
-			plt.title("Carr. freq. FFT power log zoom")
-			plt.imshow(np.log10(impowzm), extent=(-sz[1]/2, sz[1]/2, -sz[0]/2, sz[0]/2))
-			plt.plot(cfreq2[1], cfreq2[0], "+", label='max') # Maximum pixel
-			plt.plot(cfreq0[1], cfreq0[0], "^", label='para') # Parabolic interpolation
-			plt.plot(cfreq1[1], cfreq1[0], "*", label='cog') # Center of gravity
-			plt.legend(loc='best')
-			if (raw_input("Continue [b=break]...") == 'b'): break
+		cfreq0, impow = fringe_cal(fringes, wsize=-0.5, cpeak=0, do_embed=do_embed, method='parabola', store_pow=False, ret_pow=True, outdir='./')
+		cfreq1 = fringe_cal(fringes, wsize=-0.5, cpeak=0, do_embed=do_embed, method='cog', store_pow=False, ret_pow=False, outdir='./')
+		sz = np.r_[impow.shape]/(1+do_embed)
+		cfreq2 = np.argwhere(impow == impow.max())[0]/2 - sz/2
+		cfreq3 = fringe_cal(fringes, wsize=-0.5, cpeak=0, do_embed=do_embed, method=None, store_pow=False, ret_pow=False, outdir='./')
+
+		plt.figure(100); plt.clf()
+		plt.title("Carr. freq. FFT power log zoom")
+		plt.imshow(np.log10(impow), extent=(-sz[1]/2, sz[1]/2, -sz[0]/2, sz[0]/2))
+		plt.plot(cfreq2[1], cfreq2[0], "+", label='max') # Maximum pixel
+		plt.plot(cfreq3[1], cfreq3[0], "+", label='smth') # Maximum smoothed
+		plt.plot(cfreq0[1], cfreq0[0], "^", label='para') # Parabolic interpolation
+		plt.plot(cfreq1[1], cfreq1[0], "*", label='cog') # Center of gravity
+		plt.legend(loc='best')
+		raw_input("Continue...")
 		plt.close()
 
 	def test3b_cal_qual(self):
@@ -139,8 +138,8 @@ class TestFringecal(unittest.TestCase):
 			fpatt = sim_fringe(np.zeros(self.sz), cfreq)
 			for noiseamp in np.linspace(0, 2, 3):
 				fnoise = np.random.randn(*fpatt.shape)*noiseamp
-				cfreq1 = fringe_cal([fpatt+fnoise], store_pow=False, do_embed=True)[0]
-				cfreq2 = fringe_cal([fpatt+fnoise], store_pow=False, do_embed=False)[0]
+				cfreq1 = fringe_cal([fpatt+fnoise], store_pow=False, do_embed=True)
+				cfreq2 = fringe_cal([fpatt+fnoise], store_pow=False, do_embed=False)
 				cfrat1 = (1.-np.r_[cfreq]/cfreq1)*1e3
 				cfrat2 = (1.-np.r_[cfreq]/cfreq2)*1e3
 				self.log.debug("cf: %d, noise: %#5.3g, r1*e3: %+#4.2f, %+#4.2f, r2*e3: %+#4.2f, %+#4.2f", idx, noiseamp, cfrat1[0], cfrat1[1], cfrat2[0], cfrat2[1])
@@ -224,11 +223,11 @@ class TestFiltersb(unittest.TestCase):
 		zphases = [sum(zv*zmode for zv, zmode in zip(zvec, zndata['modes'])) for zvec in zvecs]
 		zfringes = [sim_fringe(zph, cfreq0, noiseamp=0) for zph in zphases]
 
-		cfreq = fringe_cal(zfringes, store_pow=False, do_embed=True).mean(0)
+		cfreq = fringe_cal(zfringes, store_pow=False, do_embed=True, method='cog')
 		# Should give approximately cfreq, difference should be less 
 		# than 2% and pixel difference should be less than 0.3
 		self.assertLess(np.abs(1-cfreq/np.r_[cfreq0]).mean(), 0.02)
-		self.assertLess(np.abs(cfreq0 - cfreq).mean(), 0.3)
+		self.assertLess(np.abs(cfreq0 - cfreq).mean(), 0.4)
 
 		self.fcache = {}
 		for zphase, zfringe in zip(zphases, zfringes):
@@ -269,7 +268,7 @@ class TestFiltersb(unittest.TestCase):
 			'fringe_130622_154235Z_000505_img.jpg']
 		fringes = [tim.file.read_file(pjoin(TESTDATAPATH,f)) for f in files]
 
-		cfreq = fringe_cal(fringes, store_pow=False, do_embed=True).mean(0)
+		cfreq = fringe_cal(fringes, store_pow=False, do_embed=True)
 		apt_mask = tim.im.mk_rad_mask(*fringes[0].shape) < 1
 
 		self.fcache = {}
@@ -576,11 +575,11 @@ class TestGradphase(unittest.TestCase):
 		# Simulate fringes
 		zfringes = [sim_fringe(zph, self.cfreq, noiseamp=0) for zph in zphases]
 
-		cfreq = fringe_cal(zfringes, store_pow=False, do_embed=True).mean(0)
+		cfreq = fringe_cal(zfringes, store_pow=False, do_embed=True, method='cog')
 		# Should give approximately cfreq, difference should be less 
 		# than 2% and pixel difference should be less than 0.3
-		self.assertLess(np.abs(1-cfreq/np.r_[self.cfreq]).mean(), 0.02)
-		self.assertLess(np.abs(self.cfreq - cfreq).mean(), 0.3)
+		self.assertLess(np.abs(1-cfreq/np.r_[self.cfreq]).mean(), 0.03)
+		self.assertLess(np.abs(self.cfreq - cfreq).mean(), 0.4)
 
 		zvecs_reg = []
 		zvecs_grad = []
@@ -632,7 +631,7 @@ class TestGradphase(unittest.TestCase):
 
 	def test2a_data_fringe_rec(self):
 		"""Test phase gradient calculation on data fringes"""
-		cfreq = fringe_cal(self.fringes, store_pow=False, do_embed=True).mean(0)
+		cfreq = fringe_cal(self.fringes, store_pow=False, do_embed=True)
 		zndata = tim.zern.calc_zern_basis(10, min(self.sz)/2)
 		zmodemat = np.r_[ [zm[self.apt_maskb] for zm in zndata['modes']] ]
 		zngradmat = np.r_[ [phase_grad(zmode, apt_mask=self.apt_maskb, asvec=True) for zmode in zndata['modes']] ]
@@ -665,6 +664,7 @@ class TestGradphase(unittest.TestCase):
 		plt.errorbar(nz+0.1, np.mean(zvecs_regw,0), yerr=np.std(zvecs_regw,0), elinewidth=3, fmt='.', label='Reg. wt.')
 		plt.legend(loc='best')
 
+		print "Dropping to shell for data inspection..."
 		tim.shell()
 
 class TestCalcPhaseVec(unittest.TestCase):
@@ -796,7 +796,7 @@ mlagrid = [(x0, x0+sasz, y0, y0+sasz) for x0 in x0arr for y0 in y0arr]
 
 rnd = np.random.random
 fakewaves = [rnd(sz) + rnd(sz)*1j for i in range(4)]
-fakemat = rnd((len(mlagrid)*2, 20))""")
+fakemat = rnd((np.product(sz), 20))""")
 
 		print "calc_phasevec(): timing results:"
 		t_scalar = 1e3*min(t1.repeat(2, 10))/10
