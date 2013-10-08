@@ -77,7 +77,7 @@ def sim_fringe(phase, cfreq, noiseamp=0, phaseoffset=0, noisesmooth=10):
 
 	return fringe+fnoise
 
-def fringe_cal(refimgs, wsize=-0.5, cpeak=0, do_embed=True, method='cog', store_pow=True, outdir='./'):
+def fringe_cal(refimgs, wsize=-0.5, cpeak=0, do_embed=True, method='cog', store_pow=True, ret_pow=False, outdir='./'):
 	"""
 	Calibrate fringe analysis here using a frames with pure carrier
 	fringes. This frame will be used to calculate the carrier frequency such
@@ -127,7 +127,9 @@ def fringe_cal(refimgs, wsize=-0.5, cpeak=0, do_embed=True, method='cog', store_
 	if (do_embed):
 		carr_freq /= 2.0
 
-	return carr_freq, refimg_pow
+	if (ret_pow):
+		return carr_freq, refimg_pow
+	return carr_freq
 
 def locate_sb(fftpow, cpeak=None, method='cog', binfac=8):
 	"""
