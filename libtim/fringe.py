@@ -77,9 +77,9 @@ def sim_fringe(phase, cfreq, noiseamp=0, phaseoffset=0, noisesmooth=10):
 
 	return fringe+fnoise
 
-def fringe_cal(refimgs, wsize=-0.5, cpeak=0, do_embed=True, method='parabola', store_pow=True, ret_pow=False, outdir='./'):
+def fringe_cal(refimgs, wsize=-0.5, cpeak=0, do_embed=True, method='cog', store_pow=True, outdir='./'):
 	"""
-	Calibrate fringe analysis here using a reference frame with pure carrier
+	Calibrate fringe analysis here using a frames with pure carrier
 	fringes. This frame will be used to calculate the carrier frequency such
 	that subsequent images can be analysed around this frequency.
 
@@ -93,18 +93,14 @@ def fringe_cal(refimgs, wsize=-0.5, cpeak=0, do_embed=True, method='parabola', s
 	@param [in] store_pow Store the Fourier power spectrum
 	@param [in] ret_pow Return Fourier power spectra
 	@param [in] outdir Directory to store output to
-	@return len(reflist) x 2 ndarray of (freq0, freq1) spatial frequency pairs. If **ref_pow**, return list of power spectra as well
+	@return Tuple of carrier frequency, average power of reference images
 	"""
-
-	cfreql = []
-	fftpowl = []
-	fftpowzooml = []
 
 	fft_mask = tim.fft.mk_apod_mask(refimgs[0].shape, wsize=wsize, shape='rect', apod_f='cosine')
 
-	for idx, refimg in enumerate(refimgs):
-		postf = "_%d" % (idx)
-
+	# Compute the average power spectrum from all frames
+	refimg_pow = 0
+	for refimg in refimgs:
 		refimg_apod = (refimg - refimg.mean()) * fft_mask
 		if (do_embed):
 			refimg_apod = tim.fft.embed_data(refimg_apod, direction=1)
@@ -117,31 +113,21 @@ def fringe_cal(refimgs, wsize=-0.5, cpeak=0, do_embed=True, method='parabola', s
 		if (do_embed):
 			refimg_ft = tim.fft.embed_data(refimg_ft, direction=-1)
 
-		refimg_pow = np.abs(refimg_ft**2.0)
-		carr_freq = locate_sb(refimg_pow, cpeak=cpeak, method=method)
+		refimg_pow += np.abs(refimg_ft**2.0)
 
-		# Zoom region: 1/6 of the radius (i.e. at least 6 pixels per fringe)
-		sh = refimg_pow.shape
-		npix = 12. / (1+int(do_embed))
-		fft_pow_zoom = refimg_pow[int(sh[0]/2.-sh[0]/npix):int(sh[0]/2.+sh[0]/npix), int(sh[1]/2.-sh[1]/npix):int(sh[1]/2.+sh[1]/npix)]
+	if (store_pow):
+		tim.file.store_file(pjoin(outdir, 'fa_cal_pow_log.png'), np.log10(refimg_pow), cmap='gray')
+		tim.file.store_file(pjoin(outdir, 'fa_cal_pow_lin.png'), refimg_pow, cmap='gray')
 
-		if (store_pow):
-			tim.file.store_file(pjoin(outdir, 'fa_cal_pow_zoom'+postf+'.png'), np.log10(fft_pow_zoom))
+	# Locate the sideband from the average power spectrum
+	carr_freq = locate_sb(refimg_pow, cpeak=cpeak, method=method)
 
-		fftpowl.append(refimg_pow)
-		fftpowzooml.append(fft_pow_zoom)
+	# If we embedded the data, the frequency we find is twice as high 
+	# because the input array was larger, correct this here
+	if (do_embed):
+		carr_freq /= 2.0
 
-		# If we embedded the data, the frequency we find is twice as high 
-		# because the input array was larger, correct this here
-		if (do_embed):
-			carr_freq /= 2.0
-
-		cfreql.append(carr_freq)
-
-	if (ret_pow):
-		return np.r_[cfreql], fftpowl, fftpowzooml
-	else:
-		return np.r_[cfreql]
+	return carr_freq, refimg_pow
 
 def locate_sb(fftpow, cpeak=None, method='cog', binfac=8):
 	"""
@@ -163,42 +149,33 @@ def locate_sb(fftpow, cpeak=None, method='cog', binfac=8):
 	@param [in] cpeak Radius of central region to ignore. If None, find automatically
 	@param [in] method Method to determine the sideband subpixel center, either 'parabola' for a 2D parabolic fit or 'cog' for center of gravity. The former is slightly more precise, the latter is more robust. If None, use integer-pixel method
 	@return Numpy array of (x, y) subpixel maximum (wrt center) of first sideband
-	@raises ValueError for cpeak < 0 or method not in [cog, parabola]
 	"""
 
-	if (cpeak and cpeak < 0):
-		raise ValueError("negative <cpeak> is illegal!")
+	# Convolve with smoothing window to suppres noise
+	window = np.ones((binfac,binfac))/(binfac*binfac)
+	fftpowsm = scipy.signal.fftconvolve(fftpow, window, mode='same')
 
 	# Detect central peak if not given
-	if (not cpeak):
-		rad_prof = tim.im.mk_rad_prof(fftpow)
+	if (not cpeak or cpeak <= 0):
+		rad_prof = tim.im.mk_rad_prof(fftpowsm)
 		# Detect where intensity stops declining. Skip first two pixels because this is already low due to removing the mean from the FFT
 		d_rad_prof = rad_prof[2:-1] - rad_prof[3:]
 		cpeak = np.argwhere(d_rad_prof < 0)[0][0] + 2
 
 	# Ignore center <cpeak> pixels in further processing
-	sz = np.r_[fftpow.shape]
+	sz = np.r_[fftpowsm.shape]
 	rad_mask = tim.im.mk_rad_mask(*sz, norm=False)
-	fftpow[rad_mask <= cpeak] = 0
+	fftpowsm[rad_mask <= cpeak] = 0
 
-	#@bug Need to crop fftpow first to assure binning works
-	# Downsample image to reduce noise sensitivity, then get brightest pixel (which is a patch)
-	fftpow2 = tim.file.bin_data(fftpow, binfac=binfac)
-	#binfac = fftpow.shape[0]/fftpow2.shape[0]
-	max0, max1 = sb_loc = np.argwhere(fftpow2 == fftpow2.max())[0]*binfac
+	# Locate maximum intensity peak as first estimate
+	max0, max1 = sb_loc = np.argwhere(fftpowsm == fftpowsm.max())[0]
 
-	# Find brightest pixel inside brightest binned patch
-	bfh = binfac/2
-	fftpow_crop = fftpow[max0-bfh:max0+bfh, max1-bfh:max1+bfh]
-	sb_loc += np.argwhere(fftpow_crop == fftpow_crop.max())[0]-bfh
-
-	# Find sub-pixel maximum around brightest pixel
+	# Find sub-pixel maximum
 	if (method == 'parabola'):
-		# Use binned image also for parabola fittin. This should be more 
+		# Use smoothed image also for parabola fitting. This should be more 
 		# robust and still give a decent center.
-		sb_loc = tim.xcorr.calc_subpixmax(fftpow2, 0, index=True) * binfac
+		sb_loc = tim.xcorr.calc_subpixmax(fftpowsm, 0, index=True)
 	elif (method == "cog"):
-		max0, max1 = sb_loc
 		dmax0, dmax1 = (max0, max1) - sz/2
 
 		# Crop a region around maximum, never include the origin, take a 
