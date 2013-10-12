@@ -639,8 +639,8 @@ def calc_phasevec(waves, basismat, method='scalar', apt_mask=None, mlagrid=None,
 		modevec = np.linalg.lstsq(grad_basismatw, phasew)[0]
 
 	elif (method == 'vshwfs'):
-		# Compute mean of series of virtual shwfs images
-		wfsimg = vshwfs_im = np.mean([tim.shwfs.sim_shwfs(wv, mlagrid, scale=scale) for wv in waves], axis=0)
+		# Compute median (reject outliers) of series of virtual shwfs images
+		wfsimg = vshwfs_im = np.median([tim.shwfs.sim_shwfs(wv, mlagrid, scale=scale) for wv in waves], axis=0)
 		# Measure shift vector for all subapertures
 		sasz = (mlagrid[:, 1::2] - mlagrid[:, ::2])
 		vshwfs_vec = np.array([tim.shwfs.calc_cog(vshwfs_im[m[0]:m[1],m[2]:m[3]], index=True) for m in mlagrid]) - sasz/2.
@@ -669,6 +669,24 @@ def calc_phasevec(waves, basismat, method='scalar', apt_mask=None, mlagrid=None,
 		vshwfs_basismatw = vshwfs_basismat * weight.reshape(-1,1)
 		vshwfsw = vshwfs_vec.ravel() * weight
 		modevec = np.linalg.lstsq(vshwfs_basismatw, vshwfsw)[0]
+
+		# Example of above weighted least sq.
+		#
+		# vshwfs_basismat = np.r_[[np.arange(100)*0+1], [np.arange(100)], [np.arange(100)**2]].T
+		# vshwfs_vec = np.dot(vshwfs_basismat, [0.5, 0.1, 0.001])
+		# weightmask = np.random.random((100)) < 0.7
+		# weight = np.ones(100)
+		# vshwfs_vec[weightmask] = np.random.random(sum(weightmask))*np.mean(vshwfs_vec)
+
+		# vshwfs_basismatw = vshwfs_basismat * weight.reshape(-1,1)
+		# vshwfsw = vshwfs_vec.ravel() * weight
+		# print np.linalg.lstsq(vshwfs_basismatw, vshwfsw)[0]
+		
+		# weight[weightmask] = 0.1
+		# vshwfs_basismatw = vshwfs_basismat * weight.reshape(-1,1)
+		# vshwfsw = vshwfs_vec.ravel() * weight
+		# print np.linalg.lstsq(vshwfs_basismatw, vshwfsw)[0]
+
 	else:
 		raise RuntimeError("Method not in ['scalar', 'gradient', 'vshwfs']")
 
