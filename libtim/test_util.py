@@ -185,6 +185,16 @@ class TestMetaData(unittest.TestCase):
 				self.assertTrue(os.path.isfile(file))
 				inmeta = load_metadata(file, format)
 				self.assertEqual(thismeta, inmeta)
+	
+	def test2c_gen_meta_field_chk(self):
+		"""Test metadata generation key presence"""
+		data = gen_metadata(self.meta)
+		self.assertTrue(os.path.isdir(data['curdir']))
+		self.assertTrue(os.path.exists(data['program']))
+		self.assertTrue('argv' in data.keys())
+		self.assertGreater(data['epoch'], 1382029054)
+		self.assertGreater(len(data['utctime']), 10)
+		self.assertGreater(len(data['localtime']), 10)
 
 class TestFITSutils(unittest.TestCase):
 	def setUp(self):
@@ -199,10 +209,22 @@ class TestFITSutils(unittest.TestCase):
 
 	def test1b_mkfitdhdr_long(self):
 		"""Test longer calls"""
-		mkfitshdr({'filename': "reproc2_slide3"})
-		mkfitshdr({'filename': "reproc2_slide3-tgMOV-0.5-cosine-0.75"})
-		mkfitshdr({'filename': "reproc2_slide3-tgMOV-0.5-cosine-0.75/"})
-		mkfitshdr({'filename': "reproc2_slide3-tgMOV-0.5-cosine-0.75/0_141132-463_Zernike_reconstruction.fits"})
+		filenames = ["reproc2_slide3", "reproc2_slide3-tgMOV-0.5-cosine-0.75",  "reproc2_slide3-tgMOV-0.5-cosine-0.75/", "reproc2_slide3-tgMOV-0.5-cosine-0.75/0_141132-463_Zernike_reconstruction.fits"]
+		for fname in filenames:
+			hdr = mkfitshdr({'filename': fname})
+			self.assertEqual(hdr['filename'], fname)
+
+	def test1c_mkfitdhdr_chk(self):
+		"""Check if header has basic keys"""
+		hdr = mkfitshdr()
+		self.assertTrue(hdr['progname'])
+		self.assertTrue(hdr['progpath'])
+		self.assertTrue(hdr['progsize'])
+		self.assertTrue(hdr['curdir'])
+		self.assertTrue(hdr['epoch'])
+		self.assertTrue(hdr['utctime'])
+		self.assertTrue(hdr['loctime'])
+		self.assertTrue(hdr['hostid'])
 
 class TestParsestr(unittest.TestCase):
 	def setUp(self):

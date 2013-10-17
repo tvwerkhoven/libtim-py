@@ -253,13 +253,16 @@ def gen_metadata(metadata, *args, **kwargs):
 	fhash = sha1_h.hexdigest()
 
 	# Start metadata dictionary with pre-set values
-	metadict = {'program': sys.argv[0],
+	metadict = {'curdir': os.path.realpath(os.path.curdir),
+		'program': sys.argv[0],
 		'argv': " ".join(sys.argv[1:]),
 		'epoch': time(),
 		'utctime': asctime(gmtime(time())),
 		'localtime':asctime(localtime(time())),
 		'hostid': os.uname()[1],
 		'progsize': os.stat(sys.argv[0]).st_size,
+		'progmtime': os.path.getmtime(sys.argv[0]),
+		'progctime': os.path.getctime(sys.argv[0]),
 		'sha1digest': fhash}
 
 	grev = git_rev(sys.argv[0])
@@ -342,16 +345,18 @@ def load_metadata(infile, format='json'):
 	return metad
 
 
-def mkfitshdr(cards, usedefaults=True):
+def mkfitshdr(cards=None, usedefaults=True):
 	"""
 	Make a FITS file header of all arguments supplied in the dict **cards**.
 
 	If **usedefaults** is set, also add default header items:
 	- Program filename and pasth (from sys.argv[0])
+	- Current working dir
 	- Program filesize, mtime and ctime
+	- Git revision of executable (if available)
 	- epoch (time())
 	- utctime / localtime
-	- hostname
+	- hostid
 
 	@params [in] cards Dict containing key=value pairs for the header
 	@params [in] usedefaults Also store default parameters in header
@@ -361,18 +366,17 @@ def mkfitshdr(cards, usedefaults=True):
 	clist = pyfits.CardList()
 
 	if (usedefaults):
-		grev = git_rev(sys.argv[0])
 		clist.append(pyfits.Card(key='progname', 
 								value=os.path.basename(sys.argv[0]),
 								comment='Program filename') )
 		clist.append(pyfits.Card(key='progpath', 
 								value=os.path.dirname(sys.argv[0]),
 								comment='Program path') )
+		grev = git_rev(sys.argv[0])
 		if (grev):
 			clist.append(pyfits.Card(key='gitrev', 
 								value=grev,
 								comment='Program git revision') )
-
 		clist.append(pyfits.Card(key='progsize', 
 								value=os.path.getsize(sys.argv[0]),
 								comment='Program filesize (bytes)') )
@@ -382,14 +386,20 @@ def mkfitshdr(cards, usedefaults=True):
 		clist.append(pyfits.Card(key='ctime', 
 								value=os.path.getctime(sys.argv[0]),
 								comment='Program metadata change time' ) )
+		clist.append(pyfits.Card(key='curdir', 
+								value=os.path.realpath(os.path.curdir),
+								comment='Current working dir') )
 		clist.append(pyfits.Card(key='epoch', value=time(),
 								comment='Current seconds since epoch from time.time()') )
 		# No comments for the last two fields because they are too large
 		clist.append(pyfits.Card(key='utctime', value=asctime(gmtime(time()))) )
 		clist.append(pyfits.Card(key='loctime', value=asctime(localtime(time()))) )
+		clist.append(pyfits.Card(key='hostid', value=os.uname()[1],
+								comment='Hostname from os.uname()') )
 
-	for key, val in cards.iteritems():
-		clist.append(pyfits.Card(key, val) )
+	if (cards):
+		for key, val in cards.iteritems():
+			clist.append(pyfits.Card(key, val) )
 
 	return pyfits.Header(cards=clist)
 
