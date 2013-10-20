@@ -419,8 +419,9 @@ def git_rev(fpath):
 	import subprocess
 	cmd = ['git', 'describe', '--always', '--dirty']
 	proc = subprocess.Popen(cmd, cwd=fdir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-	out = proc.communicate()
-	rev = out[0].rstrip()
+	# Take only stdout
+	out = proc.communicate()[0]
+	rev = out.rstrip()
 
 	return rev
 
