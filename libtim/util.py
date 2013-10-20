@@ -403,6 +403,33 @@ def mkfitshdr(cards=None, usedefaults=True):
 
 	return pyfits.Header(cards=clist)
 
+def svn_rev(fpath):
+	"""
+	Query and return svn revision of a certain path.
+
+	@param [in] fpath Path to investigate. Can be filename, in which case only the path will be use
+	@returns Output of `svn info`
+	"""
+
+	try:
+		fdir = os.path.dirname(fpath)
+	except:
+		raise ValueError("Cannot get directory for '%s'" % fpath)
+
+	import subprocess
+	cmd = ['svn', 'info']
+	proc = subprocess.Popen(cmd, cwd=fdir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	out = proc.communicate()[0]
+	# Take only stdout
+
+	if (out):
+		for line in out.splitlines():
+			if "Revision" in line:
+				rev = line[10:]
+				return rev
+
+	return ""
+
 def git_rev(fpath):
 	"""
 	Query and return git revision of a certain path.
