@@ -132,10 +132,10 @@ class TestGitRev(unittest.TestCase):
 		@todo This dir is not always a git repo! How to test?
 		"""
 		rev = git_rev(sys.argv[0])
-		#print rev
+
 		self.assertTrue(rev.__class__ == 'string'.__class__)
-		self.assertTrue(len(rev) >= 0)
-		self.assertTrue(len(rev) < 32)
+		self.assertGreater(len(rev), 0)
+		self.assertLess(len(rev), 32)
 
 class TestMetaData(unittest.TestCase):
 	def setUp(self):
