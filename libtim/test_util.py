@@ -117,14 +117,14 @@ class TestGitRev(unittest.TestCase):
 		"""Call function, check for failure"""
 		# Current directory probably has a revision
 		git_rev('./')
-		# Empty string defaults to current dir
-		git_rev('')
-		# 'no file' defaults to current directory
-		git_rev('no file')
 
 		# /tmp/ probably has no git revision
 		self.assertEqual(git_rev('/tmp/'), '')
-		self.assertRaises(TypeError, git_rev, 1)
+		# 1 is illegal
+		self.assertRaises(ValueError, git_rev, 1)
+		# These files don't exist
+		self.assertRaises(OSError, git_rev, '')
+		self.assertRaises(OSError, git_rev, 'no file does not exist')
 
 	def test1_rev_lib(self):
 		"""
