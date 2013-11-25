@@ -38,7 +38,7 @@ from util import mkfitshdr
 # Routines
 #=============================================================================
 
-def mk_rad_mask(r0, r1=None, norm=True, center=None, dtype=np.float):
+def mk_rad_mask(r0, r1=None, norm=True, center=None, dtype=np.float, getxy=False):
 	"""
 	Make a rectangular matrix of size (r0, r1) where the value of each 
 	element is the Euclidean distance to **center**. If **center** is not 
@@ -55,6 +55,8 @@ def mk_rad_mask(r0, r1=None, norm=True, center=None, dtype=np.float):
 	@param [in] r0 The width (and height if r1==None) of the mask.
 	@param [in] r1 The height of the mask.
 	@param [in] norm Normalize the distance such that 2/(r0, r1) equals a distance of 1.
+	@param [in] getxy Return x, y-values instead of r
+	@param [in] dtype Datatype to use for radial coordinates
 	@param [in] center Set distance origin to **center** (defaults to the middle of the rectangle)
 	"""
 
@@ -80,7 +82,10 @@ def mk_rad_mask(r0, r1=None, norm=True, center=None, dtype=np.float):
 		r0v = np.linspace(0-center[0], r0-center[0], r0).astype(dtype).reshape(-1,1)
 		r1v = np.linspace(0-center[1], r1-center[1], r1).astype(dtype).reshape(1,-1)
 	
-	return (r0v**2. + r1v**2.)**0.5
+	if (getxy):
+		return r0v, r1v
+	else:
+		return (r0v**2. + r1v**2.)**0.5
 
 def mk_rad_prof(data, center=None, maxrange=None, step=1, procf=np.mean):
 	"""

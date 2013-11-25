@@ -79,6 +79,22 @@ class TestUtilFuncs(unittest.TestCase):
 		test_mask = mk_rad_mask(341, 234, norm=True)
 		self.assertAlmostEqual(test_mask[0,0], 2**0.5)
 
+	def test1a_mkradmask_getxy(self):
+		"""Test mk_rad_mask with x, y values"""
+		testx, testy = mk_rad_mask(128.0, getxy=True)
+		self.assertNotEqual(testx.shape, testy.shape)
+		self.assertEqual(testx.size, testy.size)
+		np.testing.assert_array_equal(testx.flat, testy.flat)
+		np.testing.assert_array_equal(np.linspace(-1, 1, 128), testx.flat)
+		np.testing.assert_array_equal(np.linspace(-1, 1, 128), testy.flat)
+
+		testx, testy = mk_rad_mask(128.0, norm=False, getxy=True)
+		self.assertNotEqual(testx.shape, testy.shape)
+		self.assertEqual(testx.size, testy.size)
+		np.testing.assert_array_equal(testx.flat, testy.flat)
+		np.testing.assert_array_equal(np.linspace(-64, 64, 128), testx.flat)
+		np.testing.assert_array_equal(np.linspace(-64, 64, 128), testy.flat)
+
 	def test1a_mkradmask_offset(self):
 		"""Test mk_rad_mask with different center offsets"""
 
