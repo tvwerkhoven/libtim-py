@@ -231,7 +231,8 @@ def gen_metadata(metadata, *args, **kwargs):
 	- program arguments (**sys.argv[1:]**)
 	- time / date (as epoch, utc, localtime)
 	- size of current executable
-	- SHA1 hex digest of current executable (sha1(sys.argv[0]))
+	- SHA1 hex digest of current script (sha1(sys.argv[0]))
+	- path & SHA1 digest of python interpreter used (sys.executable)
 
 	and additionally save everything in *args and **kwargs.
 
@@ -252,6 +253,12 @@ def gen_metadata(metadata, *args, **kwargs):
 			 sha1_h.update(chunk)
 	fhash = sha1_h.hexdigest()
 
+	sha1_h = hashlib.sha1()
+	with open(sys.executable,'rb') as f:
+		for chunk in iter(lambda: f.read(128*sha1_h.block_size), ''):
+			 sha1_h.update(chunk)
+	ihash = sha1_h.hexdigest()
+
 	# Start metadata dictionary with pre-set values
 	metadict = {'curdir': os.path.realpath(os.path.curdir),
 		'program': sys.argv[0],
@@ -263,7 +270,9 @@ def gen_metadata(metadata, *args, **kwargs):
 		'progsize': os.stat(sys.argv[0]).st_size,
 		'progmtime': os.path.getmtime(sys.argv[0]),
 		'progctime': os.path.getctime(sys.argv[0]),
-		'sha1digest': fhash}
+		'sha1script': fhash,
+		'interppath': sys.executable,
+		'sha1interp': ihash}
 
 	grev = git_rev(sys.argv[0])
 	if (grev):
