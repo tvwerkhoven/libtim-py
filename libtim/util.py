@@ -452,12 +452,16 @@ def git_rev(fpath):
 	except:
 		raise ValueError("Cannot get directory for '%s'" % fpath)
 
-	import subprocess
-	cmd = ['git', 'describe', '--always', '--dirty']
-	proc = subprocess.Popen(cmd, cwd=fdir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-	# Take only stdout
-	out = proc.communicate()[0]
-	rev = out.rstrip()
+	# Put in try clause in case git is not available
+	try:
+		import subprocess
+		cmd = ['git', 'describe', '--always', '--dirty']
+		proc = subprocess.Popen(cmd, cwd=fdir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		# Take only stdout
+		out = proc.communicate()[0]
+		rev = out.rstrip()
+	except:
+		rev = ""
 
 	return rev
 
