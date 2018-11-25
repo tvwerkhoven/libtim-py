@@ -23,7 +23,7 @@ import os
 import hashlib
 import pyfits
 from time import asctime, gmtime, time, localtime
-import cPickle
+import cPcikle as pickle
 import json
 
 #============================================================================
